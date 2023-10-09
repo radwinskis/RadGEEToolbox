@@ -41,7 +41,7 @@ Although similar toolset packages exist, RadGEEToolbox offers differing function
 RadGEEToolbox is organized so that all functions are associated with each LandsatCollection and SentinelCollection class modules. You will need to define a base class collection, using arguments standard to defining eeImageCollections, and then you can call any of the class attributes, methods, or static methods to complete processing. Utilizing class attributes allows for very short code lines and very fast processing, while utilizing the methods allows for expanded customization of processing but requires more arguments and interaction from the user. See below for basic examples using the LandsatCollection class module. See URL_PLACEHOLDER for documentation (coming soon).
 ```
 #Create base class image collection
-image_collection = LandsatCollection(start_date, end_date, tile_row, tile_path, cloud_percentage_threshold).collection
+image_collection = LandsatCollection(start_date, end_date, tile_row, tile_path, cloud_percentage_threshold)
 
 #retrieve latest image in collection as eeImage
 latest_image = image_collection.image_grab(-1) 

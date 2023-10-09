@@ -67,7 +67,7 @@ class Sentinel2Collection:
         The SentinelCollection object alone acts as a base object for which to further filter or process to indices or spatial reductions
         To use the SentinelCollection functionality, use any of the built in class attributes or method functions. For example, using class attributes:
         ```
-        image_collection = SentinelCollection(start_date, end_date, tile, cloud_percentage_threshold).collection
+        image_collection = SentinelCollection(start_date, end_date, tile, cloud_percentage_threshold)
 
         ee_image_collection = image_collection.collection #returns eeImageCollection from provided argument filters
 

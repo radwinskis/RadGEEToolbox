@@ -71,7 +71,7 @@ class LandsatCollection:
         The LandsatCollection object alone acts as a base object for which to further filter or process to indices or spatial reductions
         To use the LandsatCollection functionality, use any of the built in class attributes or method functions. For example, using class attributes:
         ```
-        image_collection = LandsatCollection(start_date, end_date, tile_row, tile_path, cloud_percentage_threshold).collection
+        image_collection = LandsatCollection(start_date, end_date, tile_row, tile_path, cloud_percentage_threshold)
 
         ee_image_collection = image_collection.collection #returns eeImageCollection from provided argument filters
 
