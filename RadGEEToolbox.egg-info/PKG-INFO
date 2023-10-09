@@ -1,3 +1,16 @@
+Metadata-Version: 2.1
+Name: RadGEEToolbox
+Version: 1.3
+Summary: Python package simplifying large-scale operations using Google Earth Engine (GEE) for users who utilize Landsat and Sentinel
+Home-page: https://github.com/radwinskis/RadGEEToolbox
+Author: Mark Radwin
+Author-email: markradwin@gmail.com
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.6
+Description-Content-Type: text/markdown
+
 # RadGEEToolbox 🛠️
 
 ### 🌎 Python package simplifying large-scale operations using Google Earth Engine (GEE) for users who utilize Landsat and Sentinel 
@@ -75,7 +88,7 @@ latest_NDWI_image = NDWI_collection.image_grab(-1)
 
 ### 📦 Installing via pip
 
-To install `RadGEEToolbox` version 1.3 using pip (NOTE: it is recommended to create a new virtual environment):
+To install `RadGEEToolbox` version 1.3 using pip:
 
 ```bash
 pip install RadGEEToolbox==1.3
