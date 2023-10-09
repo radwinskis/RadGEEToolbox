@@ -2,4 +2,4 @@ __pycache__/
 *.pyc
 *.pyo
 RadGEEToolbox.egg-info/
-build/
+build/lib/RadGEEToolbox/
