@@ -70,8 +70,8 @@ class LandsatCollection:
     Usage:
         The LandsatCollection object alone acts as a base object for which to further filter or process to indices or spatial reductions
         To use the LandsatCollection functionality, use any of the built in class attributes or method functions. For example, using class attributes:
-
-        image_collection = LandsatCollection('arguments set by user').collection
+        ```
+        image_collection = LandsatCollection(start_date, end_date, tile_row, tile_path, cloud_percentage_threshold).collection
 
         ee_image_collection = image_collection.collection #returns eeImageCollection from provided argument filters
 
@@ -82,7 +82,7 @@ class LandsatCollection:
         NDWI_collection = image_collection.ndwi #returns NDWI LandsatCollection image collection
 
         latest_NDWI_image = NDWI_collection.image_grab(-1) #Example showing how class functions work with any LandsatCollection image collection object, returning latest ndwi image
-    
+        ```
     """
     def __init__(self, start_date=None, end_date=None, tile_row=None, tile_path=None, boundary=None, cloud_percentage_threshold=None, collection=None):
         if collection is None and (start_date is None or end_date is None or cloud_percentage_threshold is None):

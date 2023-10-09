@@ -66,8 +66,8 @@ class Sentinel2Collection:
     Usage:
         The SentinelCollection object alone acts as a base object for which to further filter or process to indices or spatial reductions
         To use the SentinelCollection functionality, use any of the built in class attributes or method functions. For example, using class attributes:
-
-        image_collection = SentinelCollection('arguments set by user').collection
+        ```
+        image_collection = SentinelCollection(start_date, end_date, tile, cloud_percentage_threshold).collection
 
         ee_image_collection = image_collection.collection #returns eeImageCollection from provided argument filters
 
@@ -78,7 +78,7 @@ class Sentinel2Collection:
         NDWI_collection = image_collection.ndwi #returns NDWI SentinelCollection image collection
 
         latest_NDWI_image = NDWI_collection.image_grab(-1) #Example showing how class functions work with any SentinelCollection image collection object, returning latest ndwi image
-    
+        ```
     """
 
     def __init__(self, start_date=None, end_date=None, tile=None, cloud_percentage_threshold=None, nodata_threshold=None, collection=None, boundary=None):
