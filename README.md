@@ -2,6 +2,8 @@
 
 ### 🌎 Python package simplifying large-scale operations using Google Earth Engine (GEE) for users who utilize Landsat and Sentinel 
 
+### [See documentation here](https://radgeetoolbox.readthedocs.io/en/latest/)
+
 Initially created by Mark Radwin to help simplify processing imagery for PhD studies and general image exploration, this package offers helpful functionality with an outlook to add furthur functionality to aid assorted Earth observation specialists. 
 
 The package is divided into four modules:
@@ -38,7 +40,7 @@ Although similar toolset packages exist, RadGEEToolbox offers differing function
 - Easily call in a variety of useful color palettes for image visualization
 
 ### ⌨️ Basic Usage
-RadGEEToolbox is organized so that all functions are associated with each LandsatCollection and Sentinel2Collection class modules. You will need to define a base class collection, using arguments standard to defining eeImageCollections, and then you can call any of the class attributes, methods, or static methods to complete processing. Utilizing class attributes allows for very short code lines and very fast processing, while utilizing the methods allows for expanded customization of processing but requires more arguments and interaction from the user. See below for basic examples using the LandsatCollection class module. See URL_PLACEHOLDER for documentation (coming soon).
+RadGEEToolbox is organized so that all functions are associated with each LandsatCollection and Sentinel2Collection class modules. You will need to define a base class collection, using arguments standard to defining eeImageCollections, and then you can call any of the class attributes, methods, or static methods to complete processing. Utilizing class attributes allows for very short code lines and very fast processing, while utilizing the methods allows for expanded customization of processing but requires more arguments and interaction from the user. See below for basic examples using the LandsatCollection class module. See https://radgeetoolbox.readthedocs.io/en/latest/ for documentation.
 ```
 #Create base class image collection
 image_collection = LandsatCollection(start_date, end_date, tile_row, tile_path, cloud_percentage_threshold)
@@ -71,7 +73,7 @@ latest_NDWI_image = NDWI_collection.image_grab(-1)
 - **Python**: Ensure you have version 3.6 or higher installed.
 - **pip**: This is Python's package installer. 
 
-### 📦 Installing via pip (COMING SOON!!!)
+### 📦 Installing via pip
 
 To install `RadGEEToolbox` version 1.3 using pip:
 
