@@ -1,3 +1,4 @@
+[![PyPI version](https://badge.fury.io/py/RadGEEToolbox.svg)](https://pypi.org/project/RadGEEToolbox/)
 # RadGEEToolbox 🛠️
 
 ### 🌎 Python package simplifying large-scale operations using Google Earth Engine (GEE) for users who utilize Landsat and Sentinel 
