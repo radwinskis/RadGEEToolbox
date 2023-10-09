@@ -1,0 +1,5 @@
+Sentinel2Collection Documentation
+--------------------------------
+
+.. automodule:: RadGEEToolbox.Sentinel2Collection
+   :members:

@@ -8,77 +8,120 @@ class Sentinel2Collection:
 
     Arguments:
         start_date (str): Start date string in format of yyyy-mm-dd for filtering collection (required unless collection is provided)
+        
         end_date (str): End date string in format of yyyy-mm-dd for filtering collection (required unless collection is provided)
+        
         tile (str): tile of Sentinel image (required unless collection is provided)
+        
         boundary (ee geometry): Boundary for filtering images to images that intersect with the boundary shape (optional)
+        
         cloud_percentage_threshold (int): Integer percentage threshold where only imagery with cloud % less than threshold will be provided (optional; defaults to 15)
-        collection (ee ImageCollection): Optional argument to convert an eeImageCollection object to a SentinelCollection object - will override other arguments!
+        
+        collection (ee ImageCollection): Optional argument to convert an eeImageCollection object to a Sentinel2Collection object - will override other arguments!
 
     Attributes:
-        collection (returns: eeImageCollection): Returns an eeImageCollection object from any SentinelCollection image collection object
+        collection (returns: eeImageCollection): Returns an eeImageCollection object from any Sentinel2Collection image collection object
+        
         dates_list (returns: Server-Side List): Unreadable Earth Engine list of image dates (server-side)
+        
         dates (returns: Client-Side List): Readable pythonic list of image dates (client-side)
-        masked_clouds_collection (returns: SentinelCollection image collection): Returns collection with clouds masked (transparent) for each image
+        
+        masked_clouds_collection (returns: Sentinel2Collection image collection): Returns collection with clouds masked (transparent) for each image
+        
         max (returns: eeImage): Returns a temporally reduced max image (calculates max at each pixel)
+        
         median (returns: eeImage): Returns a temporally reduced median image (calculates median at each pixel)
+        
         mean (returns: eeImage): Returns a temporally reduced mean image (calculates mean at each pixel)
+        
         min (returns: eeImage): Returns a temporally reduced min image (calculates min at each pixel)
-        gypsum (returns: eeImageCollection): Returns SentinelCollection image collection of singleband gypsum index rasters
-        halite (returns: eeImageCollection): Returns SentinelCollection image collection of singleband halite index rasters
-        ndwi (returns: eeImageCollection): Returns SentinelCollection image collection of singleband NDWI (water) rasters
-        ndvi (returns: eeImageCollection): Returns SentinelCollection image collection of singleband NDVI (vegetation) rasters
+        
+        gypsum (returns: eeImageCollection): Returns Sentinel2Collection image collection of singleband gypsum index rasters
+        
+        halite (returns: eeImageCollection): Returns Sentinel2Collection image collection of singleband halite index rasters
+        
+        ndwi (returns: eeImageCollection): Returns Sentinel2Collection image collection of singleband NDWI (water) rasters
+        
+        ndvi (returns: eeImageCollection): Returns Sentinel2Collection image collection of singleband NDVI (vegetation) rasters
 
     Methods:
         median_collection(self)
+        
         mean_collection(self)
+        
         max_collection(self)
+        
         min_collection(self)
+        
         ndwi_collection(self, threshold)
+        
         ndvi_collection(self, threshold)
+        
         halite_collection(self, threshold)
+        
         gypsum_collection(self, threshold)
+        
         mask_with_polygon(self, polygon)
+        
         masked_water_collection(self)
+        
         masked_clouds_collection(self)
+        
         surface_temperature_collection(self)
+        
         mask_halite(self, threshold)
+        
         mask_halite_and_gypsum(self, halite_threshold, gypsum_threshold)
+        
         list_of_dates(self)
+        
         image_grab(self, img_selector)
+        
         custom_image_grab(self, img_col, img_selector)
+        
         image_pick(self, img_date)
+        
         CollectionStitch(self, img_col2)
         
 
     Static Methods:
         image_dater(image)
+        
         sentinel_ndwi_fn(image, threshold)
+        
         sentinel_ndvi_fn(image, threshold)
+        
         sentinel_halite_fn(image, threshold)
+        
         sentinel_gypsum_fn(image, threshold)
+        
         MaskWaterS2(image)
+        
         halite_mask(image, threshold)
+        
         gypsum_and_halite_mask(image, halite_threshold, gypsum_threshold)
+        
         MaskCloudsS2(image)
+        
         PixelAreaSum(image, band_name, geometry, threshold=-1, scale=30, maxPixels=1e12)
         
 
     Usage:
-        The SentinelCollection object alone acts as a base object for which to further filter or process to indices or spatial reductions
-        To use the SentinelCollection functionality, use any of the built in class attributes or method functions. For example, using class attributes:
-        ```
-        image_collection = SentinelCollection(start_date, end_date, tile, cloud_percentage_threshold)
+        The Sentinel2Collection object alone acts as a base object for which to further filter or process to indices or spatial reductions
+        
+        To use the Sentinel2Collection functionality, use any of the built in class attributes or method functions. For example, using class attributes:
+        
+        image_collection = Sentinel2Collection(start_date, end_date, tile, cloud_percentage_threshold)
 
         ee_image_collection = image_collection.collection #returns eeImageCollection from provided argument filters
 
         latest_image = image_collection.image_grab(-1) #returns latest image in collection as eeImage
 
-        cloud_masked_collection = image_collection.masked_clouds_collection #returns cloud-masked SentinelCollection image collection
+        cloud_masked_collection = image_collection.masked_clouds_collection #returns cloud-masked Sentinel2Collection image collection
 
-        NDWI_collection = image_collection.ndwi #returns NDWI SentinelCollection image collection
+        NDWI_collection = image_collection.ndwi #returns NDWI Sentinel2Collection image collection
 
-        latest_NDWI_image = NDWI_collection.image_grab(-1) #Example showing how class functions work with any SentinelCollection image collection object, returning latest ndwi image
-        ```
+        latest_NDWI_image = NDWI_collection.image_grab(-1) #Example showing how class functions work with any Sentinel2Collection image collection object, returning latest ndwi image
     """
 
     def __init__(self, start_date=None, end_date=None, tile=None, cloud_percentage_threshold=None, nodata_threshold=None, collection=None, boundary=None):
@@ -444,14 +487,14 @@ class Sentinel2Collection:
     
     def mask_with_polygon(self, polygon):
         """
-        Function to mask SentinelCollection image collection by a polygon (eeGeometry)
+        Function to mask Sentinel2Collection image collection by a polygon (eeGeometry)
 
         Args:
         self: self is passed into argument
         polygon: eeGeometry polygon or shape used to mask image collection
 
         Returns:
-        image collection: masked SentinelCollection image collection
+        image collection: masked Sentinel2Collection image collection
         
         """
         # Convert the polygon to a mask

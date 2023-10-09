@@ -8,69 +8,119 @@ class LandsatCollection:
 
     Arguments:
         start_date (str): Start date string in format of yyyy-mm-dd for filtering collection (required unless collection is provided)
+
         end_date (str): End date string in format of yyyy-mm-dd for filtering collection (required unless collection is provided)
+
         tile_row (str): MGRS tile row of Landsat image (required unless collection is provided)
+
         tile_path (str): MGRS tile path of Landsat image (required unless collection is provided)
+
         boundary (ee geometry): Boundary for filtering images to images that intersect with the boundary shape (optional)
+
         cloud_percentage_threshold (int): Integer percentage threshold where only imagery with cloud % less than threshold will be provided (optional; defaults to 15)
+        
         collection (ee ImageCollection): Optional argument to convert an eeImageCollection object to a LandsatCollection object - will override other arguments!
 
     Attributes:
         collection (returns: eeImageCollection): Returns an eeImageCollection object from any LandsatCollection image collection object
+        
         dates_list (returns: Server-Side List): Unreadable Earth Engine list of image dates (server-side)
+        
         dates (returns: Client-Side List): Readable pythonic list of image dates (client-side)
+        
         masked_clouds_collection (returns: LandsatCollection image collection): Returns collection with clouds masked (transparent) for each image
+        
         max (returns: eeImage): Returns a temporally reduced max image (calculates max at each pixel)
+        
         median (returns: eeImage): Returns a temporally reduced median image (calculates median at each pixel)
+        
         mean (returns: eeImage): Returns a temporally reduced mean image (calculates mean at each pixel)
+        
         min (returns: eeImage): Returns a temporally reduced min image (calculates min at each pixel)
+        
         gypsum (returns: eeImageCollection): Returns LandsatCollection image collection of singleband gypsum index rasters
+        
         halite (returns: eeImageCollection): Returns LandsatCollection image collection of singleband halite index rasters
+        
         LST (returns: eeImageCollection): Returns LandsatCollection image collection of singleband land-surface-temperature rasters (Celcius)
+        
         ndwi (returns: eeImageCollection): Returns LandsatCollection image collection of singleband NDWI (water) rasters
+        
         ndvi (returns: eeImageCollection): Returns LandsatCollection image collection of singleband NDVI (vegetation) rasters
 
     Methods:
         median_collection(self)
+        
         mean_collection(self)
+        
         max_collection(self)
+        
         min_collection(self)
+        
         ndwi_collection(self, threshold)
+        
         ndvi_collection(self, threshold)
+        
         halite_collection(self, threshold, ng_threshold=None)
+        
         gypsum_collection(self, threshold, ng_threshold=None)
+        
         masked_water_collection(self)
+        
         masked_clouds_collection(self)
+        
         surface_temperature_collection(self)
+        
         mask_with_polygon(self, polygon)
+        
         mask_halite(self, threshold, ng_threshold=None)
+        
         mask_halite_and_gypsum(self, halite_threshold, gypsum_threshold, halite_ng_threshold=None, gypsum_ng_threshold=None)
+        
         list_of_dates(self)
+        
         image_grab(self, img_selector)
+        
         custom_image_grab(self, img_col, img_selector)
+        
         image_pick(self, img_date)
+        
         CollectionStitch(self, img_col2)
 
     Static Methods:
         image_dater(image)
+        
         landsat5bandrename(img)
+        
         landsat_ndwi_fn(image, threshold)
+        
         landsat_ndvi_fn(image, threshold)
+        
         landsat_halite_fn(image, threshold, ng_threshold=None)
+        
         landsat_gypsum_fn(image, threshold, ng_threshold=None)
+        
         MaskWaterLandsat(image)
+        
         halite_mask(image, threshold, ng_threshold=None)
+        
         gypsum_and_halite_mask(image, halite_threshold, gypsum_threshold, halite_ng_threshold=None, gypsum_ng_threshold=None)
+        
         maskL8clouds(image)
+        
         temperature_bands(img)
+        
         landsat_LST(image)
+        
         PixelAreaSum(image, band_name, geometry, threshold=-1, scale=30, maxPixels=1e12)
+        
         dNDWIPixelAreaSum(image, geometry, band_name='ndwi', scale=30, maxPixels=1e12)
 
     Usage:
         The LandsatCollection object alone acts as a base object for which to further filter or process to indices or spatial reductions
+        
         To use the LandsatCollection functionality, use any of the built in class attributes or method functions. For example, using class attributes:
-        ```
+       
         image_collection = LandsatCollection(start_date, end_date, tile_row, tile_path, cloud_percentage_threshold)
 
         ee_image_collection = image_collection.collection #returns eeImageCollection from provided argument filters
@@ -82,7 +132,6 @@ class LandsatCollection:
         NDWI_collection = image_collection.ndwi #returns NDWI LandsatCollection image collection
 
         latest_NDWI_image = NDWI_collection.image_grab(-1) #Example showing how class functions work with any LandsatCollection image collection object, returning latest ndwi image
-        ```
     """
     def __init__(self, start_date=None, end_date=None, tile_row=None, tile_path=None, boundary=None, cloud_percentage_threshold=None, collection=None):
         if collection is None and (start_date is None or end_date is None or cloud_percentage_threshold is None):

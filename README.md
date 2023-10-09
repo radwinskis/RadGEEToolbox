@@ -6,12 +6,12 @@ Initially created by Mark Radwin to help simplify processing imagery for PhD stu
 
 The package is divided into four modules:
 - LandsatCollection
-- SentinelCollection
+- Sentinel2Collection
 - CollectionStitch
 - GetPalette
 
 
-where LandsatCollection.py and SentinelCollection.py are the main two modules for the majority of image processing. 
+where LandsatCollection.py and Sentinel2Collection.py are the main two modules for the majority of image processing. 
 
 Almost all functionality is server-side friendly.
 
@@ -38,7 +38,7 @@ Although similar toolset packages exist, RadGEEToolbox offers differing function
 - Easily call in a variety of useful color palettes for image visualization
 
 ### ⌨️ Basic Usage
-RadGEEToolbox is organized so that all functions are associated with each LandsatCollection and SentinelCollection class modules. You will need to define a base class collection, using arguments standard to defining eeImageCollections, and then you can call any of the class attributes, methods, or static methods to complete processing. Utilizing class attributes allows for very short code lines and very fast processing, while utilizing the methods allows for expanded customization of processing but requires more arguments and interaction from the user. See below for basic examples using the LandsatCollection class module. See URL_PLACEHOLDER for documentation (coming soon).
+RadGEEToolbox is organized so that all functions are associated with each LandsatCollection and Sentinel2Collection class modules. You will need to define a base class collection, using arguments standard to defining eeImageCollections, and then you can call any of the class attributes, methods, or static methods to complete processing. Utilizing class attributes allows for very short code lines and very fast processing, while utilizing the methods allows for expanded customization of processing but requires more arguments and interaction from the user. See below for basic examples using the LandsatCollection class module. See URL_PLACEHOLDER for documentation (coming soon).
 ```
 #Create base class image collection
 image_collection = LandsatCollection(start_date, end_date, tile_row, tile_path, cloud_percentage_threshold)

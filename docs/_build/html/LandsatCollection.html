@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LandsatCollection Documentation &mdash; RadGEEToolbox 1.3 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=c55cb9cb"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Sentinel2Collection Documentation" href="Sentinel2Collection.html" />
+    <link rel="prev" title="Welcome to RadGEEToolbox’s documentation!" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            RadGEEToolbox
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">LandsatCollection Documentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatCollection"><code class="docutils literal notranslate"><span class="pre">LandsatCollection</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.CollectionStitch"><code class="docutils literal notranslate"><span class="pre">LandsatCollection.CollectionStitch()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.MaskWaterLandsat"><code class="docutils literal notranslate"><span class="pre">LandsatCollection.MaskWaterLandsat()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.PixelAreaSum"><code class="docutils literal notranslate"><span class="pre">LandsatCollection.PixelAreaSum()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.custom_image_grab"><code class="docutils literal notranslate"><span class="pre">LandsatCollection.custom_image_grab()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.dNDWIPixelAreaSum"><code class="docutils literal notranslate"><span class="pre">LandsatCollection.dNDWIPixelAreaSum()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.get_boundary_filtered_collection"><code class="docutils literal notranslate"><span class="pre">LandsatCollection.get_boundary_filtered_collection()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.get_filtered_collection"><code class="docutils literal notranslate"><span class="pre">LandsatCollection.get_filtered_collection()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.gypsum_and_halite_mask"><code class="docutils literal notranslate"><span class="pre">LandsatCollection.gypsum_and_halite_mask()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.gypsum_collection"><code class="docutils literal notranslate"><span class="pre">LandsatCollection.gypsum_collection()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.halite_collection"><code class="docutils literal notranslate"><span class="pre">LandsatCollection.halite_collection()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.halite_mask"><code class="docutils literal notranslate"><span class="pre">LandsatCollection.halite_mask()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.image_dater"><code class="docutils literal notranslate"><span class="pre">LandsatCollection.image_dater()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.image_grab"><code class="docutils literal notranslate"><span class="pre">LandsatCollection.image_grab()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.image_pick"><code class="docutils literal notranslate"><span class="pre">LandsatCollection.image_pick()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.landsat5bandrename"><code class="docutils literal notranslate"><span class="pre">LandsatCollection.landsat5bandrename()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.landsat_LST"><code class="docutils literal notranslate"><span class="pre">LandsatCollection.landsat_LST()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.landsat_gypsum_fn"><code class="docutils literal notranslate"><span class="pre">LandsatCollection.landsat_gypsum_fn()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.landsat_halite_fn"><code class="docutils literal notranslate"><span class="pre">LandsatCollection.landsat_halite_fn()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.landsat_ndvi_fn"><code class="docutils literal notranslate"><span class="pre">LandsatCollection.landsat_ndvi_fn()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.landsat_ndwi_fn"><code class="docutils literal notranslate"><span class="pre">LandsatCollection.landsat_ndwi_fn()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.list_of_dates"><code class="docutils literal notranslate"><span class="pre">LandsatCollection.list_of_dates()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.maskL8clouds"><code class="docutils literal notranslate"><span class="pre">LandsatCollection.maskL8clouds()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.mask_halite"><code class="docutils literal notranslate"><span class="pre">LandsatCollection.mask_halite()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.mask_halite_and_gypsum"><code class="docutils literal notranslate"><span class="pre">LandsatCollection.mask_halite_and_gypsum()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.mask_with_polygon"><code class="docutils literal notranslate"><span class="pre">LandsatCollection.mask_with_polygon()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.masked_clouds_collection"><code class="docutils literal notranslate"><span class="pre">LandsatCollection.masked_clouds_collection()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.masked_water_collection"><code class="docutils literal notranslate"><span class="pre">LandsatCollection.masked_water_collection()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.max_collection"><code class="docutils literal notranslate"><span class="pre">LandsatCollection.max_collection()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.mean_collection"><code class="docutils literal notranslate"><span class="pre">LandsatCollection.mean_collection()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.median_collection"><code class="docutils literal notranslate"><span class="pre">LandsatCollection.median_collection()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.min_collection"><code class="docutils literal notranslate"><span class="pre">LandsatCollection.min_collection()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.ndvi_collection"><code class="docutils literal notranslate"><span class="pre">LandsatCollection.ndvi_collection()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.ndwi_collection"><code class="docutils literal notranslate"><span class="pre">LandsatCollection.ndwi_collection()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.surface_temperature_collection"><code class="docutils literal notranslate"><span class="pre">LandsatCollection.surface_temperature_collection()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.temperature_bands"><code class="docutils literal notranslate"><span class="pre">LandsatCollection.temperature_bands()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatSubCollection"><code class="docutils literal notranslate"><span class="pre">LandsatSubCollection</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.LandsatCollection.LandsatSubCollection.get_filtered_collection"><code class="docutils literal notranslate"><span class="pre">LandsatSubCollection.get_filtered_collection()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="Sentinel2Collection.html">Sentinel2Collection Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CollectionStitch.html">CollectionStitch Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="GetPalette.html">GetPalette Documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">RadGEEToolbox</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">LandsatCollection Documentation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/LandsatCollection.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-RadGEEToolbox.LandsatCollection">
+<span id="landsatcollection-documentation"></span><h1>LandsatCollection Documentation<a class="headerlink" href="#module-RadGEEToolbox.LandsatCollection" title="Link to this heading"></a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatCollection">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">RadGEEToolbox.LandsatCollection.</span></span><span class="sig-name descname"><span class="pre">LandsatCollection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_date</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_date</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tile_row</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tile_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cloud_percentage_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatCollection" title="Link to this definition"></a></dt>
+<dd><p>Class object representing a collection of Landsat satellite images</p>
+<p>This class provides methods to filter, process, and analyze Landsat satellite imagery for a given period and region</p>
+<dl>
+<dt>Arguments:</dt><dd><p>start_date (str): Start date string in format of yyyy-mm-dd for filtering collection (required unless collection is provided)</p>
+<p>end_date (str): End date string in format of yyyy-mm-dd for filtering collection (required unless collection is provided)</p>
+<p>tile_row (str): MGRS tile row of Landsat image (required unless collection is provided)</p>
+<p>tile_path (str): MGRS tile path of Landsat image (required unless collection is provided)</p>
+<p>boundary (ee geometry): Boundary for filtering images to images that intersect with the boundary shape (optional)</p>
+<p>cloud_percentage_threshold (int): Integer percentage threshold where only imagery with cloud % less than threshold will be provided (optional; defaults to 15)</p>
+<p>collection (ee ImageCollection): Optional argument to convert an eeImageCollection object to a LandsatCollection object - will override other arguments!</p>
+</dd>
+<dt>Attributes:</dt><dd><p>collection (returns: eeImageCollection): Returns an eeImageCollection object from any LandsatCollection image collection object</p>
+<p>dates_list (returns: Server-Side List): Unreadable Earth Engine list of image dates (server-side)</p>
+<p>dates (returns: Client-Side List): Readable pythonic list of image dates (client-side)</p>
+<p>masked_clouds_collection (returns: LandsatCollection image collection): Returns collection with clouds masked (transparent) for each image</p>
+<p>max (returns: eeImage): Returns a temporally reduced max image (calculates max at each pixel)</p>
+<p>median (returns: eeImage): Returns a temporally reduced median image (calculates median at each pixel)</p>
+<p>mean (returns: eeImage): Returns a temporally reduced mean image (calculates mean at each pixel)</p>
+<p>min (returns: eeImage): Returns a temporally reduced min image (calculates min at each pixel)</p>
+<p>gypsum (returns: eeImageCollection): Returns LandsatCollection image collection of singleband gypsum index rasters</p>
+<p>halite (returns: eeImageCollection): Returns LandsatCollection image collection of singleband halite index rasters</p>
+<p>LST (returns: eeImageCollection): Returns LandsatCollection image collection of singleband land-surface-temperature rasters (Celcius)</p>
+<p>ndwi (returns: eeImageCollection): Returns LandsatCollection image collection of singleband NDWI (water) rasters</p>
+<p>ndvi (returns: eeImageCollection): Returns LandsatCollection image collection of singleband NDVI (vegetation) rasters</p>
+</dd>
+<dt>Methods:</dt><dd><p>median_collection(self)</p>
+<p>mean_collection(self)</p>
+<p>max_collection(self)</p>
+<p>min_collection(self)</p>
+<p>ndwi_collection(self, threshold)</p>
+<p>ndvi_collection(self, threshold)</p>
+<p>halite_collection(self, threshold, ng_threshold=None)</p>
+<p>gypsum_collection(self, threshold, ng_threshold=None)</p>
+<p>masked_water_collection(self)</p>
+<p>masked_clouds_collection(self)</p>
+<p>surface_temperature_collection(self)</p>
+<p>mask_with_polygon(self, polygon)</p>
+<p>mask_halite(self, threshold, ng_threshold=None)</p>
+<p>mask_halite_and_gypsum(self, halite_threshold, gypsum_threshold, halite_ng_threshold=None, gypsum_ng_threshold=None)</p>
+<p>list_of_dates(self)</p>
+<p>image_grab(self, img_selector)</p>
+<p>custom_image_grab(self, img_col, img_selector)</p>
+<p>image_pick(self, img_date)</p>
+<p>CollectionStitch(self, img_col2)</p>
+</dd>
+<dt>Static Methods:</dt><dd><p>image_dater(image)</p>
+<p>landsat5bandrename(img)</p>
+<p>landsat_ndwi_fn(image, threshold)</p>
+<p>landsat_ndvi_fn(image, threshold)</p>
+<p>landsat_halite_fn(image, threshold, ng_threshold=None)</p>
+<p>landsat_gypsum_fn(image, threshold, ng_threshold=None)</p>
+<p>MaskWaterLandsat(image)</p>
+<p>halite_mask(image, threshold, ng_threshold=None)</p>
+<p>gypsum_and_halite_mask(image, halite_threshold, gypsum_threshold, halite_ng_threshold=None, gypsum_ng_threshold=None)</p>
+<p>maskL8clouds(image)</p>
+<p>temperature_bands(img)</p>
+<p>landsat_LST(image)</p>
+<p>PixelAreaSum(image, band_name, geometry, threshold=-1, scale=30, maxPixels=1e12)</p>
+<p>dNDWIPixelAreaSum(image, geometry, band_name=’ndwi’, scale=30, maxPixels=1e12)</p>
+</dd>
+<dt>Usage:</dt><dd><p>The LandsatCollection object alone acts as a base object for which to further filter or process to indices or spatial reductions</p>
+<p>To use the LandsatCollection functionality, use any of the built in class attributes or method functions. For example, using class attributes:</p>
+<p>image_collection = LandsatCollection(start_date, end_date, tile_row, tile_path, cloud_percentage_threshold)</p>
+<p>ee_image_collection = image_collection.collection #returns eeImageCollection from provided argument filters</p>
+<p>latest_image = image_collection.image_grab(-1) #returns latest image in collection as eeImage</p>
+<p>cloud_masked_collection = image_collection.masked_clouds_collection #returns cloud-masked LandsatCollection image collection</p>
+<p>NDWI_collection = image_collection.ndwi #returns NDWI LandsatCollection image collection</p>
+<p>latest_NDWI_image = NDWI_collection.image_grab(-1) #Example showing how class functions work with any LandsatCollection image collection object, returning latest ndwi image</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatCollection.CollectionStitch">
+<span class="sig-name descname"><span class="pre">CollectionStitch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">img_col2</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.CollectionStitch" title="Link to this definition"></a></dt>
+<dd><p>Function to mosaic two LandsatCollection objects which share image dates. Mosaics are only formed for dates where both image collections have images. Server-side friendly.</p>
+<p>Args:
+self: self is passed into argument, which is a LandsatCollection image collection
+img_col2: secondary LandsatCollection image collection to be mosaiced with the primary image collection</p>
+<p>Returns:
+image collection: LandsatCollection image collection with mosaiced imagery and image properties from the primary collection</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatCollection.MaskWaterLandsat">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">MaskWaterLandsat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.MaskWaterLandsat" title="Link to this definition"></a></dt>
+<dd><p>Function to mask water pixels</p>
+<p>Args:
+image: input eeImage</p>
+<p>Returns:
+image: output eeImage with water pixels masked</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatCollection.PixelAreaSum">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">PixelAreaSum</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">band_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geometry</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">30</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maxPixels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1000000000000.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.PixelAreaSum" title="Link to this definition"></a></dt>
+<dd><p>Function to calculate the summation of area for pixels of interest (above a specific threshold) and store the value as image property (matching name of chosen band)</p>
+<p>Args:
+image: input eeImage
+band_name: name of band (string) for calculating area
+geometry: eeGeometry object denoting area to clip to for area calculation
+threshold: integer threshold to specify masking of pixels below threshold (defaults to -1)
+scale: integer scale of image resolution (meters) (defaults to 30)
+maxPixels: integer denoting maximum number of pixels for calculations</p>
+<p>Returns:
+image: eeImage with area calculation stored as property matching name of band</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatCollection.custom_image_grab">
+<span class="sig-name descname"><span class="pre">custom_image_grab</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">img_col</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">img_selector</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.custom_image_grab" title="Link to this definition"></a></dt>
+<dd><p>Function to select (“grab”) image of a specific index from the list of dates of an eeImageCollection object</p>
+<p>Args:
+self: self is passed into argument
+img_col: eeImageCollection with same dates as another LandsatCollection image collection object
+img_selector: index of image in list of dates for which user seeks to “select”</p>
+<p>Returns:
+image: eeImage of selected image</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatCollection.dNDWIPixelAreaSum">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">dNDWIPixelAreaSum</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geometry</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">band_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ndwi'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">30</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maxPixels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1000000000000.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.dNDWIPixelAreaSum" title="Link to this definition"></a></dt>
+<dd><p>Function to dynamically calulate the summation of area for water pixels of interest and store the value as image property named ‘ndwi’
+Uses Otsu thresholding to dynamically choose the best threshold rather than needing to specify threshold.
+Note: An offset of 0.15 is added to the Otsu threshold.</p>
+<p>Args:
+image: input eeImage
+geometry: eeGeometry object denoting area to clip to for area calculation
+band_name: name of ndwi band (string) for calculating area (defaults to ‘ndwi’)
+scale: integer scale of image resolution (meters) (defaults to 30)
+maxPixels: integer denoting maximum number of pixels for calculations</p>
+<p>Returns:
+image: eeImage with area calculation stored as property matching name of band</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatCollection.get_boundary_filtered_collection">
+<span class="sig-name descname"><span class="pre">get_boundary_filtered_collection</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.get_boundary_filtered_collection" title="Link to this definition"></a></dt>
+<dd><p>Function to filter and mask image collection based on LandsatCollection class arguments</p>
+<p>Args:
+self: self is passed into argument</p>
+<p>Returns:
+image collection: eeImageCollection</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatCollection.get_filtered_collection">
+<span class="sig-name descname"><span class="pre">get_filtered_collection</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.get_filtered_collection" title="Link to this definition"></a></dt>
+<dd><p>Function to filter image collection based on LandsatCollection class arguments</p>
+<p>Args:
+self: self is passed into argument</p>
+<p>Returns:
+image collection: eeImageCollection</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatCollection.gypsum_and_halite_mask">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">gypsum_and_halite_mask</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">halite_threshold</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gypsum_threshold</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">halite_ng_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gypsum_ng_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.gypsum_and_halite_mask" title="Link to this definition"></a></dt>
+<dd><p>Function to mask both gypsum and halite pixels. Must specify threshold for isolating halite and gypsum pixels. Can specify separate thresholds for Landsat 5 vs 8&amp;9 images</p>
+<p>Args:
+image: input eeImage
+halite_threshold: integer threshold for halite where pixels less than threshold are masked
+gypsum_threshold: integer threshold for gypsum where pixels less than threshold are masked
+halite_ng_threshold (optional): integer threshold for halite to be applied to landsat 8 or 9 where pixels less than threshold are masked 
+gypsum_ng_threshold (optional): integer threshold for gypsum to be applied to landsat 8 or 9 where pixels less than threshold are masked</p>
+<p>Returns:
+image: eeImage where gypsum and halite pixels are masked (image without halite or gypsum pixels)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatCollection.gypsum_collection">
+<span class="sig-name descname"><span class="pre">gypsum_collection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">threshold</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ng_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.gypsum_collection" title="Link to this definition"></a></dt>
+<dd><p>Function to calculate gypsum index and return collection as class object. Can specify separate thresholds for Landsat 5 vs 8&amp;9 images</p>
+<p>Args:
+self: self is passed into argument
+threshold: specify threshold for gypsum function (values less than threshold are masked)
+ng_threshold: (optional) specify threshold for Landsat 8&amp;9 gypsum function (values less than threshold are masked)</p>
+<p>Returns:
+image collection: LandsatCollecion image collection object of gypsum index imagery</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatCollection.halite_collection">
+<span class="sig-name descname"><span class="pre">halite_collection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">threshold</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ng_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.halite_collection" title="Link to this definition"></a></dt>
+<dd><p>Function to calculate halite index and return collection as class object. Can specify separate thresholds for Landsat 5 vs 8&amp;9 images</p>
+<p>Args:
+self: self is passed into argument
+threshold: specify threshold for halite function (values less than threshold are masked)
+ng_threshold: (optional) specify threshold for Landsat 8&amp;9 halite function (values less than threshold are masked)</p>
+<p>Returns:
+image collection: LandsatCollecion image collection object of halite index imagery</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatCollection.halite_mask">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">halite_mask</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ng_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.halite_mask" title="Link to this definition"></a></dt>
+<dd><p>Function to mask halite pixels after specifying index to isolate/mask-to halite pixels. Can specify separate thresholds for Landsat 5 vs 8&amp;9 images</p>
+<p>Args:
+image: input eeImage
+threshold: integer threshold where pixels less than threshold are masked
+ng_threshold (optional): integer threshold to be applied to landsat 8 or 9 where pixels less than threshold are masked</p>
+<p>Returns:
+image: eeImage where halite pixels are masked (image without halite pixels)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatCollection.image_dater">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">image_dater</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.image_dater" title="Link to this definition"></a></dt>
+<dd><p>Adds date to image properties as ‘Date_Filter’</p>
+<p>Args: 
+image (eeImage): input image</p>
+<p>Use: to be mapped over an image collection</p>
+<p>Returns: 
+image (eeImage): image with date in properties</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatCollection.image_grab">
+<span class="sig-name descname"><span class="pre">image_grab</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">img_selector</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.image_grab" title="Link to this definition"></a></dt>
+<dd><p>Function to select (“grab”) image of a specific index from the list of dates. Easy way to get latest image or browse imagery one-by-one.</p>
+<p>Args:
+self: self is passed into argument
+img_selector: index of image in list of dates for which user seeks to “select”</p>
+<p>Returns:
+image: eeImage of selected image</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatCollection.image_pick">
+<span class="sig-name descname"><span class="pre">image_pick</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">img_date</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.image_pick" title="Link to this definition"></a></dt>
+<dd><p>Function to select (“grab”) image of a specific date in format of ‘YYYY-MM-DD’</p>
+<p>Args:
+self: self is passed into argument
+img_date: date (str) of image to select in format of ‘YYYY-MM-DD’</p>
+<p>Returns:
+image: eeImage of selected image</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatCollection.landsat5bandrename">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">landsat5bandrename</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">img</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.landsat5bandrename" title="Link to this definition"></a></dt>
+<dd><p>Function to rename Landsat 5 bands to match Landsat 8 &amp; 9</p>
+<p>Args: 
+image (eeImage): input image</p>
+<p>Returns: 
+image (eeImage): image with renamed bands</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatCollection.landsat_LST">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">landsat_LST</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.landsat_LST" title="Link to this definition"></a></dt>
+<dd><p>Function to calculate land surface temperature (LST) from landsat TIR bands</p>
+<p>Args:
+image: input eeImage</p>
+<p>Returns:
+image: output LST eeImage</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatCollection.landsat_gypsum_fn">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">landsat_gypsum_fn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ng_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.landsat_gypsum_fn" title="Link to this definition"></a></dt>
+<dd><p>Function to calculate gypsum index for Landsat imagery. Can specify separate thresholds for Landsat 5 vs 8&amp;9 images</p>
+<p>Args:
+image: input eeImage
+threshold: integer threshold where pixels less than threshold are masked
+ng_threshold (optional): integer threshold to be applied to landsat 8 or 9 where pixels less than threshold are masked</p>
+<p>Returns:
+image: gypsum eeImage</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatCollection.landsat_halite_fn">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">landsat_halite_fn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ng_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.landsat_halite_fn" title="Link to this definition"></a></dt>
+<dd><p>Function to calculate halite index for Landsat imagery. Can specify separate thresholds for Landsat 5 vs 8&amp;9 images</p>
+<p>Args:
+image: input eeImage
+threshold: integer threshold where pixels less than threshold are masked
+ng_threshold (optional): integer threshold to be applied to landsat 8 or 9 where pixels less than threshold are masked</p>
+<p>Returns:
+image: halite eeImage</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatCollection.landsat_ndvi_fn">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">landsat_ndvi_fn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.landsat_ndvi_fn" title="Link to this definition"></a></dt>
+<dd><p>Function to calculate ndvi for Landsat imagery</p>
+<p>Args:
+image: input eeImage
+threshold: integer threshold where pixels less than threshold are masked</p>
+<p>Returns:
+image: ndvi eeImage</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatCollection.landsat_ndwi_fn">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">landsat_ndwi_fn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.landsat_ndwi_fn" title="Link to this definition"></a></dt>
+<dd><p>Function to calculate ndwi for Landsat imagery</p>
+<p>Args: 
+image (eeImage): input image
+threshold (int): value between -1 and 1 where pixels less than threshold will be masked</p>
+<p>Returns:
+image: ndwi image</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatCollection.list_of_dates">
+<span class="sig-name descname"><span class="pre">list_of_dates</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.list_of_dates" title="Link to this definition"></a></dt>
+<dd><p>Function to retrieve list of dates as server-side object</p>
+<p>Args:
+self: self is passed into argument</p>
+<p>Returns:
+list: server-side eeList of dates</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatCollection.maskL8clouds">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">maskL8clouds</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.maskL8clouds" title="Link to this definition"></a></dt>
+<dd><p>Function to map clouds</p>
+<p>Args:
+image: input eeImage</p>
+<p>Returns:
+image: output eeImage with clouds masked</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatCollection.mask_halite">
+<span class="sig-name descname"><span class="pre">mask_halite</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">threshold</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ng_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.mask_halite" title="Link to this definition"></a></dt>
+<dd><p>Function to mask halite and return collection as class object. Can specify separate thresholds for Landsat 5 vs 8&amp;9 images</p>
+<p>Args:
+self: self is passed into argument
+threshold: specify threshold for gypsum function (values less than threshold are masked)
+ng_threshold: (optional) specify threshold for Landsat 8&amp;9 gypsum function (values less than threshold are masked)</p>
+<p>Returns:
+image collection: LandsatCollection image collection object with halite masked</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatCollection.mask_halite_and_gypsum">
+<span class="sig-name descname"><span class="pre">mask_halite_and_gypsum</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">halite_threshold</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gypsum_threshold</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">halite_ng_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gypsum_ng_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.mask_halite_and_gypsum" title="Link to this definition"></a></dt>
+<dd><p>Function to mask halite and gypsum and return collection as class object. Can specify separate thresholds for Landsat 5 vs 8&amp;9 images</p>
+<p>Args:
+self: self is passed into argument
+halite_threshold: specify threshold for halite function (values less than threshold are masked)
+halite_ng_threshold: (optional) specify threshold for Landsat 8&amp;9 halite function (values less than threshold are masked)
+gypsum_threshold: specify threshold for gypsum function (values less than threshold are masked)
+gypsum_ng_threshold: (optional) specify threshold for Landsat 8&amp;9 gypsum function (values less than threshold are masked)</p>
+<p>Returns:
+image collection: LandsatCollection image collection object with gypsum and halite masked</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatCollection.mask_with_polygon">
+<span class="sig-name descname"><span class="pre">mask_with_polygon</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">polygon</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.mask_with_polygon" title="Link to this definition"></a></dt>
+<dd><p>Function to mask LandsatCollection image collection by a polygon (eeGeometry)</p>
+<p>Args:
+self: self is passed into argument
+polygon: eeGeometry polygon or shape used to mask image collection</p>
+<p>Returns:
+image collection: masked LandsatCollection image collection</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatCollection.masked_clouds_collection">
+<span class="sig-name descname"><span class="pre">masked_clouds_collection</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.masked_clouds_collection" title="Link to this definition"></a></dt>
+<dd><p>Function to mask clouds and return collection as class object</p>
+<p>Args:
+self: self is passed into argument</p>
+<p>Returns:
+image collection: LandsatCollection image collection objects with clouds being masked</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatCollection.masked_water_collection">
+<span class="sig-name descname"><span class="pre">masked_water_collection</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.masked_water_collection" title="Link to this definition"></a></dt>
+<dd><p>Function to mask water and return collection as class object</p>
+<p>Args:
+self: self is passed into argument</p>
+<p>Returns:
+image collection: LandsatCollection image collection object of images with water being masked</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatCollection.max_collection">
+<span class="sig-name descname"><span class="pre">max_collection</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.max_collection" title="Link to this definition"></a></dt>
+<dd><p>Function to calculate max image from image collection</p>
+<p>Args:
+self: self is passed into argument</p>
+<p>Returns:
+image: max eeImage</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatCollection.mean_collection">
+<span class="sig-name descname"><span class="pre">mean_collection</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.mean_collection" title="Link to this definition"></a></dt>
+<dd><p>Function to calculate mean image from image collection</p>
+<p>Args:
+self: self is passed into argument</p>
+<p>Returns:
+image: mean eeImage</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatCollection.median_collection">
+<span class="sig-name descname"><span class="pre">median_collection</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.median_collection" title="Link to this definition"></a></dt>
+<dd><p>Function to calculate median image from image collection</p>
+<p>Args:
+self: self is passed into argument</p>
+<p>Returns:
+image: median eeImage</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatCollection.min_collection">
+<span class="sig-name descname"><span class="pre">min_collection</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.min_collection" title="Link to this definition"></a></dt>
+<dd><p>Function to calculate min image from image collection</p>
+<p>Args:
+self: self is passed into argument</p>
+<p>Returns:
+image: min eeImage</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatCollection.ndvi_collection">
+<span class="sig-name descname"><span class="pre">ndvi_collection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">threshold</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.ndvi_collection" title="Link to this definition"></a></dt>
+<dd><p>Function to calculate ndvi and return collection as class object</p>
+<p>Args:
+self: self is passed into argument
+threshold: specify threshold for NDVI function (values less than threshold are masked)</p>
+<p>Returns:
+image collection: LandsatCollecion image collection object of ndvi imagery</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatCollection.ndwi_collection">
+<span class="sig-name descname"><span class="pre">ndwi_collection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">threshold</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.ndwi_collection" title="Link to this definition"></a></dt>
+<dd><p>Function to calculate ndwi and return collection as class object</p>
+<p>Args:
+self: self is passed into argument
+threshold: specify threshold for NDWI function (values less than threshold are masked)</p>
+<p>Returns:
+image collection: LandsatCollecion image collection object of ndwi imagery</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatCollection.surface_temperature_collection">
+<span class="sig-name descname"><span class="pre">surface_temperature_collection</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.surface_temperature_collection" title="Link to this definition"></a></dt>
+<dd><p>Function to calculate LST and return collection as class object</p>
+<p>Args:
+self: self is passed into argument</p>
+<p>Returns:
+image collection: LandsatCollection image collection object of land surface temperature imagery (temperature in Celcius)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatCollection.temperature_bands">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">temperature_bands</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">img</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatCollection.temperature_bands" title="Link to this definition"></a></dt>
+<dd><p>Function to rename bands for temperature calculations</p>
+<p>Args:
+img: input eeImage</p>
+<p>Returns:
+image: output eeImage with new bands</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatSubCollection">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">RadGEEToolbox.LandsatCollection.</span></span><span class="sig-name descname"><span class="pre">LandsatSubCollection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">collection</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dates_list</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatSubCollection" title="Link to this definition"></a></dt>
+<dd><p>Class to handle returning processed collections back to a class object</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.LandsatCollection.LandsatSubCollection.get_filtered_collection">
+<span class="sig-name descname"><span class="pre">get_filtered_collection</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.LandsatCollection.LandsatSubCollection.get_filtered_collection" title="Link to this definition"></a></dt>
+<dd><p>Function to filter image collection based on LandsatCollection class arguments</p>
+<p>Args:
+self: self is passed into argument</p>
+<p>Returns:
+image collection: eeImageCollection</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="Welcome to RadGEEToolbox’s documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="Sentinel2Collection.html" class="btn btn-neutral float-right" title="Sentinel2Collection Documentation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Mark Radwin.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

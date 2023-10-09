@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CollectionStitch Documentation &mdash; RadGEEToolbox 1.3 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=c55cb9cb"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="GetPalette Documentation" href="GetPalette.html" />
+    <link rel="prev" title="Sentinel2Collection Documentation" href="Sentinel2Collection.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            RadGEEToolbox
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="LandsatCollection.html">LandsatCollection Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Sentinel2Collection.html">Sentinel2Collection Documentation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">CollectionStitch Documentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#RadGEEToolbox.CollectionStitch.CollectionStitch"><code class="docutils literal notranslate"><span class="pre">CollectionStitch()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="GetPalette.html">GetPalette Documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">RadGEEToolbox</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">CollectionStitch Documentation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/CollectionStitch.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-RadGEEToolbox.CollectionStitch">
+<span id="collectionstitch-documentation"></span><h1>CollectionStitch Documentation<a class="headerlink" href="#module-RadGEEToolbox.CollectionStitch" title="Link to this heading"></a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="RadGEEToolbox.CollectionStitch.CollectionStitch">
+<span class="sig-prename descclassname"><span class="pre">RadGEEToolbox.CollectionStitch.</span></span><span class="sig-name descname"><span class="pre">CollectionStitch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">img_col1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">img_col2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">copy_properties_from</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.CollectionStitch.CollectionStitch" title="Link to this definition"></a></dt>
+<dd><p>Function to mosaic two RadGEETools image collection objects which share image dates. 
+Mosaics are only formed for dates where both image collections have images. Server-side friendly.
+Returned image collection is an eeImageCollection object. NOTE this is different from the CollectionStitch function available in the LandsatCollection and SentinelCollection classes.</p>
+<p>Args:
+img_col2: primary LandsatCollection image collection to be mosaiced with the secondary image collection
+img_col2: secondary LandsatCollection image collection to be mosaiced with the primary image collection
+copy_properties_from: image collection used for copying image properties</p>
+<p>Returns:
+image collection: eeImageCollection image collection with mosaiced imagery and image properties from chosen collection</p>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="Sentinel2Collection.html" class="btn btn-neutral float-left" title="Sentinel2Collection Documentation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="GetPalette.html" class="btn btn-neutral float-right" title="GetPalette Documentation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Mark Radwin.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

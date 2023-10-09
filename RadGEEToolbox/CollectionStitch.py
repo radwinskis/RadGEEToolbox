@@ -4,7 +4,7 @@ def CollectionStitch(img_col1, img_col2, copy_properties_from=1):
     """
     Function to mosaic two RadGEETools image collection objects which share image dates. 
     Mosaics are only formed for dates where both image collections have images. Server-side friendly.
-    Returned image collection is an eeImageCollection object
+    Returned image collection is an eeImageCollection object. NOTE this is different from the CollectionStitch function available in the LandsatCollection and SentinelCollection classes.
 
     Args:
     img_col2: primary LandsatCollection image collection to be mosaiced with the secondary image collection

@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sentinel2Collection Documentation &mdash; RadGEEToolbox 1.3 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=c55cb9cb"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="CollectionStitch Documentation" href="CollectionStitch.html" />
+    <link rel="prev" title="LandsatCollection Documentation" href="LandsatCollection.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            RadGEEToolbox
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="LandsatCollection.html">LandsatCollection Documentation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Sentinel2Collection Documentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection"><code class="docutils literal notranslate"><span class="pre">Sentinel2Collection</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.CollectionStitch"><code class="docutils literal notranslate"><span class="pre">Sentinel2Collection.CollectionStitch()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.MaskCloudsS2"><code class="docutils literal notranslate"><span class="pre">Sentinel2Collection.MaskCloudsS2()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.MaskWaterS2"><code class="docutils literal notranslate"><span class="pre">Sentinel2Collection.MaskWaterS2()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.PixelAreaSum"><code class="docutils literal notranslate"><span class="pre">Sentinel2Collection.PixelAreaSum()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.custom_image_grab"><code class="docutils literal notranslate"><span class="pre">Sentinel2Collection.custom_image_grab()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.get_boundary_filtered_collection"><code class="docutils literal notranslate"><span class="pre">Sentinel2Collection.get_boundary_filtered_collection()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.get_filtered_collection"><code class="docutils literal notranslate"><span class="pre">Sentinel2Collection.get_filtered_collection()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.gypsum_collection"><code class="docutils literal notranslate"><span class="pre">Sentinel2Collection.gypsum_collection()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.halite_collection"><code class="docutils literal notranslate"><span class="pre">Sentinel2Collection.halite_collection()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.image_dater"><code class="docutils literal notranslate"><span class="pre">Sentinel2Collection.image_dater()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.image_grab"><code class="docutils literal notranslate"><span class="pre">Sentinel2Collection.image_grab()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.image_pick"><code class="docutils literal notranslate"><span class="pre">Sentinel2Collection.image_pick()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.list_of_dates"><code class="docutils literal notranslate"><span class="pre">Sentinel2Collection.list_of_dates()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.mask_with_polygon"><code class="docutils literal notranslate"><span class="pre">Sentinel2Collection.mask_with_polygon()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.masked_clouds_collection"><code class="docutils literal notranslate"><span class="pre">Sentinel2Collection.masked_clouds_collection()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.masked_water_collection"><code class="docutils literal notranslate"><span class="pre">Sentinel2Collection.masked_water_collection()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.max_collection"><code class="docutils literal notranslate"><span class="pre">Sentinel2Collection.max_collection()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.mean_collection"><code class="docutils literal notranslate"><span class="pre">Sentinel2Collection.mean_collection()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.median_collection"><code class="docutils literal notranslate"><span class="pre">Sentinel2Collection.median_collection()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.min_collection"><code class="docutils literal notranslate"><span class="pre">Sentinel2Collection.min_collection()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.ndvi_collection"><code class="docutils literal notranslate"><span class="pre">Sentinel2Collection.ndvi_collection()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.ndwi_collection"><code class="docutils literal notranslate"><span class="pre">Sentinel2Collection.ndwi_collection()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.sentinel_gypsum_fn"><code class="docutils literal notranslate"><span class="pre">Sentinel2Collection.sentinel_gypsum_fn()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.sentinel_halite_fn"><code class="docutils literal notranslate"><span class="pre">Sentinel2Collection.sentinel_halite_fn()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.sentinel_ndvi_fn"><code class="docutils literal notranslate"><span class="pre">Sentinel2Collection.sentinel_ndvi_fn()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.sentinel_ndwi_fn"><code class="docutils literal notranslate"><span class="pre">Sentinel2Collection.sentinel_ndwi_fn()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2SubCollection"><code class="docutils literal notranslate"><span class="pre">Sentinel2SubCollection</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2SubCollection.get_filtered_collection"><code class="docutils literal notranslate"><span class="pre">Sentinel2SubCollection.get_filtered_collection()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="CollectionStitch.html">CollectionStitch Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="GetPalette.html">GetPalette Documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">RadGEEToolbox</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Sentinel2Collection Documentation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/Sentinel2Collection.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-RadGEEToolbox.Sentinel2Collection">
+<span id="sentinel2collection-documentation"></span><h1>Sentinel2Collection Documentation<a class="headerlink" href="#module-RadGEEToolbox.Sentinel2Collection" title="Link to this heading"></a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="RadGEEToolbox.Sentinel2Collection.Sentinel2Collection">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">RadGEEToolbox.Sentinel2Collection.</span></span><span class="sig-name descname"><span class="pre">Sentinel2Collection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_date</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_date</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tile</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cloud_percentage_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nodata_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection" title="Link to this definition"></a></dt>
+<dd><p>Class object representing a collection of Sentinel satellite images</p>
+<p>This class provides methods to filter, process, and analyze Sentinel satellite imagery for a given period and region</p>
+<dl>
+<dt>Arguments:</dt><dd><p>start_date (str): Start date string in format of yyyy-mm-dd for filtering collection (required unless collection is provided)</p>
+<p>end_date (str): End date string in format of yyyy-mm-dd for filtering collection (required unless collection is provided)</p>
+<p>tile (str): tile of Sentinel image (required unless collection is provided)</p>
+<p>boundary (ee geometry): Boundary for filtering images to images that intersect with the boundary shape (optional)</p>
+<p>cloud_percentage_threshold (int): Integer percentage threshold where only imagery with cloud % less than threshold will be provided (optional; defaults to 15)</p>
+<p>collection (ee ImageCollection): Optional argument to convert an eeImageCollection object to a Sentinel2Collection object - will override other arguments!</p>
+</dd>
+<dt>Attributes:</dt><dd><p>collection (returns: eeImageCollection): Returns an eeImageCollection object from any Sentinel2Collection image collection object</p>
+<p>dates_list (returns: Server-Side List): Unreadable Earth Engine list of image dates (server-side)</p>
+<p>dates (returns: Client-Side List): Readable pythonic list of image dates (client-side)</p>
+<p>masked_clouds_collection (returns: Sentinel2Collection image collection): Returns collection with clouds masked (transparent) for each image</p>
+<p>max (returns: eeImage): Returns a temporally reduced max image (calculates max at each pixel)</p>
+<p>median (returns: eeImage): Returns a temporally reduced median image (calculates median at each pixel)</p>
+<p>mean (returns: eeImage): Returns a temporally reduced mean image (calculates mean at each pixel)</p>
+<p>min (returns: eeImage): Returns a temporally reduced min image (calculates min at each pixel)</p>
+<p>gypsum (returns: eeImageCollection): Returns Sentinel2Collection image collection of singleband gypsum index rasters</p>
+<p>halite (returns: eeImageCollection): Returns Sentinel2Collection image collection of singleband halite index rasters</p>
+<p>ndwi (returns: eeImageCollection): Returns Sentinel2Collection image collection of singleband NDWI (water) rasters</p>
+<p>ndvi (returns: eeImageCollection): Returns Sentinel2Collection image collection of singleband NDVI (vegetation) rasters</p>
+</dd>
+<dt>Methods:</dt><dd><p>median_collection(self)</p>
+<p>mean_collection(self)</p>
+<p>max_collection(self)</p>
+<p>min_collection(self)</p>
+<p>ndwi_collection(self, threshold)</p>
+<p>ndvi_collection(self, threshold)</p>
+<p>halite_collection(self, threshold)</p>
+<p>gypsum_collection(self, threshold)</p>
+<p>mask_with_polygon(self, polygon)</p>
+<p>masked_water_collection(self)</p>
+<p>masked_clouds_collection(self)</p>
+<p>surface_temperature_collection(self)</p>
+<p>mask_halite(self, threshold)</p>
+<p>mask_halite_and_gypsum(self, halite_threshold, gypsum_threshold)</p>
+<p>list_of_dates(self)</p>
+<p>image_grab(self, img_selector)</p>
+<p>custom_image_grab(self, img_col, img_selector)</p>
+<p>image_pick(self, img_date)</p>
+<p>CollectionStitch(self, img_col2)</p>
+</dd>
+<dt>Static Methods:</dt><dd><p>image_dater(image)</p>
+<p>sentinel_ndwi_fn(image, threshold)</p>
+<p>sentinel_ndvi_fn(image, threshold)</p>
+<p>sentinel_halite_fn(image, threshold)</p>
+<p>sentinel_gypsum_fn(image, threshold)</p>
+<p>MaskWaterS2(image)</p>
+<p>halite_mask(image, threshold)</p>
+<p>gypsum_and_halite_mask(image, halite_threshold, gypsum_threshold)</p>
+<p>MaskCloudsS2(image)</p>
+<p>PixelAreaSum(image, band_name, geometry, threshold=-1, scale=30, maxPixels=1e12)</p>
+</dd>
+<dt>Usage:</dt><dd><p>The Sentinel2Collection object alone acts as a base object for which to further filter or process to indices or spatial reductions</p>
+<p>To use the Sentinel2Collection functionality, use any of the built in class attributes or method functions. For example, using class attributes:</p>
+<p>image_collection = Sentinel2Collection(start_date, end_date, tile, cloud_percentage_threshold)</p>
+<p>ee_image_collection = image_collection.collection #returns eeImageCollection from provided argument filters</p>
+<p>latest_image = image_collection.image_grab(-1) #returns latest image in collection as eeImage</p>
+<p>cloud_masked_collection = image_collection.masked_clouds_collection #returns cloud-masked Sentinel2Collection image collection</p>
+<p>NDWI_collection = image_collection.ndwi #returns NDWI Sentinel2Collection image collection</p>
+<p>latest_NDWI_image = NDWI_collection.image_grab(-1) #Example showing how class functions work with any Sentinel2Collection image collection object, returning latest ndwi image</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.CollectionStitch">
+<span class="sig-name descname"><span class="pre">CollectionStitch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">img_col2</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.CollectionStitch" title="Link to this definition"></a></dt>
+<dd><p>Function to mosaic two LandsatCollection objects which share image dates. Mosaics are only formed for dates where both image collections have images. Server-side friendly.</p>
+<p>Args:
+self: self is passed into argument, which is a LandsatCollection image collection
+img_col2: secondary LandsatCollection image collection to be mosaiced with the primary image collection</p>
+<p>Returns:
+image collection: LandsatCollection image collection with mosaiced imagery and image properties from the primary collection</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.MaskCloudsS2">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">MaskCloudsS2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.MaskCloudsS2" title="Link to this definition"></a></dt>
+<dd><p>Function to map clouds</p>
+<p>Args:
+image: input eeImage</p>
+<p>Returns:
+image: output eeImage with clouds masked</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.MaskWaterS2">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">MaskWaterS2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.MaskWaterS2" title="Link to this definition"></a></dt>
+<dd><p>Function to mask water pixels</p>
+<p>Args:
+image: input eeImage</p>
+<p>Returns:
+image: output eeImage with water pixels masked</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.PixelAreaSum">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">PixelAreaSum</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">band_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geometry</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maxPixels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1000000000000.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.PixelAreaSum" title="Link to this definition"></a></dt>
+<dd><p>Function to calculate the summation of area for pixels of interest (above a specific threshold) and store the value as image property (matching name of chosen band)</p>
+<p>Args:
+image: input eeImage
+band_name: name of band (string) for calculating area
+geometry: eeGeometry object denoting area to clip to for area calculation
+threshold: integer threshold to specify masking of pixels below threshold (defaults to -1)
+scale: integer scale of image resolution (meters) (defaults to 30)
+maxPixels: integer denoting maximum number of pixels for calculations</p>
+<p>Returns:
+image: eeImage with area calculation stored as property matching name of band</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.custom_image_grab">
+<span class="sig-name descname"><span class="pre">custom_image_grab</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">img_col</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">img_selector</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.custom_image_grab" title="Link to this definition"></a></dt>
+<dd><p>Function to select (“grab”) image of a specific index from the list of dates of an eeImageCollection object</p>
+<p>Args:
+self: self is passed into argument
+img_col: eeImageCollection with same dates as another LandsatCollection image collection object
+img_selector: index of image in list of dates for which user seeks to “select”</p>
+<p>Returns:
+image: eeImage of selected image</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.get_boundary_filtered_collection">
+<span class="sig-name descname"><span class="pre">get_boundary_filtered_collection</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.get_boundary_filtered_collection" title="Link to this definition"></a></dt>
+<dd><p>Function to filter and mask image collection based on LandsatCollection class arguments</p>
+<p>Args:
+self: self is passed into argument</p>
+<p>Returns:
+image collection: eeImageCollection</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.get_filtered_collection">
+<span class="sig-name descname"><span class="pre">get_filtered_collection</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.get_filtered_collection" title="Link to this definition"></a></dt>
+<dd><p>Function to filter image collection based on LandsatCollection class arguments</p>
+<p>Args:
+self: self is passed into argument</p>
+<p>Returns:
+image collection: eeImageCollection</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.gypsum_collection">
+<span class="sig-name descname"><span class="pre">gypsum_collection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">threshold</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.gypsum_collection" title="Link to this definition"></a></dt>
+<dd><p>Function to calculate gypsum index and return collection as class object. Can specify separate thresholds for Landsat 5 vs 8&amp;9 images</p>
+<p>Args:
+self: self is passed into argument
+threshold: specify threshold for gypsum function (values less than threshold are masked)</p>
+<p>Returns:
+image collection: LandsatCollecion image collection object of gypsum index imagery</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.halite_collection">
+<span class="sig-name descname"><span class="pre">halite_collection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">threshold</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.halite_collection" title="Link to this definition"></a></dt>
+<dd><p>Function to calculate halite index and return collection as class object. Can specify separate thresholds for Landsat 5 vs 8&amp;9 images</p>
+<p>Args:
+self: self is passed into argument
+threshold: specify threshold for halite function (values less than threshold are masked)</p>
+<p>Returns:
+image collection: LandsatCollecion image collection object of halite index imagery</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.image_dater">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">image_dater</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.image_dater" title="Link to this definition"></a></dt>
+<dd><p>Adds date to image properties as ‘Date_Filter’</p>
+<p>Args: 
+image (eeImage): input image</p>
+<p>Use: to be mapped over an image collection</p>
+<p>Returns: 
+image (eeImage): image with date in properties</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.image_grab">
+<span class="sig-name descname"><span class="pre">image_grab</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">img_selector</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.image_grab" title="Link to this definition"></a></dt>
+<dd><p>Function to select (“grab”) image of a specific index from the list of dates. Easy way to get latest image or browse imagery one-by-one.</p>
+<p>Args:
+self: self is passed into argument
+img_selector: index of image in list of dates for which user seeks to “select”</p>
+<p>Returns:
+image: eeImage of selected image</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.image_pick">
+<span class="sig-name descname"><span class="pre">image_pick</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">img_date</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.image_pick" title="Link to this definition"></a></dt>
+<dd><p>Function to select (“grab”) image of a specific date in format of ‘YYYY-MM-DD’</p>
+<p>Args:
+self: self is passed into argument
+img_date: date (str) of image to select in format of ‘YYYY-MM-DD’</p>
+<p>Returns:
+image: eeImage of selected image</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.list_of_dates">
+<span class="sig-name descname"><span class="pre">list_of_dates</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.list_of_dates" title="Link to this definition"></a></dt>
+<dd><p>Function to retrieve list of dates as server-side object</p>
+<p>Args:
+self: self is passed into argument</p>
+<p>Returns:
+list: server-side eeList of dates</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.mask_with_polygon">
+<span class="sig-name descname"><span class="pre">mask_with_polygon</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">polygon</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.mask_with_polygon" title="Link to this definition"></a></dt>
+<dd><p>Function to mask Sentinel2Collection image collection by a polygon (eeGeometry)</p>
+<p>Args:
+self: self is passed into argument
+polygon: eeGeometry polygon or shape used to mask image collection</p>
+<p>Returns:
+image collection: masked Sentinel2Collection image collection</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.masked_clouds_collection">
+<span class="sig-name descname"><span class="pre">masked_clouds_collection</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.masked_clouds_collection" title="Link to this definition"></a></dt>
+<dd><p>Function to mask clouds and return collection as class object</p>
+<p>Args:
+self: self is passed into argument</p>
+<p>Returns:
+image collection: LandsatCollection image collection objects with clouds being masked</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.masked_water_collection">
+<span class="sig-name descname"><span class="pre">masked_water_collection</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.masked_water_collection" title="Link to this definition"></a></dt>
+<dd><p>Function to mask water and return collection as class object</p>
+<p>Args:
+self: self is passed into argument</p>
+<p>Returns:
+image collection: LandsatCollection image collection object of images with water being masked</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.max_collection">
+<span class="sig-name descname"><span class="pre">max_collection</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.max_collection" title="Link to this definition"></a></dt>
+<dd><p>Function to calculate max image from image collection</p>
+<p>Args:
+self: self is passed into argument</p>
+<p>Returns:
+image: max eeImage</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.mean_collection">
+<span class="sig-name descname"><span class="pre">mean_collection</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.mean_collection" title="Link to this definition"></a></dt>
+<dd><p>Function to calculate mean image from image collection</p>
+<p>Args:
+self: self is passed into argument</p>
+<p>Returns:
+image: mean eeImage</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.median_collection">
+<span class="sig-name descname"><span class="pre">median_collection</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.median_collection" title="Link to this definition"></a></dt>
+<dd><p>Function to calculate median image from image collection</p>
+<p>Args:
+self: self is passed into argument</p>
+<p>Returns:
+image: median eeImage</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.min_collection">
+<span class="sig-name descname"><span class="pre">min_collection</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.min_collection" title="Link to this definition"></a></dt>
+<dd><p>Function to calculate min image from image collection</p>
+<p>Args:
+self: self is passed into argument</p>
+<p>Returns:
+image: min eeImage</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.ndvi_collection">
+<span class="sig-name descname"><span class="pre">ndvi_collection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">threshold</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.ndvi_collection" title="Link to this definition"></a></dt>
+<dd><p>Function to calculate ndvi and return collection as class object</p>
+<p>Args:
+self: self is passed into argument
+threshold: specify threshold for NDVI function (values less than threshold are masked)</p>
+<p>Returns:
+image collection: LandsatCollecion image collection object of ndvi imagery</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.ndwi_collection">
+<span class="sig-name descname"><span class="pre">ndwi_collection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">threshold</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.ndwi_collection" title="Link to this definition"></a></dt>
+<dd><p>Function to calculate ndwi and return collection as class object</p>
+<p>Args:
+self: self is passed into argument
+threshold: specify threshold for NDWI function (values less than threshold are masked)</p>
+<p>Returns:
+image collection: LandsatCollecion image collection object of ndwi imagery</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.sentinel_gypsum_fn">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">sentinel_gypsum_fn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.sentinel_gypsum_fn" title="Link to this definition"></a></dt>
+<dd><p>Function to calculate gypsum index for Landsat imagery. Can specify separate thresholds for Landsat 5 vs 8&amp;9 images</p>
+<p>Args:
+image: input eeImage
+threshold: integer threshold where pixels less than threshold are masked</p>
+<p>Returns:
+image: gypsum eeImage</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.sentinel_halite_fn">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">sentinel_halite_fn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.sentinel_halite_fn" title="Link to this definition"></a></dt>
+<dd><p>Function to calculate halite index for Landsat imagery. Can specify separate thresholds for Landsat 5 vs 8&amp;9 images</p>
+<p>Args:
+image: input eeImage
+threshold: integer threshold where pixels less than threshold are masked</p>
+<p>Returns:
+image: halite eeImage</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.sentinel_ndvi_fn">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">sentinel_ndvi_fn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.sentinel_ndvi_fn" title="Link to this definition"></a></dt>
+<dd><p>Function to calculate ndvi for Landsat imagery</p>
+<p>Args:
+image: input eeImage
+threshold: integer threshold where pixels less than threshold are masked</p>
+<p>Returns:
+image: ndvi eeImage</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.sentinel_ndwi_fn">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">sentinel_ndwi_fn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2Collection.sentinel_ndwi_fn" title="Link to this definition"></a></dt>
+<dd><p>Function to calculate ndwi for Landsat imagery</p>
+<p>Args: 
+image (eeImage): input image
+threshold (int): value between -1 and 1 where pixels less than threshold will be masked</p>
+<p>Returns:
+image: ndwi image</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="RadGEEToolbox.Sentinel2Collection.Sentinel2SubCollection">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">RadGEEToolbox.Sentinel2Collection.</span></span><span class="sig-name descname"><span class="pre">Sentinel2SubCollection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">collection</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dates_list</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2SubCollection" title="Link to this definition"></a></dt>
+<dd><p>Class to handle returning processed collections back to a class object</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="RadGEEToolbox.Sentinel2Collection.Sentinel2SubCollection.get_filtered_collection">
+<span class="sig-name descname"><span class="pre">get_filtered_collection</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#RadGEEToolbox.Sentinel2Collection.Sentinel2SubCollection.get_filtered_collection" title="Link to this definition"></a></dt>
+<dd><p>Function to filter image collection based on LandsatCollection class arguments</p>
+<p>Args:
+self: self is passed into argument</p>
+<p>Returns:
+image collection: eeImageCollection</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="LandsatCollection.html" class="btn btn-neutral float-left" title="LandsatCollection Documentation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="CollectionStitch.html" class="btn btn-neutral float-right" title="CollectionStitch Documentation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Mark Radwin.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
