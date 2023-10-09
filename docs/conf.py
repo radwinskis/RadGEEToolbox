@@ -12,7 +12,8 @@
 #
 import os
 import sys
-sys.path.insert(0, 'G:/Other computers/My Computer/Python Scripts/RadGEEToolbox')
+sys.path.insert(0, os.path.abspath('..'))
+# sys.path.insert(0, 'G:/Other computers/My Computer/Python Scripts/RadGEEToolbox')
 
 
 
