@@ -3,3 +3,9 @@ __pycache__/
 *.pyo
 RadGEEToolbox.egg-info/
 build/lib/RadGEEToolbox/
+docs/_build
+RadGEEToolbox/package_testing.ipynb
+RadGEEToolbox/LandsatCollectionOldV1_3.py
+RadGEEToolbox/Sentinel2CollectionOldV1_3.py
+package_testing.ipynb
+test_import.py

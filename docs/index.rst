@@ -14,6 +14,7 @@ Welcome to RadGEEToolbox's documentation!
    Sentinel2Collection
    CollectionStitch
    GetPalette
+   VisParams
 
 Indices and tables
 ==================

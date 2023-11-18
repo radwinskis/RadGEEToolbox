@@ -34,3 +34,40 @@ def CollectionStitch(img_col1, img_col2, copy_properties_from=1):
             None  # If the condition isn't met, do nothing and keep going through the list
     new_col = ee.ImageCollection.fromImages(image_list)
     return new_col
+
+def MosaicByDate(img_col):
+    """
+    Function to mosaic collection images that share the same date. Server-side friendly. Requires images to have date property of "Date_Filter"
+
+    Args:
+    img_col: eeImageCollection object
+
+    Returns:
+    image collection: eeImageCollection with mosaiced imagery
+    """
+    input_collection = img_col
+# Function to mosaic images of the same date and accumulate them
+    def mosaic_and_accumulate(date, list_accumulator):
+        # date = ee.Date(date)
+        list_accumulator = ee.List(list_accumulator)
+        date_filter = ee.Filter.eq('Date_Filter', date)
+        date_collection = input_collection.filter(date_filter)
+        
+        # Create mosaic
+        mosaic = date_collection.mosaic().set('Date_Filter', date)
+
+        return list_accumulator.add(mosaic)
+
+    # Get distinct dates
+    distinct_dates = input_collection.aggregate_array('Date_Filter').distinct()
+
+    # Initialize an empty list as the accumulator
+    initial = ee.List([])
+
+    # Iterate over each date to create mosaics and accumulate them in a list
+    mosaic_list = distinct_dates.iterate(mosaic_and_accumulate, initial)
+
+    new_col = ee.ImageCollection.fromImages(mosaic_list)
+
+    # Convert the list of mosaics to an ImageCollection
+    return new_col
