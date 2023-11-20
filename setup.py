@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="RadGEEToolbox",
-    version="1.4.1",
+    version="1.4.2",
     author="Mark Radwin",
     author_email="markradwin@gmail.com",
     description="Python package simplifying large-scale operations using Google Earth Engine (GEE) for users who utilize Landsat and Sentinel",
@@ -19,8 +19,7 @@ setup(
         "Operating System :: OS Independent",
     ],
     install_requires=[
-        "ee",
-        "geemap"
+        "ee"
     ],
     python_requires=">=3.6",
 )
