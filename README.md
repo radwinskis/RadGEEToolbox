@@ -92,7 +92,7 @@ latest_NDWI_image = NDWI_collection.image_grab(-1)
 
 - **Python**: Ensure you have version 3.6 or higher installed.
 - **pip**: This is Python's package installer. 
-- **conda-forge**: Conda channel installer (Coming soon...)
+- **conda-forge**: Community led Conda package installer channel
 
 ### 📦 Installing via pip
 
