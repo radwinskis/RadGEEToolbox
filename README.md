@@ -92,14 +92,22 @@ latest_NDWI_image = NDWI_collection.image_grab(-1)
 
 - **Python**: Ensure you have version 3.6 or higher installed.
 - **pip**: This is Python's package installer. 
-- **conda-forge**: Coming soon...
+- **conda-forge**: Conda channel installer (Coming soon...)
 
 ### 📦 Installing via pip
 
 To install `RadGEEToolbox` version 1.4.1 using pip (NOTE: it is recommended to create a new virtual environment):
 
 ```bash
-pip install RadGEEToolbox==1.3
+pip install RadGEEToolbox==1.4.1
+```
+
+### 📦 Installing via Conda (Coming soon...)
+
+To install `RadGEEToolbox` version 1.4.1 using conda-forge (NOTE: it is recommended to create a new virtual environment):
+
+```bash
+conda install -c conda-forge RadGEEToolbox
 ```
 
 ### 🔧 Manual Installation from Source
