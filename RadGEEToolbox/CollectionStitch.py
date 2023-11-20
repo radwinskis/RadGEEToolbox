@@ -1,5 +1,4 @@
 import ee
-import geemap
 def CollectionStitch(img_col1, img_col2, copy_properties_from=1):
     """
     Function to mosaic two RadGEETools image collection objects which share image dates. 

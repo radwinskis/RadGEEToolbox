@@ -1,4 +1,3 @@
-import geemap
 import ee
 class LandsatCollection:
     """
@@ -139,6 +138,8 @@ class LandsatCollection:
         mask_halite(self, threshold, ng_threshold=None)
         
         mask_halite_and_gypsum(self, halite_threshold, gypsum_threshold, halite_ng_threshold=None, gypsum_ng_threshold=None)
+
+        PixelAreaSumCollection(self, band_name, geometry, threshold, scale, maxPixels)
         
         image_grab(self, img_selector)
         
@@ -268,6 +269,7 @@ class LandsatCollection:
         self._chlorophyll = None
         self._LST = None
         self._MosaicByDate = None
+        self._PixelAreaSumCollection = None
 
     @staticmethod
     def image_dater(image):
@@ -668,6 +670,30 @@ class LandsatCollection:
             scale=scale,
             maxPixels = maxPixels)
         return image.set(band_name, stats.get(band_name))
+    
+    def PixelAreaSumCollection(self, band_name, geometry, threshold=-1, scale=30, maxPixels=1e12):
+        """
+        Function to calculate the summation of area for pixels of interest (above a specific threshold) 
+        within a geometry and store the value as image property (matching name of chosen band) for an entire
+        image collection.
+        The resulting value has units of square meters. 
+
+        Args:
+        self: self is the input image collection
+        band_name: name of band (string) for calculating area.
+        geometry: ee.Geometry object denoting area to clip to for area calculation.
+        threshold: integer threshold to specify masking of pixels below threshold (defaults to -1).
+        scale: integer scale of image resolution (meters) (defaults to 30).
+        maxPixels: integer denoting maximum number of pixels for calculations.
+        
+        Returns:
+        image (ee.Image): Image with area calculation stored as property matching name of band.
+        """
+        if self._PixelAreaSumCollection is None:
+            collection = self.collection
+            AreaCollection = collection.map(lambda image: LandsatCollection.PixelAreaSum(image, band_name=band_name, geometry=geometry, threshold=threshold, scale=scale, maxPixels=maxPixels))
+            self._PixelAreaSumCollection = AreaCollection
+        return self._PixelAreaSumCollection
 
     @staticmethod
     def dNDWIPixelAreaSum(image, geometry, band_name='ndwi', scale=30, maxPixels=1e12):

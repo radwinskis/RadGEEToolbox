@@ -1,4 +1,3 @@
-import geemap
 import ee
 class Sentinel2Collection:
     """
@@ -139,6 +138,8 @@ class Sentinel2Collection:
         mask_halite(self, threshold)
         
         mask_halite_and_gypsum(self, halite_threshold, gypsum_threshold)
+
+        PixelAreaSumCollection(self, band_name, geometry, threshold, scale, maxPixels)
         
         image_grab(self, img_selector)
         
@@ -271,6 +272,7 @@ class Sentinel2Collection:
         self._turbidity = None
         self._chlorophyll = None
         self._MosaicByDate = None
+        self._PixelAreaSumCollection = None
 
     @staticmethod
     def image_dater(image):
@@ -507,7 +509,7 @@ class Sentinel2Collection:
         band_name: name of band (string) for calculating area.
         geometry: ee.Geometry object denoting area to clip to for area calculation.
         threshold: integer threshold to specify masking of pixels below threshold (defaults to -1).
-        scale: integer scale of image resolution (meters) (defaults to 30).
+        scale: integer scale of image resolution (meters) (defaults to 10).
         maxPixels: integer denoting maximum number of pixels for calculations.
         
         Returns:
@@ -523,6 +525,30 @@ class Sentinel2Collection:
             maxPixels = maxPixels)
         return image.set(band_name, stats.get(band_name)) #calculates and returns summed pixel area as image property titled the same as the band name of the band used for calculation
     
+    def PixelAreaSumCollection(self, band_name, geometry, threshold=-1, scale=10, maxPixels=1e12):
+        """
+        Function to calculate the summation of area for pixels of interest (above a specific threshold) 
+        within a geometry and store the value as image property (matching name of chosen band) for an entire
+        image collection.
+        The resulting value has units of square meters. 
+
+        Args:
+        self: self is the input image collection
+        band_name: name of band (string) for calculating area.
+        geometry: ee.Geometry object denoting area to clip to for area calculation.
+        threshold: integer threshold to specify masking of pixels below threshold (defaults to -1).
+        scale: integer scale of image resolution (meters) (defaults to 10).
+        maxPixels: integer denoting maximum number of pixels for calculations.
+        
+        Returns:
+        image (ee.Image): Image with area calculation stored as property matching name of band.
+        """
+        if self._PixelAreaSumCollection is None:
+            collection = self.collection
+            AreaCollection = collection.map(lambda image: Sentinel2Collection.PixelAreaSum(image, band_name=band_name, geometry=geometry, threshold=threshold, scale=scale, maxPixels=maxPixels))
+            self._PixelAreaSumCollection = AreaCollection
+        return self._PixelAreaSumCollection
+
     @property
     def dates_list(self):
         """
