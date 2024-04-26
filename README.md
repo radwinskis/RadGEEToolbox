@@ -102,12 +102,12 @@ To install `RadGEEToolbox` version 1.4.4 using pip (NOTE: it is recommended to c
 pip install RadGEEToolbox==1.4.4
 ```
 
-### 📦 Installing via Conda (Coming soon...)
+### 📦 Installing via Conda
 
 To install `RadGEEToolbox` version 1.4.4 using conda-forge (NOTE: it is recommended to create a new virtual environment):
 
 ```bash
-conda install -c conda-forge RadGEEToolbox
+conda install conda-forge::radgeetoolbox
 ```
 
 ### 🔧 Manual Installation from Source
