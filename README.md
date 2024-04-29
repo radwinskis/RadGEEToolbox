@@ -7,9 +7,11 @@
 
 Initially created by Mark Radwin to help simplify processing imagery for PhD studies and general image exploration, this package offers helpful functionality with an outlook to add furthur functionality to aid assorted Earth observation specialists. 
 
-The package is divided into four modules:
+The package is divided into six modules:
 - LandsatCollection
    - Define and process Landsat 5 TM, 8 OLI, and 9 OLI surface reflectance imagery
+- Sentinel1Collection
+   - Define and process Sentinel 1 Synthetic Aperture Radar (SAR) backscatter imagery
 - Sentinel2Collection
    - Define and process Sentinel 2 MSI surface reflectance imagery
 - CollectionStitch
@@ -20,7 +22,9 @@ The package is divided into four modules:
    - Alternative to visualization parameters dictionaries, define vis params using a function and retrieve palettes from GetPalette - makes visualizing images a bit easier
 
 
-LandsatCollection.py and Sentinel2Collection.py are the main two modules for the majority of image processing. 
+LandsatCollection.py, Sentinel1Collection.py, and Sentinel2Collection.py are the main modules for the majority of image processing. 
+
+CollectionStitch.py, GetPalette.py, and VisParams.py are supplemental for additional processing and image display
 
 Almost all functionality is server-side friendly AND most results are cached, providing very fast processing times.
 
@@ -50,6 +54,20 @@ Although similar toolset packages exist, RadGEEToolbox offers differing function
 - Easily call in a variety of useful color palettes for image visualization
 - Easily define visualization parameter dictionaries
 - AND more with a continual list of growing features
+
+### New features included in version 1.5.0
+- Support for Sentinel 1 SAR data
+   - Includes all high-level functionality from the LandsatCollection and Sentinel2Collection modules
+   - Easy to defin the type of S1 data to use (instrument mode, polarization, pixel size, orbit direction, etc)
+   - Multilooking
+   - Speckle filtering (Lee-Sigma)
+   - Converting dB to sigma naught, or sigma naught to dB
+- Support for calculating the values along a transect or collection of transects
+   - Works for each image collection module
+   - Can iterate along an image collection and store transect values for each transect and for each image
+   - Stores transect data as a DataFrame
+   - Automatically saves transect data to csv files when iterating along a collection
+
 
 ### ⌨️ Basic Usage
 RadGEEToolbox is organized so that all functions are associated with each LandsatCollection and Sentinel2Collection class modules. You will need to define a base class collection, using arguments standard to defining ee.ImageCollections, and then you can call any of the class property attributes, methods, or static methods to complete processing. Utilizing class attribute propertues allows for very short code lines and very fast processing, while utilizing the methods allows for expanded customization of processing but requires more arguments and interaction from the user. The choice is up to you!
@@ -96,15 +114,15 @@ latest_NDWI_image = NDWI_collection.image_grab(-1)
 
 ### 📦 Installing via pip
 
-To install `RadGEEToolbox` version 1.4.4 using pip (NOTE: it is recommended to create a new virtual environment):
+To install `RadGEEToolbox` version 1.5.0 using pip (NOTE: it is recommended to create a new virtual environment):
 
 ```bash
-pip install RadGEEToolbox==1.4.4
+pip install RadGEEToolbox==1.5.0
 ```
 
 ### 📦 Installing via Conda
 
-To install `RadGEEToolbox` version 1.4.4 using conda-forge (NOTE: it is recommended to create a new virtual environment):
+To install `RadGEEToolbox` version 1.5.0 using conda-forge (NOTE: it is recommended to create a new virtual environment):
 
 ```bash
 conda install conda-forge::radgeetoolbox
@@ -135,4 +153,4 @@ To verify that `RadGEEToolbox` was installed correctly:
 python -c "import RadGEEToolbox; print(RadGEEToolbox.__version__)"
 ```
 
-You should see `1.4.4` printed as the version number.
+You should see `1.5.0` printed as the version number.

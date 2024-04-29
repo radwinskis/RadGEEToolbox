@@ -1,4 +1,6 @@
 import ee
+import pandas as pd
+import numpy as np
 class LandsatCollection:
     """
     Class object representing a combined collection of NASA/USGS Landsat 5, 8, and 9 TM & OLI surface reflectance satellite images at 30 m/px
@@ -1496,3 +1498,212 @@ class LandsatCollection:
         # Convert the list of mosaics to an ImageCollection
         return self._MosaicByDate
     
+    @staticmethod
+    def ee_to_df(ee_object, columns=None, remove_geom=True, sort_columns=False, **kwargs):
+        """Converts an ee.FeatureCollection to pandas dataframe. Adapted from the geemap package (https://geemap.org/common/#geemap.common.ee_to_df)
+
+        Args:
+            ee_object (ee.FeatureCollection): ee.FeatureCollection.
+            columns (list): List of column names. Defaults to None.
+            remove_geom (bool): Whether to remove the geometry column. Defaults to True.
+            sort_columns (bool): Whether to sort the column names. Defaults to False.
+            kwargs: Additional arguments passed to ee.data.computeFeature.
+
+        Raises:
+            TypeError: ee_object must be an ee.FeatureCollection
+
+        Returns:
+            pd.DataFrame: pandas DataFrame
+        """
+        if isinstance(ee_object, ee.Feature):
+            ee_object = ee.FeatureCollection([ee_object])
+
+        if not isinstance(ee_object, ee.FeatureCollection):
+            raise TypeError("ee_object must be an ee.FeatureCollection")
+
+        try:
+            property_names = ee_object.first().propertyNames().sort().getInfo()
+            if remove_geom:
+                data = ee_object.map(
+                    lambda f: ee.Feature(None, f.toDictionary(property_names))
+                )
+            else:
+                data = ee_object
+
+            kwargs["expression"] = data
+            kwargs["fileFormat"] = "PANDAS_DATAFRAME"
+
+            df = ee.data.computeFeatures(kwargs)
+
+            if isinstance(columns, list):
+                df = df[columns]
+
+            if remove_geom and ("geo" in df.columns):
+                df = df.drop(columns=["geo"], axis=1)
+
+            if sort_columns:
+                df = df.reindex(sorted(df.columns), axis=1)
+
+            return df
+        except Exception as e:
+            raise Exception(e)
+
+    @staticmethod
+    def extract_transect(image, line, reducer="mean", n_segments=100, dist_interval=None, scale=None, crs=None, crsTransform=None, tileScale=1.0, to_pandas=False, **kwargs):
+
+        """Extracts transect from an image. Adapted from the geemap package (https://geemap.org/common/#geemap.common.extract_transect)
+
+        Args:
+            image (ee.Image): The image to extract transect from.
+            line (ee.Geometry.LineString): The LineString used to extract transect from an image.
+            reducer (str, optional): The ee.Reducer to use, e.g., 'mean', 'median', 'min', 'max', 'stdDev'. Defaults to "mean".
+            n_segments (int, optional): The number of segments that the LineString will be split into. Defaults to 100.
+            dist_interval (float, optional): The distance interval used for splitting the LineString. If specified, the n_segments parameter will be ignored. Defaults to None.
+            scale (float, optional): A nominal scale in meters of the projection to work in. Defaults to None.
+            crs (ee.Projection, optional): The projection to work in. If unspecified, the projection of the image's first band is used. If specified in addition to scale, rescaled to the specified scale. Defaults to None.
+            crsTransform (list, optional): The list of CRS transform values. This is a row-major ordering of the 3x2 transform matrix. This option is mutually exclusive with 'scale', and will replace any transform already set on the projection. Defaults to None.
+            tileScale (float, optional): A scaling factor used to reduce aggregation tile size; using a larger tileScale (e.g. 2 or 4) may enable computations that run out of memory with the default. Defaults to 1.
+            to_pandas (bool, optional): Whether to convert the result to a pandas dataframe. Default to False.
+
+        Raises:
+            TypeError: If the geometry type is not LineString.
+            Exception: If the program fails to compute.
+
+        Returns:
+            ee.FeatureCollection: The FeatureCollection containing the transect with distance and reducer values.
+        """
+        try:
+            geom_type = line.type().getInfo()
+            if geom_type != "LineString":
+                raise TypeError("The geometry type must be LineString.")
+
+            reducer = eval("ee.Reducer." + reducer + "()")
+            maxError = image.projection().nominalScale().divide(5)
+
+            length = line.length(maxError)
+            if dist_interval is None:
+                dist_interval = length.divide(n_segments)
+
+            distances = ee.List.sequence(0, length, dist_interval)
+            lines = line.cutLines(distances, maxError).geometries()
+
+            def set_dist_attr(l):
+                l = ee.List(l)
+                geom = ee.Geometry(l.get(0))
+                distance = ee.Number(l.get(1))
+                geom = ee.Geometry.LineString(geom.coordinates())
+                return ee.Feature(geom, {"distance": distance})
+
+            lines = lines.zip(distances).map(set_dist_attr)
+            lines = ee.FeatureCollection(lines)
+
+            transect = image.reduceRegions(
+                **{
+                    "collection": ee.FeatureCollection(lines),
+                    "reducer": reducer,
+                    "scale": scale,
+                    "crs": crs,
+                    "crsTransform": crsTransform,
+                    "tileScale": tileScale,
+                }
+            )
+
+            if to_pandas:
+                return LandsatCollection.ee_to_df(transect)
+            return transect
+
+        except Exception as e:
+            raise Exception(e)
+    
+    @staticmethod
+    def transect(image, lines, line_names, reducer='mean', n_segments=None, dist_interval=30, to_pandas=True):
+        """Computes and stores the values along a transect for each line in a list of lines. Builds off of the extract_transect function from the geemap package
+            where checks are ran to ensure that the reducer column is present in the transect data. If the reducer column is not present, a column of NaNs is created.
+            An ee reducer is used to aggregate the values along the transect, depending on the number of segments or distance interval specified. Defaults to 'mean' reducer.
+
+        Args:
+            image (ee.Image): ee.Image object to use for calculating transect values.
+            lines (list): List of ee.Geometry.LineString objects.
+            line_names (list of strings): List of line string names.
+            reducer (str): The ee reducer to use. Defaults to 'mean'.
+            n_segments (int): The number of segments that the LineString will be split into. Defaults to None.
+            dist_interval (float): The distance interval in meters used for splitting the LineString. If specified, the n_segments parameter will be ignored. Defaults to 30.
+            to_pandas (bool): Whether to convert the result to a pandas dataframe. Defaults to True.
+
+        Returns:
+            pd.DataFrame or ee.FeatureCollection: organized list of values along the transect(s)
+        """
+        #Create empty dataframe
+        transects_df = pd.DataFrame()
+
+        #Check if line is a list of lines or a single line - if single line, convert to list
+        if isinstance(lines, list):
+            pass
+        else:
+            lines = [lines]
+        
+        for i, line in enumerate(lines):
+            if n_segments is None:
+                transect_data = LandsatCollection.extract_transect(image=image, line=line, reducer=reducer, dist_interval=dist_interval, to_pandas=to_pandas)
+                if reducer in transect_data.columns:
+                    # Extract the 'mean' column and rename it
+                    mean_column = transect_data[['mean']]
+                else:
+                    # Handle the case where 'mean' column is not present
+                    print(f"{reducer} column not found in transect data for line {line_names[i]}")
+                    # Create a column of NaNs with the same length as the longest column in transects_df
+                    max_length = max(transects_df.shape[0], transect_data.shape[0])
+                    mean_column = pd.Series([np.nan] * max_length)
+            else:
+                transect_data = LandsatCollection.extract_transect(image=image, line=line, reducer=reducer, n_segments=n_segments, to_pandas=to_pandas)
+                if reducer in transect_data.columns:
+                    # Extract the 'mean' column and rename it
+                    mean_column = transect_data[['mean']]
+                else:
+                    # Handle the case where 'mean' column is not present
+                    print(f"{reducer} column not found in transect data for line {line_names[i]}")
+                    # Create a column of NaNs with the same length as the longest column in transects_df
+                    max_length = max(transects_df.shape[0], transect_data.shape[0])
+                    mean_column = pd.Series([np.nan] * max_length)
+            
+            transects_df = pd.concat([transects_df, mean_column], axis=1)
+
+        transects_df.columns = line_names
+                
+        return transects_df
+    
+    def transect_iterator(self, lines, line_names, save_folder_path, reducer='mean', n_segments=None, dist_interval=30, to_pandas=True):
+        """Computes and stores the values along a transect for each line in a list of lines for each image in a LandsatCollection image collection, then saves the data for each image to a csv file. Builds off of the extract_transect function from the geemap package
+            where checks are ran to ensure that the reducer column is present in the transect data. If the reducer column is not present, a column of NaNs is created.
+            An ee reducer is used to aggregate the values along the transect, depending on the number of segments or distance interval specified. Defaults to 'mean' reducer.
+            Naming conventions for the csv files follows as: "image-date_transects.csv"
+
+        Args:
+            self (LandsatCollection image collection): Image collection object to iterate for calculating transect values for each image.
+            lines (list): List of ee.Geometry.LineString objects.
+            line_names (list of strings): List of line string names.
+            save_folder_path (str): The path to the folder where the csv files will be saved.
+            reducer (str): The ee reducer to use. Defaults to 'mean'.
+            n_segments (int): The number of segments that the LineString will be split into. Defaults to None.
+            dist_interval (float): The distance interval used for splitting the LineString. If specified, the n_segments parameter will be ignored. Defaults to 10.
+            to_pandas (bool): Whether to convert the result to a pandas dataframe. Defaults to True.
+
+        Raises:
+            Exception: If the program fails to compute.
+
+        Returns:
+            csv file: file for each image with an organized list of values along the transect(s)
+        """
+        image_collection = self #.collection
+        # image_collection_dates = self._dates
+        image_collection_dates = self.dates
+        for i, date in enumerate(image_collection_dates):
+            try:
+                print(f"Processing image {i+1}/{len(image_collection_dates)}: {date}")
+                image = image_collection.image_grab(i)
+                transects_df = LandsatCollection.transect(image, lines, line_names, reducer=reducer, n_segments=n_segments, dist_interval=dist_interval, to_pandas=to_pandas)
+                image_id = date
+                transects_df.to_csv(f'{save_folder_path}{image_id}_transects.csv')
+                print(f'{image_id}_transects saved to csv')
+            except Exception as e:
+                print(f"An error occurred while processing image {i+1}: {e}")
