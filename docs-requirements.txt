@@ -1,3 +1,5 @@
 earthengine-api
+numpy
+pandas
 sphinx
 sphinx_rtd_theme
