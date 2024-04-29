@@ -11,6 +11,7 @@ Welcome to RadGEEToolbox's documentation!
    :caption: Contents:
 
    LandsatCollection
+   Sentinel1Collection
    Sentinel2Collection
    CollectionStitch
    GetPalette
