@@ -2,10 +2,10 @@ from setuptools import setup, find_packages
 
 setup(
     name="RadGEEToolbox",
-    version="1.5.0",
+    version="1.6.0",
     author="Mark Radwin",
     author_email="markradwin@gmail.com",
-    description="Python package simplifying large-scale operations using Google Earth Engine (GEE) for users who utilize Landsat and Sentinel",
+    description="Streamlined Multispectral & SAR Analysis for Google Earth Engine Python API",
     long_description=open("README.md", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
     url="https://github.com/radwinskis/RadGEEToolbox",

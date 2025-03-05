@@ -19,11 +19,11 @@ sys.path.insert(0, os.path.abspath('..'))
 # -- Project information -----------------------------------------------------
 
 project = 'RadGEEToolbox'
-copyright = '2024, Mark Radwin'
+copyright = '2025, Mark Radwin'
 author = 'Mark Radwin'
 
 # The full version, including alpha/beta/rc tags
-release = '1.5.0'
+release = '1.6.0'
 
 
 # -- General configuration ---------------------------------------------------

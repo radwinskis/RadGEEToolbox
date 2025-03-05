@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 class Sentinel2Collection:
     """
-    Class object representing a collection of ESA Sentinel-2 MSIsurface reflectance satellite images at 10 m/px resolution
+    Class object representing a collection of ESA Sentinel-2 MSIsurface reflectance satellite images at 10 m/px resolution from Google Earth Engine.
 
     This class provides methods to filter, process, and analyze Sentinel-2 satellite imagery for a given period and region
 
@@ -150,7 +150,10 @@ class Sentinel2Collection:
         image_pick(self, img_date)
         
         CollectionStitch(self, img_col2)
+
+        transect_iterator(self, lines, line_names, save_folder_path, reducer='mean', n_segments=None, dist_interval=30, to_pandas=True)
         
+        iterate_zonal_stats(self, coordinates, buffer_size=1, reducer_type='mean', scale=10, tileScale=1, coordinate_names=None, file_path=None, dates=None)
 
     Static Methods:
         image_dater(image)
@@ -182,6 +185,12 @@ class Sentinel2Collection:
         MaskCloudsS2(image)
         
         PixelAreaSum(image, band_name, geometry, threshold=-1, scale=30, maxPixels=1e12)
+
+        extract_transect(image, line, reducer="mean", n_segments=100, dist_interval=None, scale=None, crs=None, crsTransform=None, tileScale=1.0, to_pandas=False)
+
+        transect(image, lines, line_names, reducer='mean', n_segments=None, dist_interval=30, to_pandas=True)
+
+        extract_zonal_stats_from_buffer(image, coordinates, buffer_size=1, reducer_type='mean', scale=10, tileScale=1, coordinate_names=None)
         
 
     Usage:
@@ -1302,7 +1311,7 @@ class Sentinel2Collection:
     @staticmethod
     def extract_transect(image, line, reducer="mean", n_segments=100, dist_interval=None, scale=None, crs=None, crsTransform=None, tileScale=1.0, to_pandas=False, **kwargs):
 
-        """Extracts transect from an image. Adapted from the geemap package (https://geemap.org/common/#geemap.common.extract_transect)
+        """Extracts transect from an image. Adapted from the geemap package (https://geemap.org/common/#geemap.common.extract_transect). Exists as an alternative to RadGEEToolbox 'transect' function.
 
         Args:
             image (ee.Image): The image to extract transect from.
@@ -1457,3 +1466,149 @@ class Sentinel2Collection:
                 print(f'{image_id}_transects saved to csv')
             except Exception as e:
                 print(f"An error occurred while processing image {i+1}: {e}")
+
+    @staticmethod
+    def extract_zonal_stats_from_buffer(image, coordinates, buffer_size=1, reducer_type='mean', scale=10, tileScale=1, coordinate_names=None):
+        """
+        Function to extract spatial statistics from an image for a list of coordinates, providing individual statistics for each location.
+        A radial buffer is applied around each coordinate to extract the statistics, which defaults to 1 meter.
+        The function returns a pandas DataFrame with the statistics for each coordinate.
+
+        Args:
+            image (ee.Image): The image from which to extract the statistics. Must be a singleband image or else resulting values will all be zero!
+            coordinates (list): Single tuple or list of tuples with the decimal degrees coordinates in the format of (longitude, latitude) for which to extract the statistics. NOTE the format needs to be [(x1, y1), (x2, y2), ...].
+            buffer_size (int, optional): The radial buffer size around the coordinates in meters. Defaults to 1.
+            reducer_type (str, optional): The reducer type to use. Defaults to 'mean'. Options are 'mean', 'median', 'min', and 'max'.
+            scale (int, optional): The scale (pixel size) to use in meters. Defaults to 10.
+            tileScale (int, optional): The tile scale to use. Defaults to 1.
+            coordinate_names (list, optional): A list of strings with the names of the coordinates. Defaults to None.
+
+        Returns:
+            pd.DataFrame: A pandas DataFrame with the statistics for each coordinate, each column name corresponds to the name of the coordinate feature (which may be blank if no names are supplied).
+        """
+
+        # Check if coordinates is a single tuple and convert it to a list of tuples if necessary
+        if isinstance(coordinates, tuple) and len(coordinates) == 2:
+            coordinates = [coordinates]
+        elif not (isinstance(coordinates, list) and all(isinstance(coord, tuple) and len(coord) == 2 for coord in coordinates)):
+            raise ValueError("Coordinates must be a list of tuples with two elements each (latitude, longitude).")
+        
+        # Check if coordinate_names is a list of strings
+        if coordinate_names is not None:
+            if not isinstance(coordinate_names, list) or not all(isinstance(name, str) for name in coordinate_names):
+                raise ValueError("coordinate_names must be a list of strings.")
+            if len(coordinate_names) != len(coordinates):
+                raise ValueError("coordinate_names must have the same length as the coordinates list.")
+        else:
+            coordinate_names = [f"Location {i+1}" for i in range(len(coordinates))]
+
+        # Check if the image is a singleband image
+        def check_singleband(image):
+            band_count = image.bandNames().size()
+            return ee.Algorithms.If(band_count.eq(1), image, ee.Image.constant(0))
+
+        # image = ee.Image(check_singleband(image))
+        image = ee.Image(check_singleband(image))
+
+        #Convert coordinates to ee.Geometry.Point, buffer them, and add label/name to feature
+        points = [ee.Feature(ee.Geometry.Point([coord[0], coord[1]]).buffer(buffer_size), {'name': str(coordinate_names[i])}) for i, coord in enumerate(coordinates)]
+        # Create a feature collection from the buffered points
+        features = ee.FeatureCollection(points)
+        # Reduce the image to the buffered points - handle different reducer types
+        if reducer_type == 'mean':
+            img_stats = image.reduceRegions(
+                    collection=features,
+                    reducer=ee.Reducer.mean(),
+                    scale=scale,
+                    tileScale=tileScale)
+            mean_values = img_stats.getInfo()
+            means = []
+            names = []
+            for feature in mean_values['features']:
+                names.append(feature['properties']['name'])
+                means.append(feature['properties']['mean'])
+            organized_values = pd.DataFrame([means], columns=names)
+        elif reducer_type == 'median':
+            img_stats = image.reduceRegions(
+                    collection=features,
+                    reducer=ee.Reducer.median(),
+                    scale=scale,
+                    tileScale=tileScale)
+            median_values = img_stats.getInfo()
+            medians = []
+            names = []
+            for feature in median_values['features']:
+                names.append(feature['properties']['name'])
+                medians.append(feature['properties']['median'])
+            organized_values = pd.DataFrame([medians], columns=names)
+        elif reducer_type == 'min':
+            img_stats = image.reduceRegions(
+                    collection=features,
+                    reducer=ee.Reducer.min(),
+                    scale=scale,
+                    tileScale=tileScale)
+            min_values = img_stats.getInfo()
+            mins = []
+            names = []
+            for feature in min_values['features']:
+                names.append(feature['properties']['name'])
+                mins.append(feature['properties']['min'])
+            organized_values = pd.DataFrame([mins], columns=names)
+        elif reducer_type == 'max':
+            img_stats = image.reduceRegions(
+                    collection=features,
+                    reducer=ee.Reducer.max(),
+                    scale=scale,
+                    tileScale=tileScale)
+            max_values = img_stats.getInfo()
+            maxs = []
+            names = []
+            for feature in max_values['features']:
+                names.append(feature['properties']['name'])
+                maxs.append(feature['properties']['max'])
+            organized_values = pd.DataFrame([maxs], columns=names)
+        else:
+            raise ValueError("reducer_type must be one of 'mean', 'median', 'min', or 'max'.")
+        return organized_values
+
+    def iterate_zonal_stats(self, coordinates, buffer_size=1, reducer_type='mean', scale=10, tileScale=1, coordinate_names=None, file_path=None, dates=None):
+        """
+        Function to iterate over a collection of images and extract spatial statistics for a list of coordinates (defaults to mean). Individual statistics are provided for each location.
+        A radial buffer is applied around each coordinate to extract the statistics, which defaults to 1 meter.
+        The function returns a pandas DataFrame with the statistics for each coordinate and date, or optionally exports the data to a table in .csv format.
+        
+        Args:
+            self (RadGEEToolbox class object): The image collection from which to extract the statistics. Each image must be a singleband image or else resulting values will all be zero!
+            coordinates (list): Single tuple or a list of tuples with the coordinates as decimal degrees in the format of (longitude, latitude) for which to extract the statistics. NOTE the format needs to be [(x1, y1), (x2, y2), ...].
+            buffer_size (int, optional): The radial buffer size in meters around the coordinates. Defaults to 1.
+            reducer_type (str, optional): The reducer type to use. Defaults to 'mean'. Options are 'mean', 'median', 'min', and 'max'.
+            scale (int, optional): The scale (pixel size) to use in meters. Defaults to 10.
+            tileScale (int, optional): The tile scale to use. Defaults to 1.
+            coordinate_names (list, optional): A list of strings with the names of the coordinates. Defaults to None.
+            file_path (str, optional): The file path to export the data to. Defaults to None. Ensure ".csv" is NOT included in the file name path.
+            dates (list, optional): A list of dates for which to extract the statistics. Defaults to None.
+
+        Returns:
+            pd.DataFrame: A pandas DataFrame with the statistics for each coordinate and date, each row corresponds to a date and each column to a coordinate.
+            .csv file: Optionally exports the data to a table in .csv format. If file_path is None, the function returns the DataFrame - otherwise the function will only export the csv file.
+        """
+        img_collection = self
+        #Create empty DataFrame to accumulate results
+        accumulated_df = pd.DataFrame()
+        #Check if dates is None, if not use the dates provided
+        if dates is None:
+            dates = img_collection.dates
+        else:
+            dates = dates
+        #Iterate over the dates and extract the zonal statistics for each date
+        for date in dates:
+            image = img_collection.collection.filter(ee.Filter.eq('Date_Filter', date)).first()
+            single_df = Sentinel2Collection.extract_zonal_stats_from_buffer(image, coordinates, buffer_size=buffer_size, reducer_type=reducer_type, scale=scale, tileScale=tileScale, coordinate_names=coordinate_names)
+            single_df['Date'] = date
+            single_df.set_index('Date', inplace=True)
+            accumulated_df = pd.concat([accumulated_df, single_df])
+        #Return the DataFrame or export the data to a .csv file
+        if file_path is None:
+            return accumulated_df
+        else:
+            return accumulated_df.to_csv(f'{file_path}.csv')

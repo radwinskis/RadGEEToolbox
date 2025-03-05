@@ -11,3 +11,4 @@ RadGEEToolbox/LandsatCollectionOldV1_3.py
 RadGEEToolbox/Sentinel2CollectionOldV1_3.py
 package_testing.ipynb
 test_import.py
+setup.py

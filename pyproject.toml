@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "RadGEEToolbox"
+version = "1.6.0"
+description = "Streamlined Multispectral & SAR Analysis for Google Earth Engine Python API"
+authors = [
+    {name = "Mark Radwin", email = "markradwin@gmail.com"}
+]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.6"
+dependencies = [
+    "earthengine-api",
+    "numpy",
+    "pandas"
+]
+
+[tool.setuptools]
+packages = ["RadGEEToolbox"]
+
+[project.urls]
+Homepage = "https://github.com/radwinskis/RadGEEToolbox"
