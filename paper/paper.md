@@ -14,7 +14,7 @@ authors:
 affiliations:
  - name: Dept. of Geology & Geophysics, University of Utah, United States
    index: 1
-date: 24 April 2025
+date: 14 May 2025
 bibliography: paper.bib
 ---
 
@@ -36,7 +36,7 @@ The toolbox comprises six modular classes: `LandsatCollection`, `Sentinel1Collec
 
 ## Multispectral Tools
 
-The `LandsatCollection` and `Sentinel2Collection` modules support cloud/water filtering and provide indices for vegetation (NDVI), water (NDWI [@McFeeters:1996], NDTI [@Lacaux:2007]), turbidity, chlorophyll-a (3BDA [@Boucher:2018], 2BDA [@Buma&Lee:2020]), LST [@Sekertekin&Bonafoni:2020], halite [@Radwin&Bowen:2021], and gypsum [@Radwin&Bowen:2024]. Users can generate classification rasters by applying a pixel value threshold for binary masking of a selected spectral index, with the option to set separate thresholds for Landsat TM and OLI sensors to account for differences in spectral sensitivity when working with long time series.
+The `LandsatCollection` and `Sentinel2Collection` modules support cloud/water filtering and provide indices for vegetation (NDVI), water (NDWI [@McFeeters:1996], aqueous turbidity (NDTI) [@Lacaux:2007]), aqueous chlorophyll-a (3BDA [@Boucher:2018], 2BDA [@Buma&Lee:2020]), Land Surface Temperature (LST) [@Sekertekin&Bonafoni:2020], halite [@Radwin&Bowen:2021], and gypsum [@Radwin&Bowen:2024]. Users can generate classification rasters by choosing a pixel value threshold for binary masking of a selected spectral index, with the option to designate separate thresholds for Landsat TM and OLI sensors to account for differences in spectral sensitivity when working with long time series.
 
 ## SAR Tools
 

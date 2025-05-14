@@ -322,11 +322,11 @@ class Sentinel1Collection:
         The resulting value has units of square meters. 
 
         Args:
-            band_name: name of band (string) for calculating area.
-            geometry: ee.Geometry object denoting area to clip to for area calculation.
-            threshold: integer threshold to specify masking of pixels below threshold (defaults to -1).
-            scale: integer scale of image resolution (meters) (defaults to 30).
-            maxPixels: integer denoting maximum number of pixels for calculations.
+            band_name (str): name of band (string) for calculating area.
+            geometry (ee.Geometry): ee.Geometry object denoting area to clip to for area calculation.
+            threshold (int): integer threshold to specify masking of pixels below threshold (defaults to -1).
+            scale (int): integer scale of image resolution (meters) (defaults to 30).
+            maxPixels (int): integer denoting maximum number of pixels for calculations.
         
         Returns: 
             ee.Image: Image with area calculation stored as property matching name of band.
@@ -350,10 +350,10 @@ class Sentinel1Collection:
 
     def multilook(self, looks):
         """
-        Property attribute function to multilook image collection. Results are calculated once per class object then cached for future use.
+        Multilooks a Sentinel-1 SAR image collection. Results are calculated once per class object then cached for future use.
 
         Args:
-            looks: number of looks to multilook image collection by (int)
+            looks (int): number of looks to multilook image collection by (int). A looks value of 1 will not multilook the image collection, while a value of 2, 3, or 4 will multilook the image collection by 2x2, 3x3, or 4x4 respectively.
 
         Returns:
             Sentinel1Collection: Sentinel1Collection image collection
@@ -759,7 +759,7 @@ class Sentinel1Collection:
         Function to select ("grab") an image by index from the collection. Easy way to get latest image or browse imagery one-by-one.
 
         Args:
-            img_selector: index of image in the collection for which user seeks to select/"grab".
+            img_selector (int): index of image in the collection for which user seeks to select/"grab".
         
         Returns: 
             ee.Image: ee.Image of selected image
@@ -777,8 +777,8 @@ class Sentinel1Collection:
         Function to select ("grab") image of a specific index from an ee.ImageCollection object.
 
         Args:
-            img_col: ee.ImageCollection with same dates as another Sentinel1Collection image collection object.
-            img_selector: index of image in list of dates for which user seeks to "select".
+            img_col (ee.ImageCollection): ee.ImageCollection with same dates as another Sentinel1Collection image collection object.
+            img_selector (int): index of image in list of dates for which user seeks to "select".
         
         Returns: 
             ee.Image: ee.Image of selected image
@@ -796,7 +796,7 @@ class Sentinel1Collection:
         Function to select ("grab") image of a specific date in format of 'YYYY-MM-DD' - will not work correctly if collection is composed of multiple images of the same date.
 
         Args:
-            img_date: date (str) of image to select in format of 'YYYY-MM-DD'
+            img_date (str): date of image to select from collection, in format of 'YYYY-MM-DD'
 
         Returns: 
             ee.Image: ee.Image of selected image
