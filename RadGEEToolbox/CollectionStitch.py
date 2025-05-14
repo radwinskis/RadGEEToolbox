@@ -6,12 +6,12 @@ def CollectionStitch(img_col1, img_col2, copy_properties_from=1):
     Returned image collection is an eeImageCollection object. NOTE this is different from the CollectionStitch function available in the LandsatCollection and SentinelCollection classes.
 
     Args:
-    img_col2: primary LandsatCollection image collection to be mosaiced with the secondary image collection
-    img_col2: secondary LandsatCollection image collection to be mosaiced with the primary image collection
-    copy_properties_from: image collection used for copying image properties
+        img_col1 (RadGEEToolbox object): primary RadGEEToolbox image collection to be mosaiced with the secondary image collection
+        img_col2 (RadGEEToolbox object): secondary RadGEEToolbox image collection to be mosaiced with the primary image collection
+        copy_properties_from (int): image collection used for copying image properties, options of 1 or 2 for primary or secondary respectively. Default is 1.
 
     Returns:
-    image collection: eeImageCollection image collection with mosaiced imagery and image properties from chosen collection
+        ee.ImageCollection: ee.ImageCollection image collection with mosaiced imagery and image properties from chosen collection
     """
     image_list = []
     dates_list = img_col1.dates_list + img_col2.dates_list
@@ -39,10 +39,10 @@ def MosaicByDate(img_col):
     Function to mosaic collection images that share the same date. Server-side friendly. Requires images to have date property of "Date_Filter"
 
     Args:
-    img_col: eeImageCollection object
+        img_col(RadGEEToolbox object): eeImageCollection object
 
     Returns:
-    image collection: eeImageCollection with mosaiced imagery
+        ee.ImageCollection: ee.ImageCollection with mosaiced imagery
     """
     input_collection = img_col
 # Function to mosaic images of the same date and accumulate them

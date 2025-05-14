@@ -3,9 +3,11 @@ import pandas as pd
 import numpy as np
 class Sentinel2Collection:
     """
-    Class object representing a collection of ESA Sentinel-2 MSIsurface reflectance satellite images at 10 m/px resolution from Google Earth Engine.
+    Class object representing a collection of ESA Sentinel-2 MSI surface reflectance satellite images at 10 m/px resolution from Google Earth Engine.
 
-    This class provides methods to filter, process, and analyze Sentinel-2 satellite imagery for a given period and region
+    This class provides methods to filter, process, and analyze Sentinel-2 satellite imagery for a given period and region. 
+
+    Inspect the documentation or source code for details on the methods and properties available.
 
     Arguments:
         start_date (str): Start date string in format of yyyy-mm-dd for filtering collection (required unless collection is provided)
@@ -291,10 +293,10 @@ class Sentinel2Collection:
         Adds date to image properties as 'Date_Filter'.
 
         Args: 
-        image (ee.Image): Input image
+            image (ee.Image): Input image
 
         Returns: 
-        image (ee.Image): Image with date in properties.
+            ee.Image: Image with date in properties.
         """
         date = ee.Number(image.date().format('YYYY-MM-dd'))
         return image.set({'Date_Filter': date})
@@ -303,14 +305,14 @@ class Sentinel2Collection:
     @staticmethod
     def sentinel_ndwi_fn(image, threshold):
         """
-        Function to calculate ndwi for Sentinel2 imagery and mask image based on threshold.
+        Calculates ndwi from GREEN and NIR bands (McFeeters, 1996 - https://doi.org/10.1080/01431169608948714) for Sentinel2 imagery and masks image based on threshold.
 
         Args: 
-        image (ee.Image): input image
-        threshold (int): value between -1 and 1 where pixels less than threshold will be masked.
+            image (ee.Image): input image
+            threshold (float): value between -1 and 1 where pixels less than threshold will be masked.
 
         Returns:
-        image (ee.Image): ndwi image
+            ee.Image: ndwi ee.Image
         """
         ndwi_calc = image.normalizedDifference(['B3', 'B8']) #green-NIR / green+NIR -- full NDWI image
         water = ndwi_calc.updateMask(ndwi_calc.gte(threshold)).rename('ndwi').copyProperties(image) 
@@ -319,14 +321,14 @@ class Sentinel2Collection:
     @staticmethod
     def sentinel_ndvi_fn(image, threshold):
         """
-        Function to calculate ndvi for for Sentinel2 imagery and mask image based on threshold.
+        Calculates ndvi for for Sentinel2 imagery and mask image based on threshold.
 
         Args:
-        image (ee.Image): input image
-        threshold (int): value between -1 and 1 where pixels less than threshold will be masked.
+            image (ee.Image): input image
+            threshold (float): value between -1 and 1 where pixels less than threshold will be masked.
 
         Returns:
-        image (ee.Image): ndvi image
+            ee.Image: ndvi ee.Image
         """
         ndvi_calc = image.normalizedDifference(['B8', 'B4']) #NIR-RED/NIR+RED -- full NDVI image
         vegetation = ndvi_calc.updateMask(ndvi_calc.gte(threshold)).rename('ndvi').copyProperties(image) # subsets the image to just water pixels, 0.2 threshold for datasets
@@ -335,14 +337,14 @@ class Sentinel2Collection:
     @staticmethod
     def sentinel_halite_fn(image, threshold):
         """
-        Function to calculate multispectral halite index for Sentinel2 imagery and mask image based on threshold.
+        Calculates multispectral halite index for Sentinel2 imagery and mask image based on threshold.
 
         Args:
-        image (ee.Image): input image
-        threshold (int): value between -1 and 1 where pixels less than threshold will be masked.
+            image (ee.Image): input image
+            threshold (float): value between -1 and 1 where pixels less than threshold will be masked.
 
         Returns:
-        image (ee.Image): halite ee.Image
+            ee.Image: halite ee.Image
         """
         halite_index = image.normalizedDifference(['B4', 'B11'])
         halite = halite_index.updateMask(halite_index.gte(threshold)).rename('halite').copyProperties(image)
@@ -351,14 +353,14 @@ class Sentinel2Collection:
     @staticmethod
     def sentinel_gypsum_fn(image, threshold):
         """
-        Function to calculate multispectral gypsum index for Sentinel2 imagery and mask image based on threshold.
+        Calculates multispectral gypsum index for Sentinel2 imagery and mask image based on threshold.
 
         Args:
-        image (ee.Image): input image
-        threshold (int): value between -1 and 1 where pixels less than threshold will be masked.
+            image (ee.Image): input image
+            threshold (float): value between -1 and 1 where pixels less than threshold will be masked.
 
         Returns:
-        image (ee.Image): gypsum ee.Image
+            ee.Image: gypsum ee.Image
         """
         gypsum_index = image.normalizedDifference(['B11', 'B12'])
         gypsum = gypsum_index.updateMask(gypsum_index.gte(threshold)).rename('gypsum').copyProperties(image)
@@ -367,14 +369,14 @@ class Sentinel2Collection:
     @staticmethod
     def sentinel_turbidity_fn(image, threshold):
         """
-        Function to calculate Normalized Difference Turbidity Index (NDTI; Lacaux et al., 2007) for for Sentinel2 imagery and mask image based on threshold.
+        Calculates Normalized Difference Turbidity Index (NDTI; Lacaux et al., 2007) for for Sentinel2 imagery and mask image based on threshold.
 
         Args:
-        image (ee.Image): input image
-        threshold (int): value between -1 and 1 where pixels less than threshold will be masked.
+            image (ee.Image): input image
+            threshold (float): value between -1 and 1 where pixels less than threshold will be masked.
 
         Returns:
-        image (ee.Image): turbidity ee.Image
+            ee.Image: turbidity ee.Image
         """
         NDTI = image.normalizedDifference(['B3', 'B2'])
         turbidity = NDTI.updateMask(NDTI.gte(threshold)).rename('ndti').copyProperties(image)
@@ -383,14 +385,14 @@ class Sentinel2Collection:
     @staticmethod
     def sentinel_chlorophyll_fn(image, threshold):
         """
-        Function to calculate relative chlorophyll-a concentrations of water pixels using 2BDA index (see Buma and Lee, 2020 for review) and mask image based on threshold. NOTE: the image is downsampled to 20 meters as the red edge 1 band is utilized.
+        Calculates relative chlorophyll-a concentrations of water pixels using 2BDA index (see Buma and Lee, 2020 for review) and mask image based on threshold. NOTE: the image is downsampled to 20 meters as the red edge 1 band is utilized.
 
         Args:
-        image (ee.Image): input image
-        threshold (int): value between -1 and 1 where pixels less than threshold will be masked.
+            image (ee.Image): input image
+            threshold (float): value between -1 and 1 where pixels less than threshold will be masked.
 
         Returns:
-        image (ee.Image): chlorophyll-a ee.Image
+            ee.Image: chlorophyll-a ee.Image
         """
         chl_index = image.normalizedDifference(['B5', 'B4'])
         chlorophyll = chl_index.updateMask(chl_index.gte(threshold)).rename('2BDA').copyProperties(image)
@@ -402,10 +404,10 @@ class Sentinel2Collection:
         Function to map clouds using SCL band data.
 
         Args:
-        image (ee.Image): input image
+            image (ee.Image): input image
 
         Returns:
-        image (ee.Image): output ee.Image with clouds masked
+            ee.Image: output ee.Image with clouds masked
         """
         SCL = image.select('SCL')
         CloudMask = SCL.neq(9)
@@ -417,10 +419,10 @@ class Sentinel2Collection:
         Function to mask water pixels using SCL band data.
 
         Args:
-        image (ee.Image): input image
+            image (ee.Image): input image
 
         Returns:
-        image (ee.Image): output ee.Image with water pixels masked
+            ee.Image: output ee.Image with water pixels masked
         """
         SCL = image.select('SCL')
         WaterMask = SCL.neq(6)
@@ -433,11 +435,11 @@ class Sentinel2Collection:
         all pixels less than NDWI threshold are masked out.
 
         Args: 
-        image (ee.Image): input image
-        threshold (int): value between -1 and 1 where pixels less than threshold will be masked.
+            image (ee.Image): input image
+            threshold (float): value between -1 and 1 where pixels less than threshold will be masked.
 
         Returns:
-        image (ee.Image): ee.Image
+            ee.Image: ee.Image
         """
         ndwi_calc = image.normalizedDifference(['B3', 'B8']) #green-NIR / green+NIR -- full NDWI image
         water = image.updateMask(ndwi_calc.lt(threshold)) 
@@ -449,10 +451,10 @@ class Sentinel2Collection:
         Function to mask to water pixels (mask land and cloud pixels) using SCL band data.
 
         Args:
-        image (ee.Image): input image
+            image (ee.Image): input image
 
         Returns:
-        image (ee.Image): output ee.Image with all but water pixels masked
+            ee.Image: output ee.Image with all but water pixels masked
         """
         SCL = image.select('SCL')
         WaterMask = SCL.eq(6)
@@ -464,11 +466,11 @@ class Sentinel2Collection:
         Function to mask halite pixels after specifying index to isolate/mask-to halite pixels.
 
         Args:
-        image (ee.Image): input image
-        threshold (int): value between -1 and 1 where pixels less than threshold will be masked..
+            image (ee.Image): input image
+            threshold (float): value between -1 and 1 where pixels less than threshold will be masked..
         
         Returns:
-        image (ee.Image): ee.Image where halite pixels are masked (image without halite pixels).
+            ee.Image: ee.Image where halite pixels are masked (image without halite pixels).
         """
         halite_index = image.normalizedDifference(['B4', 'B11'])
         mask = image.updateMask(halite_index.lt(threshold)).copyProperties(image)
@@ -480,12 +482,12 @@ class Sentinel2Collection:
         Function to mask both gypsum and halite pixels. Must specify threshold for isolating halite and gypsum pixels. 
 
         Args:
-        image (ee.Image): input image
-        halite_threshold: integer threshold for halite where pixels less than threshold are masked.
-        gypsum_threshold: integer threshold for gypsum where pixels less than threshold are masked.
+            image (ee.Image): input image
+            halite_threshold: integer threshold for halite where pixels less than threshold are masked.
+            gypsum_threshold: integer threshold for gypsum where pixels less than threshold are masked.
        
         Returns:
-        image (ee.Image): ee.Image where gypsum and halite pixels are masked (image without halite or gypsum pixels).
+            ee.Image: ee.Image where gypsum and halite pixels are masked (image without halite or gypsum pixels).
         """
         halite_index = image.normalizedDifference(['B4', 'B11'])
         gypsum_index = image.normalizedDifference(['B11', 'B12'])
@@ -499,11 +501,11 @@ class Sentinel2Collection:
         Function to mask all bands to water pixels (mask land and cloud pixels) based on NDWI.
 
         Args: 
-        image (ee.Image): input image
-        threshold (int): value between -1 and 1 where pixels less than threshold will be masked.
+            image (ee.Image): input image
+            threshold (float): value between -1 and 1 where pixels less than threshold will be masked.
 
         Returns:
-        image (ee.Image): ee.Image image
+            ee.Image: ee.Image image
         """
         ndwi_calc = image.normalizedDifference(['B3', 'B8']) #green-NIR / green+NIR -- full NDWI image
         water = image.updateMask(ndwi_calc.gte(threshold)) 
@@ -512,19 +514,19 @@ class Sentinel2Collection:
     @staticmethod
     def PixelAreaSum(image, band_name, geometry, threshold=-1, scale=10, maxPixels=1e12):
         """
-        Function to calculate the summation of area for pixels of interest (above a specific threshold) within a geometry and store the value as image property (matching name of chosen band).
+        Calculates the summation of area for pixels of interest (above a specific threshold) within a geometry and store the value as image property (matching name of chosen band).
         The resulting value has units of square meters. 
 
         Args:
-        image (ee.Image): input ee.Image
-        band_name: name of band (string) for calculating area.
-        geometry: ee.Geometry object denoting area to clip to for area calculation.
-        threshold: integer threshold to specify masking of pixels below threshold (defaults to -1).
-        scale: integer scale of image resolution (meters) (defaults to 10).
-        maxPixels: integer denoting maximum number of pixels for calculations.
+            image (ee.Image): input ee.Image
+            band_name: name of band (string) for calculating area.
+            geometry: ee.Geometry object denoting area to clip to for area calculation.
+            threshold: integer threshold to specify masking of pixels below threshold (defaults to -1).
+            scale: integer scale of image resolution (meters) (defaults to 10).
+            maxPixels: integer denoting maximum number of pixels for calculations.
         
         Returns:
-        image (ee.Image): Image with area calculation stored as property matching name of band.
+            ee.Image: Image with area calculation stored as property matching name of band.
         """
         area_image = ee.Image.pixelArea()
         mask = image.select(band_name).gte(threshold)
@@ -538,21 +540,20 @@ class Sentinel2Collection:
     
     def PixelAreaSumCollection(self, band_name, geometry, threshold=-1, scale=10, maxPixels=1e12):
         """
-        Function to calculate the summation of area for pixels of interest (above a specific threshold) 
+        Calculates the summation of area for pixels of interest (above a specific threshold) 
         within a geometry and store the value as image property (matching name of chosen band) for an entire
         image collection.
         The resulting value has units of square meters. 
 
         Args:
-        self: self is the input image collection
-        band_name: name of band (string) for calculating area.
-        geometry: ee.Geometry object denoting area to clip to for area calculation.
-        threshold: integer threshold to specify masking of pixels below threshold (defaults to -1).
-        scale: integer scale of image resolution (meters) (defaults to 10).
-        maxPixels: integer denoting maximum number of pixels for calculations.
+            band_name: name of band (string) for calculating area.
+            geometry: ee.Geometry object denoting area to clip to for area calculation.
+            threshold: integer threshold to specify masking of pixels below threshold (defaults to -1).
+            scale: integer scale of image resolution (meters) (defaults to 10).
+            maxPixels: integer denoting maximum number of pixels for calculations.
         
         Returns:
-        image (ee.Image): Image with area calculation stored as property matching name of band.
+            ee.Image: Image with area calculation stored as property matching name of band.
         """
         if self._PixelAreaSumCollection is None:
             collection = self.collection
@@ -565,11 +566,8 @@ class Sentinel2Collection:
         """
         Property attribute to retrieve list of dates as server-side (GEE) object.
 
-        Args:
-        self: self is passed into argument.
-
         Returns:
-        ee.List: Server-side ee.List of dates.
+            ee.List: Server-side ee.List of dates.
         """
         if self._dates_list is None:
             dates = self.collection.aggregate_array('Date_Filter')
@@ -581,11 +579,8 @@ class Sentinel2Collection:
         """
         Property attribute to retrieve list of dates as readable and indexable client-side list object.
 
-        Args:
-        self: self is passed into argument.
-
         Returns:
-        list: list of date strings.
+            list: list of date strings.
         """
         if self._dates_list is None:
             dates = self.collection.aggregate_array('Date_Filter')
@@ -599,11 +594,8 @@ class Sentinel2Collection:
         """
         Function to filter image collection using a list of MGRS tiles (based on Sentinel2Collection class arguments).
 
-        Args:
-        self: self is passed into argument.
-
         Returns:
-        image collection (ee.ImageCollection): Image collection objects
+            ee.ImageCollection: Image collection objects
         """
         sentinel2 = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
         filtered_collection = sentinel2.filterDate(self.start_date, self.end_date).filter(ee.Filter.inList('MGRS_TILE', self.tile)).filter(ee.Filter.lte('NODATA_PIXEL_PERCENTAGE', self.nodata_threshold)) \
@@ -614,11 +606,8 @@ class Sentinel2Collection:
         """
         Function to filter image collection using a geometry/boundary rather than list of tiles (based on Sentinel2Collection class arguments).
 
-        Args:
-        self: self is passed into argument.
-
         Returns:
-        image collection (ee.ImageCollection): Image collection objects
+            ee.ImageCollection: Image collection objects
 
         """
         sentinel2 = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
@@ -630,11 +619,8 @@ class Sentinel2Collection:
         """
         Function to filter image collection a list of relative orbit numbers rather than list of tiles (based on Sentinel2Collection class arguments).
 
-        Args:
-        self: self is passed into argument.
-
         Returns:
-        image collection (ee.ImageCollection): Image collection objects
+            ee.ImageCollection: Image collection objects
         """
         sentinel2 = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
         filtered_collection = sentinel2.filterDate(self.start_date, self.end_date).filter(ee.Filter.inList('SENSING_ORBIT_NUMBER', self.relative_orbit_number)).filter(ee.Filter.lte('NODATA_PIXEL_PERCENTAGE', self.nodata_threshold)) \
@@ -645,11 +631,8 @@ class Sentinel2Collection:
         """
         Function to filter image collection a list of relative orbit numbers and geometry/boundary rather than list of tiles (based on Sentinel2Collection class arguments).
 
-        Args:
-        self: self is passed into argument.
-
         Returns:
-        image collection (ee.ImageCollection): Image collection objects
+            ee.ImageCollection: Image collection objects
         """
         sentinel2 = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
         filtered_collection = sentinel2.filterDate(self.start_date, self.end_date).filter(ee.Filter.inList('SENSING_ORBIT_NUMBER', self.relative_orbit_number)).filterBounds(self.boundary).filter(ee.Filter.lte('NODATA_PIXEL_PERCENTAGE', self.nodata_threshold)) \
@@ -659,13 +642,10 @@ class Sentinel2Collection:
     @property
     def median(self):
         """
-        Property attribute function to calculate median image from image collection. Results are calculated once per class object then cached for future use.
-
-        Args:
-        self: self is passed into argument.
+        Calculates median image from image collection. Results are calculated once per class object then cached for future use.
 
         Returns:
-        image (ee.Image): median image from entire collection.
+            ee.Image: median image from entire collection.
         """
         if self._median is None:
             col = self.collection.median()
@@ -675,13 +655,10 @@ class Sentinel2Collection:
     @property
     def mean(self):
         """
-        Property attribute function to calculate mean image from image collection. Results are calculated once per class object then cached for future use.
-
-        Args:
-        self: self is passed into argument.
+        Calculates mean image from image collection. Results are calculated once per class object then cached for future use.
 
         Returns:
-        image (ee.Image): mean image from entire collection.
+            ee.Image: mean image from entire collection.
 
         """
         if self._mean is None:
@@ -692,13 +669,10 @@ class Sentinel2Collection:
     @property
     def max(self):
         """
-        Property attribute function to calculate max image from image collection. Results are calculated once per class object then cached for future use.
-
-        Args:
-        self: self is passed into argument.
+        Calculates max image from image collection. Results are calculated once per class object then cached for future use.
 
         Returns:
-        image (ee.Image): max image from entire collection.
+            ee.Image: max image from entire collection.
         """
         if self._max is None:
             col = self.collection.max()
@@ -708,13 +682,10 @@ class Sentinel2Collection:
     @property
     def min(self):
         """
-        Property attribute function to calculate min image from image collection. Results are calculated once per class object then cached for future use.
+        Calculates min image from image collection. Results are calculated once per class object then cached for future use.
         
-        Args:
-        self: self is passed into argument.
-
         Returns:
-        image (ee.Image): min image from entire collection.
+            ee.Image: min image from entire collection.
         """
         if self._min is None:
             col = self.collection.min()
@@ -729,11 +700,8 @@ class Sentinel2Collection:
         and caches the result. The calculation is performed only once when the property is first accessed, and the cached result is returned 
         on subsequent accesses.
 
-        Args:
-        self: self is passed into argument.
-
         Returns:
-        image collection (Sentinel2Collection): A Sentinel2Collection image collection.
+            Sentinel2Collection: A Sentinel2Collection image collection.
         """
         if self._ndwi is None:
             self._ndwi = self.ndwi_collection(self.ndwi_threshold)
@@ -741,14 +709,13 @@ class Sentinel2Collection:
 
     def ndwi_collection(self, threshold):
         """
-        Function to calculate ndwi and return collection as class object. Masks collection based on threshold which defaults to -1.
+        Calculates ndwi and return collection as class object. Masks collection based on threshold which defaults to -1.
 
         Args:
-        self: self is passed into argument
-        threshold: specify threshold for NDWI function (values less than threshold are masked).
+            threshold: specify threshold for NDWI function (values less than threshold are masked).
 
         Returns:
-        image collection (Sentinel2Collection): Sentinel2Collection image collection.
+            Sentinel2Collection: Sentinel2Collection image collection.
         """
         first_image = self.collection.first()
         available_bands = first_image.bandNames()
@@ -768,11 +735,8 @@ class Sentinel2Collection:
         and caches the result. The calculation is performed only once when the property is first accessed, and the cached result is returned 
         on subsequent accesses.
 
-        Args:
-        self: self is passed into argument
-
         Returns:
-        image collection (Sentinel2Collection): A Sentinel2Collection image collection.
+            Sentinel2Collection: A Sentinel2Collection image collection.
         """
         if self._ndvi is None:
             self._ndvi = self.ndvi_collection(self.ndvi_threshold)
@@ -780,14 +744,13 @@ class Sentinel2Collection:
     
     def ndvi_collection(self, threshold):
         """
-        Function to calculate ndvi and return collection as class object. Masks collection based on threshold which defaults to -1.
+        Calculates ndvi and return collection as class object. Masks collection based on threshold which defaults to -1.
 
         Args:
-        self: self is passed into argument.
-        threshold: specify threshold for NDVI function (values less than threshold are masked).
+            threshold: specify threshold for NDVI function (values less than threshold are masked).
 
         Returns:
-        image collection (Sentinel2Collection): Sentinel2Collection image collection.
+            Sentinel2Collection: Sentinel2Collection image collection.
         """
         first_image = self.collection.first()
         available_bands = first_image.bandNames()
@@ -806,11 +769,8 @@ class Sentinel2Collection:
         and caches the result. The calculation is performed only once when the property is first accessed, and the cached result is returned 
         on subsequent accesses.
 
-        Args:
-        self: self is passed into argument
-
         Returns:
-        image collection (Sentinel2Collection): A Sentinel2Collection image collection.
+            Sentinel2Collection: A Sentinel2Collection image collection.
         """
         if self._halite is None:
             self._halite = self.halite_collection(self.halite_threshold)
@@ -818,14 +778,13 @@ class Sentinel2Collection:
 
     def halite_collection(self, threshold):
         """
-        Function to calculate multispectral halite index and return collection as class object. Masks collection based on threshold which defaults to -1.
+        Calculates multispectral halite index and return collection as class object. Masks collection based on threshold which defaults to -1.
 
         Args:
-        self: self is passed into argument.
-        threshold: specify threshold for halite function (values less than threshold are masked).
+            threshold: specify threshold for halite function (values less than threshold are masked).
 
         Returns:
-        image collection (Sentinel2Collection): Sentinel2Collection image collection.
+            Sentinel2Collection: Sentinel2Collection image collection.
         """
         first_image = self.collection.first()
         available_bands = first_image.bandNames()
@@ -844,11 +803,8 @@ class Sentinel2Collection:
         and caches the result. The calculation is performed only once when the property is first accessed, and the cached result is returned 
         on subsequent accesses.
 
-        Args:
-        self: self is passed into argument.
-
         Returns:
-        image collection (Sentinel2Collection): A Sentinel2Collection image collection.
+            Sentinel2Collection: A Sentinel2Collection image collection.
         """
         if self._gypsum is None:
             self._gypsum = self.gypsum_collection(self.gypsum_threshold)
@@ -856,14 +812,13 @@ class Sentinel2Collection:
 
     def gypsum_collection(self, threshold):
         """
-        Function to calculate multispectral gypsum index and return collection as class object.  Masks collection based on threshold which defaults to -1.
+        Calculates multispectral gypsum index and return collection as class object.  Masks collection based on threshold which defaults to -1.
 
         Args:
-        self: self is passed into argument.
-        threshold: specify threshold for gypsum function (values less than threshold are masked).
+            threshold: specify threshold for gypsum function (values less than threshold are masked).
 
         Returns:
-        image collection (Sentinel2Collection): Sentinel2Collection image collection.
+            Sentinel2Collection: Sentinel2Collection image collection.
         """
         first_image = self.collection.first()
         available_bands = first_image.bandNames()
@@ -882,11 +837,8 @@ class Sentinel2Collection:
         and caches the result. The calculation is performed only once when the property is first accessed, and the cached result is returned 
         on subsequent accesses.
 
-        Args:
-        self: self is passed into argument.
-
         Returns:
-        image collection (Sentinel2Collection): A Sentinel2Collection image collection.
+            Sentinel2Collection: A Sentinel2Collection image collection.
         """
         if self._turbidity is None:
             self._turbidity = self.turbidity_collection(self.turbidity_threshold)
@@ -894,14 +846,13 @@ class Sentinel2Collection:
 
     def turbidity_collection(self, threshold):
         """
-        Function to calculate NDTI turbidity index and return collection as class object. Masks collection based on threshold which defaults to -1.
+        Calculates NDTI turbidity index and return collection as class object. Masks collection based on threshold which defaults to -1.
 
         Args:
-        self: self is passed into argument
-        threshold: specify threshold for NDTI function (values less than threshold are masked).
+            threshold: specify threshold for NDTI function (values less than threshold are masked).
 
         Returns:
-        image collection (Sentinel2Collection): Sentinel2Collection image collection.
+            Sentinel2Collection: Sentinel2Collection image collection.
         """
         first_image = self.collection.first()
         available_bands = first_image.bandNames()
@@ -920,11 +871,8 @@ class Sentinel2Collection:
         and caches the result. The calculation is performed only once when the property is first accessed, and the cached result is returned 
         on subsequent accesses.
 
-        Args:
-        self: self is passed into argument.
-
         Returns:
-        image collection (Sentinel2Collection): A Sentinel2Collection image collection.
+            Sentinel2Collection: A Sentinel2Collection image collection.
         """
         if self._chlorophyll is None:
             self._chlorophyll = self.chlorophyll_collection(self.chlorophyll_threshold)
@@ -932,14 +880,13 @@ class Sentinel2Collection:
 
     def chlorophyll_collection(self, threshold):
         """
-        Function to calculate 2BDA chlorophyll index and return collection as class object. Masks collection based on threshold which defaults to 0.5.
+        Calculates 2BDA chlorophyll index and return collection as class object. Masks collection based on threshold which defaults to 0.5.
 
         Args:
-        self: self is passed into argument.
-        threshold: specify threshold for 2BDA function (values less than threshold are masked).
+            threshold: specify threshold for 2BDA function (values less than threshold are masked).
 
         Returns:
-        image collection (Sentinel2Collection): Sentinel2Collection image collection.
+            Sentinel2Collection: Sentinel2Collection image collection.
         """
         first_image = self.collection.first()
         available_bands = first_image.bandNames()
@@ -955,11 +902,8 @@ class Sentinel2Collection:
         """
         Property attribute to mask water and return collection as class object.
 
-        Args:
-        self: self is passed into argument.
-
         Returns:
-        image collection (Sentinel2Collection): Sentinel2Collection image collection.
+            Sentinel2Collection: Sentinel2Collection image collection.
         """
         if self._masked_water_collection is None:
             col = self.collection.map(Sentinel2Collection.MaskWaterS2)
@@ -970,11 +914,8 @@ class Sentinel2Collection:
         """
         Function to mask water by using NDWI and return collection as class object.
 
-        Args:
-        self: self is passed into argument.
-
         Returns:
-        image collection (Sentinel2Collection): Sentinel2Collection image collection.
+            Sentinel2Collection: Sentinel2Collection image collection.
         """
         col = self.collection.map(lambda image: Sentinel2Collection.MaskWaterS2ByNDWI(image, threshold=threshold))
         return Sentinel2Collection(collection=col)
@@ -984,11 +925,8 @@ class Sentinel2Collection:
         """
         Property attribute to mask to water (mask land and cloud pixels) and return collection as class object.
 
-        Args:
-        self: self is passed into argument.
-
         Returns:
-        image collection (Sentinel2Collection): Sentinel2Collection image collection.
+            Sentinel2Collection: Sentinel2Collection image collection.
         """
         if self._masked_to_water_collection is None:
             col = self.collection.map(Sentinel2Collection.MaskToWaterS2)
@@ -999,11 +937,8 @@ class Sentinel2Collection:
         """
         Function to mask to water pixels by using NDWI and return collection as class object
 
-        Args:
-        self: self is passed into argument
-
         Returns:
-        image collection (Sentinel2Collection): Sentinel2Collection image collection.
+            Sentinel2Collection: Sentinel2Collection image collection.
         """
         col = self.collection.map(lambda image: Sentinel2Collection.MaskToWaterS2ByNDWI(image, threshold=threshold))
         return Sentinel2Collection(collection=col)
@@ -1013,11 +948,8 @@ class Sentinel2Collection:
         """
         Property attribute to mask clouds and return collection as class object.
 
-        Args:
-        self: self is passed into argument.
-
         Returns:
-        image collection (Sentinel2Collection): masked Sentinel2Collection image collection.
+            Sentinel2Collection: masked Sentinel2Collection image collection.
         """
         if self._masked_clouds_collection is None:
             col = self.collection.map(Sentinel2Collection.MaskCloudsS2)
@@ -1029,11 +961,10 @@ class Sentinel2Collection:
         Function to mask Sentinel2Collection image collection by a polygon (ee.Geometry), where pixels outside the polygon are masked out.
 
         Args:
-        self: self is passed into argument.
-        polygon: ee.Geometry polygon or shape used to mask image collection.
+            polygon: ee.Geometry polygon or shape used to mask image collection.
 
         Returns:
-        image collection (Sentinel2Collection): masked Sentinel2Collection image collection.
+            Sentinel2Collection: masked Sentinel2Collection image collection.
         
         """
         if self._geometry_masked_collection is None:
@@ -1054,11 +985,10 @@ class Sentinel2Collection:
          Function to mask Sentinel2Collection image collection by a polygon (ee.Geometry), where pixels inside the polygon are masked out.
 
         Args:
-        self: self is passed into argument.
-        polygon: ee.Geometry polygon or shape used to mask image collection.
+            polygon: ee.Geometry polygon or shape used to mask image collection.
 
         Returns:
-        image collection (Sentinel2Collection): masked Sentinel2Collection image collection.
+            Sentinel2Collection: masked Sentinel2Collection image collection.
         
         """
         if self._geometry_masked_out_collection is None:
@@ -1082,11 +1012,10 @@ class Sentinel2Collection:
         Function to mask halite and return collection as class object. 
 
         Args:
-        self: self is passed into argument
-        threshold: specify threshold for gypsum function (values less than threshold are masked).
+            threshold: specify threshold for gypsum function (values less than threshold are masked).
   
         Returns:
-        image collection (Sentinel2Collection): Sentinel2Collection image collection
+            Sentinel2Collection: Sentinel2Collection image collection
         """
         col = self.collection.map(lambda image: Sentinel2Collection.halite_mask(image, threshold=threshold))
         return Sentinel2Collection(collection=col)
@@ -1096,12 +1025,11 @@ class Sentinel2Collection:
         Function to mask halite and gypsum and return collection as class object. 
 
         Args:
-        self: self is passed into argument
-        halite_threshold: specify threshold for halite function (values less than threshold are masked).
-        gypsum_threshold: specify threshold for gypsum function (values less than threshold are masked).
+            halite_threshold: specify threshold for halite function (values less than threshold are masked).
+            gypsum_threshold: specify threshold for gypsum function (values less than threshold are masked).
 
         Returns:
-        image collection (Sentinel2Collection): Sentinel2Collection image collection
+            Sentinel2Collection: Sentinel2Collection image collection
         """
         col = self.collection.map(lambda image: Sentinel2Collection.gypsum_and_halite_mask(image, halite_threshold=halite_threshold, gypsum_threshold=gypsum_threshold))
         return Sentinel2Collection(collection=col)
@@ -1111,11 +1039,10 @@ class Sentinel2Collection:
         Function to select ("grab") an image by index from the collection. Easy way to get latest image or browse imagery one-by-one.
 
         Args:
-        self: self is passed into argument.
-        img_selector: index of image in the collection for which user seeks to select/"grab".
+            img_selector: index of image in the collection for which user seeks to select/"grab".
         
         Returns:
-        image (ee.Image): ee.Image of selected image.
+            ee.Image: ee.Image of selected image.
         """
         # Convert the collection to a list
         image_list = self.collection.toList(self.collection.size())
@@ -1130,12 +1057,11 @@ class Sentinel2Collection:
         Function to select ("grab") image of a specific index from an ee.ImageCollection object.
 
         Args:
-        self: self is passed into argument.
-        img_col: ee.ImageCollection with same dates as another Sentinel2Collection image collection object.
-        img_selector: index of image in list of dates for which user seeks to "select".
+            img_col: ee.ImageCollection with same dates as another Sentinel2Collection image collection object.
+            img_selector: index of image in list of dates for which user seeks to "select".
         
         Returns:
-        image (ee.Image): ee.Image of selected image.
+            ee.Image: ee.Image of selected image.
         """
         # Convert the collection to a list
         image_list = img_col.toList(img_col.size())
@@ -1151,11 +1077,10 @@ class Sentinel2Collection:
         Will not work correctly if collection is composed of multiple images of the same date.
 
         Args:
-        self: self is passed into argument.
-        img_date: date (str) of image to select in format of 'YYYY-MM-DD'.
+            img_date: date (str) of image to select in format of 'YYYY-MM-DD'.
 
         Returns:
-        image (ee.Image): ee.Image of selected image.
+            ee.Image: ee.Image of selected image.
         """
         new_col = self.collection.filter(ee.Filter.eq('Date_Filter', img_date))
         return new_col.first()
@@ -1168,11 +1093,10 @@ class Sentinel2Collection:
         Server-side friendly.
 
         Args:
-        self: self is passed into argument, which is a Sentinel2Collection image collection.
-        img_col2: secondary Sentinel2Collection image collection to be mosaiced with the primary image collection.
+            img_col2: secondary Sentinel2Collection image collection to be mosaiced with the primary image collection.
 
         Returns:
-        image collection (Sentinel2Collection): Sentinel2Collection image collection
+            Sentinel2Collection: Sentinel2Collection image collection
         """
         dates_list = ee.List(self.dates_list).cat(ee.List(img_col2.dates_list)).distinct()
         filtered_dates1 = self.dates_list
@@ -1208,13 +1132,12 @@ class Sentinel2Collection:
         """
         Property attribute function to mosaic collection images that share the same date. The properties CLOUD_PIXEL_PERCENTAGE and NODATA_PIXEL_PERCENTAGE 
         for each image are used to calculate an overall mean, which replaces the CLOUD_PIXEL_PERCENTAGE and NODATA_PIXEL_PERCENTAGE for each mosaiced image. 
-        Server-side friendly. NOTE: if images are removed from the collection from cloud filtering, you may have mosaics composed of only one image.
-
-        Args:
-        self: self is passed into argument, which is a Sentinel2Collection image collection.
+        Server-side friendly. 
+        
+        NOTE: if images are removed from the collection from cloud filtering, you may have mosaics composed of only one image.
 
         Returns:
-        image collection (Sentinel2Collection): Sentinel2Collection image collection 
+            Sentinel2Collection: Sentinel2Collection image collection 
         """
         if self._MosaicByDate is None:
             input_collection = self.collection
@@ -1439,7 +1362,6 @@ class Sentinel2Collection:
             Naming conventions for the csv files follows as: "image-date_transects.csv"
 
         Args:
-            self (Sentinel2Collection image collection): Image collection object to iterate for calculating transect values for each image.
             lines (list): List of ee.Geometry.LineString objects.
             line_names (list of strings): List of line string names.
             save_folder_path (str): The path to the folder where the csv files will be saved.
@@ -1576,9 +1498,10 @@ class Sentinel2Collection:
         Function to iterate over a collection of images and extract spatial statistics for a list of coordinates (defaults to mean). Individual statistics are provided for each location.
         A radial buffer is applied around each coordinate to extract the statistics, which defaults to 1 meter.
         The function returns a pandas DataFrame with the statistics for each coordinate and date, or optionally exports the data to a table in .csv format.
+
+        NOTE: The input RadGEEToolbox object must be a collection of singleband images, otherwise the resulting values will all be zero!
         
         Args:
-            self (RadGEEToolbox class object): The image collection from which to extract the statistics. Each image must be a singleband image or else resulting values will all be zero!
             coordinates (list): Single tuple or a list of tuples with the coordinates as decimal degrees in the format of (longitude, latitude) for which to extract the statistics. NOTE the format needs to be [(x1, y1), (x2, y2), ...].
             buffer_size (int, optional): The radial buffer size in meters around the coordinates. Defaults to 1.
             reducer_type (str, optional): The reducer type to use. Defaults to 'mean'. Options are 'mean', 'median', 'min', and 'max'.

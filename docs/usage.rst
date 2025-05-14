@@ -1,0 +1,81 @@
+Usage Example
+=============
+
+Below is an example use case using the ``LandsatCollection`` module to create
+an NDWI image collection, generate water classification maps, and calculate
+a time series of surface water area.
+
+1. Create a Filtered Landsat Image Collection
+---------------------------------------------
+
+::
+
+    # 1. Import necessary packages and modules
+    import ee
+    from RadGEEToolbox import LandsatCollection
+
+    # 2. Authenticate & Initialize GEE API
+    ee.Authenticate()
+    ee.Initialize()
+
+    # 3. Define study area boundary - in this case Lake Powell, Utah
+    study_area = ee.Geometry.Polygon(
+        [[[-111.35875055487008, 37.19999663127137],
+          [-111.35875055487008, 37.00119876939416],
+          [-111.12048456365915, 37.00119876939416],
+          [-111.12048456365915, 37.19999663127137]]])
+
+    # 4. Create a Landsat image collection
+    collection = LandsatCollection(
+        start_date='2020-01-01',
+        end_date='2025-01-01',
+        cloud_percentage_threshold=10,
+        boundary=study_area
+    )
+
+    # 5. Check collection by printing image dates
+    dates = collection.dates 
+    print(dates)
+
+2. Apply a Cloud Mask and Compute NDWI
+--------------------------------------
+
+::
+
+    # 1. Mask clouds 
+    cloud_masked_collection = collection.masked_clouds_collection
+
+    # 2. Generate NDWI image collection
+    cloud_masked_NDWI_collection = cloud_masked_collection.ndwi
+
+    # 3. (Optional) Classify water using a binary NDWI threshold
+    water_classification_maps = cloud_masked_collection.ndwi_collection(
+        threshold=0
+    )
+
+.. image:: _static/image-3.png
+   :alt: Visualization of classified water from one date
+   :width: 600px
+
+3. Calculate Water Area Time Series
+-----------------------------------
+
+::
+
+    calculate_water_area = cloud_masked_NDWI_collection.PixelAreaSumCollection(
+        band_name='ndwi',
+        geometry=study_area,
+        threshold=0,
+        scale=90
+    )
+
+    print('List of square meters of water in images:',
+          calculate_water_area.aggregate_array('ndwi').getInfo())
+
+.. image:: _static/image-4.png
+   :alt: Water area plotted results
+   :width: 600px
+
+You can also explore the
+`Example Notebooks <https://github.com/radwinskis/RadGEEToolbox/tree/main/Example%20Notebooks>`_
+for more usage examples.

@@ -4,9 +4,11 @@ import pandas as pd
 import numpy as np
 class Sentinel1Collection:
     """
-    Class object representing a collection of Sentinel-1 C-band Synthetic Aperture Radar (SAR) GRD data at 10 m/px resolution from Google Earth Engine (GEE).
+    Class object representing a collection of Sentinel-1 C-band Synthetic Aperture Radar (SAR) GRD data at 10 m/px resolution from Google Earth Engine (GEE). Units of backscatter are in decibels (dB) by default.
 
-    This class module provides methods to filter, process, and analyze Sentinel-1 satellite imagery for a given period and region
+    This class module provides methods to filter, process, and analyze Sentinel-1 satellite imagery for a given period and region.
+
+    Inspect the documentation or source code for details on the methods and properties available.
 
     Arguments:
         start_date (str): Start date string in format of yyyy-mm-dd for filtering collection (required unless collection is provided)
@@ -23,7 +25,7 @@ class Sentinel1Collection:
 
         bands (str or list): Band(s) of interest in each image (optional, must match polarization type; default is ['VV', 'VH'])
 
-        orbit_direction (str or list): Orbit direction for filtering collection. Options: 'ASCENDING' and/or 'DESCENDING' (required unless collection is provided)
+        orbit_direction (str or list): Orbit direction for filtering collection. Options: 'ASCENDING' and/or 'DESCENDING' (required unless collection is provided). For example, ['ASCENDING', 'DESCENDING'] will include both ascending and descending images.
 
         boundary (ee.Geometry): Boundary for filtering images to images that intersect with the boundary shape (optional)
 
@@ -181,7 +183,7 @@ class Sentinel1Collection:
             elif orbit_direction == ['ASCENDING', 'DESCENDING']:
                 self.orbit_direction = orbit_direction
             elif orbit_direction not in ['ASCENDING', 'DESCENDING']:
-                raise ValueError("Orbit direction must be either 'ASCENDING' or 'DESCENDING'")
+                raise ValueError("Orbit direction must be either 'ASCENDING' or 'DESCENDING', or '['ASCENDING', 'DESCENDING']' ")
             else:
                 pass
 
@@ -276,10 +278,10 @@ class Sentinel1Collection:
         Adds date to image properties as 'Date_Filter'.
 
         Args: 
-        image (ee.Image): Input image
+            image (ee.Image): Input image
 
         Returns: 
-        image (ee.Image): Image with date in properties.
+            ee.Image: Image with date in properties.
         """
         date = ee.Number(image.date().format('YYYY-MM-dd'))
         return image.set({'Date_Filter': date})
@@ -292,15 +294,15 @@ class Sentinel1Collection:
         and store the value as image property (matching name of chosen band).
 
         Args:
-        image (ee.Image): input ee.Image
-        band_name (string): name of band (string) for calculating area
-        geometry (ee.Geometry): ee.Geometry object denoting area to clip to for area calculation
-        threshold (int): integer threshold to specify masking of pixels below threshold (defaults to -1)
-        scale (int): integer scale of image resolution (meters) (defaults to 30)
-        maxPixels (int): integer denoting maximum number of pixels for calculations
-        
-        Returns:
-        image (ee.Image): ee.Image with area calculation stored as property matching name of band
+            image (ee.Image): input ee.Image
+            band_name (string): name of band (string) for calculating area
+            geometry (ee.Geometry): ee.Geometry object denoting area to clip to for area calculation
+            threshold (float): integer threshold to specify masking of pixels below threshold (defaults to -1)
+            scale (int): integer scale of image resolution (meters) (defaults to 30)
+            maxPixels (int): integer denoting maximum number of pixels for calculations
+            
+        Returns: 
+            ee.Image: ee.Image with area calculation stored as property matching name of band
         """
         area_image = ee.Image.pixelArea()
         mask = image.select(band_name).gte(threshold)
@@ -320,15 +322,14 @@ class Sentinel1Collection:
         The resulting value has units of square meters. 
 
         Args:
-        self: self is the input image collection
-        band_name: name of band (string) for calculating area.
-        geometry: ee.Geometry object denoting area to clip to for area calculation.
-        threshold: integer threshold to specify masking of pixels below threshold (defaults to -1).
-        scale: integer scale of image resolution (meters) (defaults to 30).
-        maxPixels: integer denoting maximum number of pixels for calculations.
+            band_name: name of band (string) for calculating area.
+            geometry: ee.Geometry object denoting area to clip to for area calculation.
+            threshold: integer threshold to specify masking of pixels below threshold (defaults to -1).
+            scale: integer scale of image resolution (meters) (defaults to 30).
+            maxPixels: integer denoting maximum number of pixels for calculations.
         
-        Returns:
-        image (ee.Image): Image with area calculation stored as property matching name of band.
+        Returns: 
+            ee.Image: Image with area calculation stored as property matching name of band.
         """
         if self._PixelAreaSumCollection is None:
             collection = self.collection
@@ -352,11 +353,10 @@ class Sentinel1Collection:
         Property attribute function to multilook image collection. Results are calculated once per class object then cached for future use.
 
         Args:
-        self: self is passed into argument
-        looks: number of looks to multilook image collection by (int)
+            looks: number of looks to multilook image collection by (int)
 
         Returns:
-        image collection (Sentinel1Collection): Sentinel1Collection image collection
+            Sentinel1Collection: Sentinel1Collection image collection
         """
         if looks not in [1, 2, 3, 4]:
             raise ValueError("Looks must be either 1, 2, 3, or 4, corresponding to 1x1, 2x2, 3x3, or 4x4 multilooking")
@@ -370,18 +370,22 @@ class Sentinel1Collection:
         return Sentinel1Collection(collection=self._multilook)
 
     @staticmethod
-    def leesigma(image, KERNEL_SIZE, geometry, Tk=7, sigma=0.9, looks=1):
+    def leesigma(image, KERNEL_SIZE, geometry=None, Tk=7, sigma=0.9, looks=1):
         """
         Implements the improved lee sigma filter for speckle filtering, adapted from https://github.com/adugnag/gee_s1_ard (by Dr. Adugna Mullissa). 
         See: Lee, J.-S. Wen, J.-H. Ainsworth, T.L. Chen, K.-S. Chen, A.J. Improved sigma filter for speckle filtering of SAR imagery. 
         IEEE Trans. Geosci. Remote Sens. 2009, 47, 202–213.
 
         Args:
-        image (ee.Image): Image for speckle filtering
-        KERNEL_SIZE (int): positive odd integer (neighbourhood window size - suggested to use between 3-9)
+            image (ee.Image): Image for speckle filtering
+            KERNEL_SIZE (int): positive odd integer (neighbourhood window size - suggested to use between 3-9)
+            geometry (ee.Geometry): Geometry to use for speckle filtering (optional). Defaults to footprint of input image.
+            Tk (int): number of bright pixels in a 3x3 window (default is 7)
+            sigma (float): noise standard deviation (default is 0.9)
+            looks (int): number of looks (1, 2, 3, or 4) corresponding to the input image (default is 1). This does NOT perform multilooking, but rather is used to determine the sigma range for filtering.
 
-        Returns:
-        Image (ee.Image): Speckle filtered image
+        Returns: 
+            ee.Image: Speckle filtered image
 
         """
 
@@ -391,6 +395,10 @@ class Sentinel1Collection:
         enl = 4
         target_kernel = 3
         bandNames = image.bandNames().remove('angle')
+
+        # Use image bounds as default geometry
+        if geometry is None:
+            geometry = image.geometry()
     
         #compute the 98 percentile intensity 
         z98 = ee.Dictionary(image.select(bandNames).reduceRegion(
@@ -507,20 +515,23 @@ class Sentinel1Collection:
         return output.copyProperties(image)
     
     
-    def speckle_filter(self, KERNEL_SIZE, geometry, Tk=7, sigma=0.9, looks=1):
+    def speckle_filter(self, KERNEL_SIZE, geometry=None, Tk=7, sigma=0.9, looks=1):
         """
         Property attribute function to apply speckle filter to entire image collection. Results are calculated once per class object then cached for future use.
 
         Args:
-        self: self is passed into argument
-        KERNEL_SIZE: size of kernel for speckle filter (int)
+            KERNEL_SIZE (int): positive odd integer (neighbourhood window size - suggested to use between 3-9)
+            geometry (ee.Geometry): Geometry to use for speckle filtering (optional). Defaults to footprint of input image.
+            Tk (int): number of bright pixels in a 3x3 window (default is 7)
+            sigma (float): noise standard deviation (default is 0.9)
+            looks (int): number of looks (1, 2, 3, or 4) corresponding to the input image (default is 1). This does NOT perform multilooking, but rather is used to determine the sigma range for filtering.
 
         Returns:
-        image collection (Sentinel1Collection): Sentinel1Collection image collection
+            Sentinel1Collection: Sentinel1Collection image collection
         """
         if self._speckle_filter is None:
             collection = self.collection
-            speckle_filtered_collection = collection.map(lambda image: Sentinel1Collection.leesigma(image, KERNEL_SIZE, geometry, Tk=Tk, sigma=sigma, looks=looks))
+            speckle_filtered_collection = collection.map(lambda image: Sentinel1Collection.leesigma(image, KERNEL_SIZE, geometry=geometry, Tk=Tk, sigma=sigma, looks=looks))
             self._speckle_filter = speckle_filtered_collection
         return Sentinel1Collection(collection=self._speckle_filter)
     
@@ -529,11 +540,8 @@ class Sentinel1Collection:
         """
         Property attribute function to convert image collection from decibels to sigma0. Results are calculated once per class object then cached for future use.
 
-        Args:
-        self: self is passed into argument
-
         Returns:
-        image collection (Sentinel1Collection): Sentinel1Collection image collection
+            Sentinel1Collection: Sentinel1Collection image collection
         """
         def conversion(image):
             image = ee.Image(image)
@@ -552,11 +560,8 @@ class Sentinel1Collection:
         """
         Property attribute function to convert image collection from decibels to sigma0. Results are calculated once per class object then cached for future use.
 
-        Args:
-        self: self is passed into argument
-
         Returns:
-        image collection (Sentinel1Collection): Sentinel1Collection image collection
+            Sentinel1Collection: Sentinel1Collection image collection
         """
         def conversion(image):
             image = ee.Image(image)
@@ -575,11 +580,8 @@ class Sentinel1Collection:
         """
         Property attribute to retrieve list of dates as server-side (GEE) object.
 
-        Args:
-        self: self is passed into argument.
-
         Returns:
-        ee.List: Server-side ee.List of dates.
+            ee.List: Server-side ee.List of dates.
         """
         if self._dates_list is None:
             dates = self.collection.aggregate_array('Date_Filter')
@@ -591,11 +593,8 @@ class Sentinel1Collection:
         """
         Property attribute to retrieve list of dates as readable and indexable client-side list object.
 
-        Args:
-        self: self is passed into argument.
-
         Returns:
-        list: list of date strings.
+            list: list of date strings.
         """
         if self._dates_list is None:
             dates = self.collection.aggregate_array('Date_Filter')
@@ -609,11 +608,8 @@ class Sentinel1Collection:
         """
         Function to filter image collection based on Sentinel1Collection class arguments. Automatically calculated when using collection method, depending on provided class arguments (when tile info is provided).
 
-        Args:
-        self: self is passed into argument
-
         Returns:
-        ee.ImageCollection: Filtered image collection - used for subsequent analyses or to acquire ee.ImageCollection from Sentinel1Collection object
+            ee.ImageCollection: Filtered image collection - used for subsequent analyses or to acquire ee.ImageCollection from Sentinel1Collection object
         """
         # filtered_collection = ee.ImageCollection("COPERNICUS/S1_GRD").filterDate(self.start_date, self.end_date).filter(ee.Filter.inList('instrumentMode', self.instrument_mode)).filter(ee.Filter.And(ee.Filter.inList('relativeOrbitNumber_start', self.relative_orbit_stop),
         #                         ee.Filter.inList('relativeOrbitNumber_stop', self.relative_orbit_stop))).filter(ee.Filter.inList('orbitProperties_pass', self.orbit_direction)).filter(ee.Filter.inList('transmitterReceiverPolarisation', 
@@ -628,11 +624,8 @@ class Sentinel1Collection:
         """
         Function to filter and mask image collection based on Sentinel1Collection class arguments. Automatically calculated when using collection method, depending on provided class arguments (when boundary info is provided).
 
-        Args:
-        self: self is passed into argument
-
         Returns:
-        ee.ImageCollection: Filtered image collection - used for subsequent analyses or to acquire ee.ImageCollection from Sentinel1Collection object
+            ee.ImageCollection: Filtered image collection - used for subsequent analyses or to acquire ee.ImageCollection from Sentinel1Collection object
 
         """
         filtered_collection = ee.ImageCollection("COPERNICUS/S1_GRD").filterDate(self.start_date, self.end_date).filterBounds(self.boundary).filter(ee.Filter.inList('instrumentMode', self.instrument_mode)).filter(ee.Filter.inList('orbitProperties_pass', self.orbit_direction)).filter(ee.Filter.eq('transmitterReceiverPolarisation', 
@@ -643,11 +636,8 @@ class Sentinel1Collection:
         """
         Function to filter image collection based on Sentinel1Collection class arguments. Automatically calculated when using collection method, depending on provided class arguments (when tile info is provided).
 
-        Args:
-        self: self is passed into argument
-
         Returns:
-        ee.ImageCollection: Filtered image collection - used for subsequent analyses or to acquire ee.ImageCollection from Sentinel1Collection object
+            ee.ImageCollection: Filtered image collection - used for subsequent analyses or to acquire ee.ImageCollection from Sentinel1Collection object
         """
         # filtered_collection = ee.ImageCollection("COPERNICUS/S1_GRD").filterDate(self.start_date, self.end_date).filter(ee.Filter.inList('instrumentMode', self.instrument_mode)).filter(ee.Filter.And(ee.Filter.inList('relativeOrbitNumber_start', self.relative_orbit_stop),
         #                         ee.Filter.inList('relativeOrbitNumber_stop', self.relative_orbit_stop))).filter(ee.Filter.inList('orbitProperties_pass', self.orbit_direction)).filter(ee.Filter.inList('transmitterReceiverPolarisation', 
@@ -663,11 +653,8 @@ class Sentinel1Collection:
         """
         Property attribute function to calculate median image from image collection. Results are calculated once per class object then cached for future use.
 
-        Args:
-        self: self is passed into argument
-
-        Returns:
-        image (ee.Image): median image from entire collection.
+        Returns: 
+            ee.Image: median image from entire collection.
         """
         if self._median is None:
             col = self.collection.median()
@@ -679,11 +666,8 @@ class Sentinel1Collection:
         """
         Property attribute function to calculate mean image from image collection. Results are calculated once per class object then cached for future use.
 
-        Args:
-        self: self is passed into argument
-
-        Returns:
-        image (ee.Image): mean image from entire collection.
+        Returns: 
+            ee.Image: mean image from entire collection.
 
         """
         if self._mean is None:
@@ -696,11 +680,8 @@ class Sentinel1Collection:
         """
         Property attribute function to calculate max image from image collection. Results are calculated once per class object then cached for future use.
 
-        Args:
-        self: self is passed into argument
-
-        Returns:
-        image (ee.Image): max image from entire collection.
+        Returns: 
+            ee.Image: max image from entire collection.
         """
         if self._max is None:
             col = self.collection.max()
@@ -712,11 +693,8 @@ class Sentinel1Collection:
         """
         Property attribute function to calculate min image from image collection. Results are calculated once per class object then cached for future use.
         
-        Args:
-        self: self is passed into argument
-
-        Returns:
-        image (ee.Image): min image from entire collection.
+        Returns: 
+            ee.Image: min image from entire collection.
         """
         if self._min is None:
             col = self.collection.min()
@@ -727,12 +705,11 @@ class Sentinel1Collection:
         """
         Function to mask Sentinel1Collection image collection by a polygon (ee.Geometry), where pixels outside the polygon are masked out.
 
-        Args:
-        self: self is passed into argument (image collection)
-        polygon (ee.Geometry): ee.Geometry polygon or shape used to mask image collection.
+        Args: (image collection)
+            polygon (ee.Geometry): ee.Geometry polygon or shape used to mask image collection.
 
         Returns:
-        image collection (Sentinel1Collection): masked Sentinel1Collection image collection
+            Sentinel1Collection: masked Sentinel1Collection image collection
         
         """
         if self._geometry_masked_collection is None:
@@ -752,12 +729,11 @@ class Sentinel1Collection:
         """
         Function to mask Sentinel1Collection image collection by a polygon (ee.Geometry), where pixels inside the polygon are masked out.
 
-        Args:
-        self: self is passed into argument (image collection)
-        polygon (ee.Geometry): ee.Geometry polygon or shape used to mask image collection.
+        Args: (image collection)
+            polygon (ee.Geometry): ee.Geometry polygon or shape used to mask image collection.
 
         Returns:
-        image collection (Sentinel1Collection): masked Sentinel1Collection image collection
+            Sentinel1Collection: masked Sentinel1Collection image collection
         
         """
         if self._geometry_masked_out_collection is None:
@@ -783,11 +759,10 @@ class Sentinel1Collection:
         Function to select ("grab") an image by index from the collection. Easy way to get latest image or browse imagery one-by-one.
 
         Args:
-        self: self is passed into argument
-        img_selector: index of image in the collection for which user seeks to select/"grab".
+            img_selector: index of image in the collection for which user seeks to select/"grab".
         
-        Returns:
-        image (ee.Image): ee.Image of selected image
+        Returns: 
+            ee.Image: ee.Image of selected image
         """
         # Convert the collection to a list
         image_list = self.collection.toList(self.collection.size())
@@ -802,12 +777,11 @@ class Sentinel1Collection:
         Function to select ("grab") image of a specific index from an ee.ImageCollection object.
 
         Args:
-        self: self is passed into argument
-        img_col: ee.ImageCollection with same dates as another Sentinel1Collection image collection object.
-        img_selector: index of image in list of dates for which user seeks to "select".
+            img_col: ee.ImageCollection with same dates as another Sentinel1Collection image collection object.
+            img_selector: index of image in list of dates for which user seeks to "select".
         
-        Returns:
-        image (ee.Image): ee.Image of selected image
+        Returns: 
+            ee.Image: ee.Image of selected image
         """
         # Convert the collection to a list
         image_list = img_col.toList(img_col.size())
@@ -822,11 +796,10 @@ class Sentinel1Collection:
         Function to select ("grab") image of a specific date in format of 'YYYY-MM-DD' - will not work correctly if collection is composed of multiple images of the same date.
 
         Args:
-        self: self is passed into argument
-        img_date: date (str) of image to select in format of 'YYYY-MM-DD'
+            img_date: date (str) of image to select in format of 'YYYY-MM-DD'
 
-        Returns:
-        image (ee.Image): ee.Image of selected image
+        Returns: 
+            ee.Image: ee.Image of selected image
         """
         new_col = self.collection.filter(ee.Filter.eq('Date_Filter', img_date))
         return new_col.first()
@@ -838,11 +811,10 @@ class Sentinel1Collection:
         Image properties are copied from the primary collection. Server-side friendly.
 
         Args:
-        self: self is passed into argument, which is a Sentinel1Collection image collection
-        img_col2: secondary Sentinel1Collection image collection to be mosaiced with the primary image collection
+            img_col2: secondary Sentinel1Collection image collection to be mosaiced with the primary image collection
 
         Returns:
-        image collection (Sentinel1Collection): Sentinel1Collection image collection
+            Sentinel1Collection: Sentinel1Collection image collection
         """
         dates_list = ee.List(self._dates_list).cat(ee.List(img_col2.dates_list)).distinct()
         filtered_dates1 = self._dates_list
@@ -881,17 +853,14 @@ class Sentinel1Collection:
         which replaces the CLOUD_COVER property for each mosaiced image. 
         Server-side friendly. NOTE: if images are removed from the collection from cloud filtering, you may have mosaics composed of only one image.
 
-        Args:
-        self: self is passed into argument, which is a Sentinel1Collection image collection
-
         Returns:
-        image collection (Sentinel1Collection): Sentinel1Collection image collection with mosaiced imagery and mean CLOUD_COVER as a property
+            Sentinel1Collection: Sentinel1Collection image collection with mosaiced imagery and mean CLOUD_COVER as a property
         """
         if self._MosaicByDate is None:
             input_collection = self.collection
             # Function to mosaic images of the same date and accumulate them
             def mosaic_and_accumulate(date, list_accumulator):
-                # date = ee.Date(date)
+
                 list_accumulator = ee.List(list_accumulator)
                 date_filter = ee.Filter.eq('Date_Filter', date)
                 date_collection = input_collection.filter(date_filter)
@@ -1106,7 +1075,6 @@ class Sentinel1Collection:
             Naming conventions for the csv files follows as: "image-date_line-name.csv"
 
         Args:
-            self (Sentinel1Collection image collection): Image collection object to iterate for calculating transect values for each image.
             lines (list): List of ee.Geometry.LineString objects.
             line_names (list of strings): List of line string names.
             save_folder_path (str): The path to the folder where the csv files will be saved.
@@ -1121,7 +1089,7 @@ class Sentinel1Collection:
         Returns:
             csv file: file for each image with an organized list of values along the transect(s)
         """
-        image_collection = self #.collection
+        image_collection = self 
         image_collection_dates = self.dates
         for i, date in enumerate(image_collection_dates):
             try:
@@ -1174,7 +1142,7 @@ class Sentinel1Collection:
             band_count = image.bandNames().size()
             return ee.Algorithms.If(band_count.eq(1), image, ee.Image.constant(0))
 
-        # image = ee.Image(check_singleband(image))
+        # Check if the image is a singleband image
         image = ee.Image(check_singleband(image))
 
         #Convert coordinates to ee.Geometry.Point, buffer them, and add label/name to feature
@@ -1243,9 +1211,10 @@ class Sentinel1Collection:
         Function to iterate over a collection of images and extract spatial statistics for a list of coordinates (defaults to mean). Individual statistics are provided for each location.
         A radial buffer is applied around each coordinate to extract the statistics, which defaults to 1 meter.
         The function returns a pandas DataFrame with the statistics for each coordinate and date, or optionally exports the data to a table in .csv format.
+
+        NOTE: The input RadGEEToolbox class object but be a collection of singleband images or else resulting values will all be zero!
         
         Args:
-            self (RadGEEToolbox class object): The image collection from which to extract the statistics. Each image must be a singleband image or else resulting values will all be zero!
             coordinates (list): Single tuple or a list of tuples with the coordinates as decimal degrees in the format of (longitude, latitude) for which to extract the statistics. NOTE the format needs to be [(x1, y1), (x2, y2), ...].
             buffer_size (int, optional): The radial buffer size in meters around the coordinates. Defaults to 1.
             reducer_type (str, optional): The reducer type to use. Defaults to 'mean'. Options are 'mean', 'median', 'min', and 'max'.

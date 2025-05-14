@@ -23,7 +23,7 @@ copyright = '2025, Mark Radwin'
 author = 'Mark Radwin'
 
 # The full version, including alpha/beta/rc tags
-release = '1.6.0'
+release = '1.6.1'
 
 
 # -- General configuration ---------------------------------------------------
@@ -31,8 +31,18 @@ release = '1.6.0'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.autodoc', "sphinx_rtd_theme"
-]
+extensions = [
+    'sphinx.ext.autodoc',
+    'sphinx.ext.napoleon',
+    'sphinx_rtd_theme']
+
+napoleon_google_docstring = True
+napoleon_numpy_docstring = False
+napoleon_include_init_with_doc = True
+napoleon_include_private_with_doc = False
+napoleon_use_param = True
+napoleon_use_rtype = True
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

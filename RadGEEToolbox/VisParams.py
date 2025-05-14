@@ -5,14 +5,14 @@ def get_visualization_params(satellite, index, min_val=None, max_val=None, palet
     Function to define visualization paramaters for image visualization. Outputs an vis_params dictionary.
 
     Args:
-    satellite (string): Denote satellite for visualization. Options: 'Landsat', 'landsat', 'Sentinel2', or 'sentinel2'
-    index (string): Multispectral index to visualize. Options: 'TrueColor', 'NDVI', 'NDWI', 'halite', 'gypsum', 'LST', 'NDTI', 'KIVU', or '2BDA'. NOTE: LST and KIVU is not available for Sentinel2, and 2BDA is not available for Landsat.
-    min_val (int or float): Optional override for minimum value to stretch raster
-    max_val (int or float): Optional override for maximum value to stretch raster
-    palette (string): Optional override for color palette used for image visualization. Must be from GetPalette.get_palette() function. Options: 'algae', 'dense', 'greens', 'haline', 'inferno', 'jet', 'matter', 'pubu', 'soft_blue_green_red', 'thermal', 'turbid', 'ylord'
+        satellite (string): Denote satellite for visualization. Options: 'Landsat', 'landsat', 'Sentinel2', or 'sentinel2'
+        index (string): Multispectral index to visualize. Options: 'TrueColor', 'NDVI', 'NDWI', 'halite', 'gypsum', 'LST', 'NDTI', 'KIVU', or '2BDA'. NOTE: LST and KIVU is not available for Sentinel2, and 2BDA is not available for Landsat.
+        min_val (int or float): Optional override for minimum value to stretch raster
+        max_val (int or float): Optional override for maximum value to stretch raster
+        palette (string): Optional override for color palette used for image visualization. Must be from GetPalette.get_palette() function. Options: 'algae', 'dense', 'greens', 'haline', 'inferno', 'jet', 'matter', 'pubu', 'soft_blue_green_red', 'thermal', 'turbid', 'ylord'
 
     Returns:
-    dictionary: vis_params dictionary to be used when visualizing an image on a map. Supplies min, max, band(s), and color palette (when appropriate).
+        dictionary: vis_params dictionary to be used when visualizing an image on a map. Supplies min, max, band(s), and color palette (when appropriate).
     """
     # Define visualization parameters for various image types
     if satellite == 'Landsat' or satellite == 'landsat':

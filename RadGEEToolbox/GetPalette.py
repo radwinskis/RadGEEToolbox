@@ -3,10 +3,10 @@ def get_palette(name):
     Returns the color palette associated with the given name.
 
     Args:
-    name: options: 'algae', 'dense', 'greens', 'haline', 'inferno', 'jet', 'matter', 'pubu', 'soft_blue_green_red', 'thermal', 'turbid', 'ylord'
+        name (str): options are 'algae', 'dense', 'greens', 'haline', 'inferno', 'jet', 'matter', 'pubu', 'soft_blue_green_red', 'thermal', 'turbid', 'ylord'
     
     Returns:
-    list: list of colors to be used for image visualization in GEE vis params
+        list: list of colors to be used for image visualization in GEE vis params
     
     """
     palettes = {

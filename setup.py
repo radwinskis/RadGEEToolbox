@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="RadGEEToolbox",
-    version="1.6.0",
+    version="1.6.1",
     author="Mark Radwin",
     author_email="markradwin@gmail.com",
     description="Streamlined Multispectral & SAR Analysis for Google Earth Engine Python API",

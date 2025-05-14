@@ -5,7 +5,9 @@ class LandsatCollection:
     """
     Class object representing a combined collection of NASA/USGS Landsat 5, 8, and 9 TM & OLI surface reflectance satellite images at 30 m/px from Google Earth Engine.
 
-    This class provides methods to filter, process, and analyze Landsat satellite imagery for a given period and region
+    This class provides methods to filter, process, and analyze Landsat satellite imagery for a given period and region.
+
+    Inspect the documentation or source code for details on the methods and properties available.
 
     Arguments:
         start_date (str): Start date string in format of yyyy-mm-dd for filtering collection (required unless collection is provided)
@@ -289,10 +291,10 @@ class LandsatCollection:
         Adds date to image properties as 'Date_Filter'.
 
         Args: 
-        image (ee.Image): Input image
+            image (ee.Image): Input image
 
         Returns: 
-        image (ee.Image): Image with date in properties.
+            ee.Image: Image with date in properties.
         """
         date = ee.Number(image.date().format('YYYY-MM-dd'))
         return image.set({'Date_Filter': date})
@@ -300,30 +302,30 @@ class LandsatCollection:
     @staticmethod
     def landsat5bandrename(img):
         """
-        Function to rename Landsat 5 bands to match Landsat 8 & 9.
+        Renames Landsat 5 bands to match Landsat 8 & 9.
 
         Args: 
-        image (ee.Image): input image
+            image (ee.Image): input image
         
         Returns: 
-        image (ee.Image): image with renamed bands
+            ee.Image: image with renamed bands
         """
         return img.select('SR_B1', 'SR_B2', 'SR_B3', 'SR_B4', 'SR_B5', 'SR_B7', 'QA_PIXEL').rename('SR_B2', 'SR_B3', 'SR_B4', 'SR_B5', 'SR_B6', 'SR_B7', 'QA_PIXEL')
     
     @staticmethod
     def landsat_ndwi_fn(image, threshold, ng_threshold=None):
         """
-        Function to calculate ndwi from GREEN and NIR bands (McFeeters, 1996 - https://doi.org/10.1080/01431169608948714) for Landsat imagery and mask image based on threshold. 
-        Can specify separate thresholds for Landsat 5 vs 8 & 9 images, where the threshold 
-        argument applies to Landsat 5 and the ng_threshold argument applies to Landsat 8 & 9.
+        Calculates ndwi from GREEN and NIR bands (McFeeters, 1996 - https://doi.org/10.1080/01431169608948714) for Landsat imagery and mask image based on threshold. 
+        
+        Can specify separate thresholds for Landsat 5 vs 8 & 9 images, where the threshold argument applies to Landsat 5 and the ng_threshold argument applies to Landsat 8 & 9.
 
         Args: 
-        image (ee.Image): input image
-        threshold (int): value between -1 and 1 where pixels less than threshold will be masked, applies to landsat 5 when ng_threshold is also set.
-        ng_threshold (int | optional): integer threshold to be applied to landsat 8 or 9 where pixels less than threshold are masked
+            image (ee.Image): input image
+            threshold (float): value between -1 and 1 where pixels less than threshold will be masked, applies to landsat 5 when ng_threshold is also set.
+            ng_threshold (float, optional): integer threshold to be applied to landsat 8 or 9 where pixels less than threshold are masked
 
         Returns:
-        image (ee.Image): ndwi image
+            ee.Image: ndwi image
         """
         ndwi_calc = image.normalizedDifference(['SR_B3', 'SR_B5']) #green-NIR / green+NIR -- full NDWI image
         water = ndwi_calc.updateMask(ndwi_calc.gte(threshold)).rename('ndwi').copyProperties(image) 
@@ -338,17 +340,17 @@ class LandsatCollection:
     @staticmethod
     def landsat_ndvi_fn(image, threshold, ng_threshold=None):
         """
-        Function to calculate ndvi from NIR and RED bands (Huang et al., 2020 - https://link.springer.com/10.1007/s11676-020-01155-1) for Landsat imagery and mask image based on threshold.
-        Can specify separate thresholds for Landsat 5 vs 8 & 9 images, where the threshold
-        argument applies to Landsat 5 and the ng_threshold argument applies to Landsat 8&9.
+        Calculates ndvi from NIR and RED bands (Huang et al., 2020 - https://link.springer.com/10.1007/s11676-020-01155-1) for Landsat imagery and mask image based on threshold.
+
+        Can specify separate thresholds for Landsat 5 vs 8 & 9 images, where the threshold argument applies to Landsat 5 and the ng_threshold argument applies to Landsat 8&9.
 
         Args:
-        image (ee.Image): input ee.Image
-        threshold (int): value between -1 and 1 where pixels less than threshold will be masked, applies to landsat 5 when ng_threshold is also set.
-        ng_threshold (int | optional): integer threshold to be applied to landsat 8 or 9 where pixels less than threshold are masked
+            image (ee.Image): input ee.Image
+            threshold (float): value between -1 and 1 where pixels less than threshold will be masked, applies to landsat 5 when ng_threshold is also set.
+            ng_threshold (float, optional): integer threshold to be applied to landsat 8 or 9 where pixels less than threshold are masked
 
         Returns:
-        image (ee.Image): ndvi ee.Image
+            ee.Image: ndvi ee.Image
         """
         ndvi_calc = image.normalizedDifference(['SR_B5', 'SR_B4']) #NIR-RED/NIR+RED -- full NDVI image
         if ng_threshold != None:
@@ -362,17 +364,17 @@ class LandsatCollection:
     @staticmethod
     def landsat_halite_fn(image, threshold, ng_threshold=None):
         """
-        Function to calculate multispectral halite index from RED and SWIR1 bands (Radwin & Bowen, 2021 - https://onlinelibrary.wiley.com/doi/10.1002/esp.5089) for Landsat imagery and mask image based on threshold.
-        Can specify separate thresholds for Landsat 5 vs 8 & 9 images, where the threshold
-        argument applies to Landsat 5 and the ng_threshold argument applies to Landsat 8 & 9.
+        Calculates multispectral halite index from RED and SWIR1 bands (Radwin & Bowen, 2021 - https://onlinelibrary.wiley.com/doi/10.1002/esp.5089) for Landsat imagery and mask image based on threshold.
+        
+        Can specify separate thresholds for Landsat 5 vs 8 & 9 images, where the threshold argument applies to Landsat 5 and the ng_threshold argument applies to Landsat 8 & 9.
 
         Args:
-        image (ee.Image): input ee.Image
-        threshold (int): value between -1 and 1 where pixels less than threshold will be masked, applies to landsat 5 when ng_threshold is also set.
-        ng_threshold (int | optional): integer threshold to be applied to landsat 8 or 9 where pixels less than threshold are masked
+            image (ee.Image): input ee.Image
+            threshold (float): value between -1 and 1 where pixels less than threshold will be masked, applies to landsat 5 when ng_threshold is also set.
+            ng_threshold (float, optional): integer threshold to be applied to landsat 8 or 9 where pixels less than threshold are masked
 
         Returns:
-        image (ee.Image): halite ee.Image
+            ee.Image: halite ee.Image
         """
         halite_index = image.normalizedDifference(['SR_B4', 'SR_B6'])
         if ng_threshold != None:
@@ -386,17 +388,17 @@ class LandsatCollection:
     @staticmethod
     def landsat_gypsum_fn(image, threshold, ng_threshold=None):
         """
-        Function to calculate multispectral gypsum index from SWIR1 and SWIR2 bands(Radwin & Bowen, 2024 - https://onlinelibrary.wiley.com/doi/10.1002/esp.5089) for Landsat imagery and mask image based on threshold.
-        Can specify separate thresholds for Landsat 5 vs 8&9 images, where the threshold
-        argument applies to Landsat 5 and the ng_threshold argument applies to Landsat 8&9.
+        Calculates multispectral gypsum index from SWIR1 and SWIR2 bands(Radwin & Bowen, 2024 - https://onlinelibrary.wiley.com/doi/10.1002/esp.5089) for Landsat imagery and mask image based on threshold.
+        
+        Can specify separate thresholds for Landsat 5 vs 8&9 images, where the threshold argument applies to Landsat 5 and the ng_threshold argument applies to Landsat 8&9.
 
         Args:
-        image (ee.Image): input ee.Image
-        threshold (int): value between -1 and 1 where pixels less than threshold will be masked, applies to landsat 5 when ng_threshold is also set.
-        ng_threshold (int | optional): integer threshold to be applied to landsat 8 or 9 where pixels less than threshold are masked
+            image (ee.Image): input ee.Image
+            threshold (float): value between -1 and 1 where pixels less than threshold will be masked, applies to landsat 5 when ng_threshold is also set.
+            ng_threshold (float, optional): integer threshold to be applied to landsat 8 or 9 where pixels less than threshold are masked
 
         Returns:
-        image (ee.Image): gypsum ee.Image
+            ee.Image: gypsum ee.Image
         """
         gypsum_index = image.normalizedDifference(['SR_B6', 'SR_B7'])
         if ng_threshold != None:
@@ -410,17 +412,16 @@ class LandsatCollection:
     @staticmethod
     def landsat_ndti_fn(image, threshold, ng_threshold=None):
         """
-        Function to calculate turbidity of water pixels using Normalized Difference Turbidity Index (NDTI; Lacaux et al., 2007 - https://doi.org/10.1016/j.rse.2006.07.012) 
-        and mask image based on threshold. Can specify separate thresholds for Landsat 5 vs 8&9 images, where the threshold
-        argument applies to Landsat 5 and the ng_threshold argument applies to Landsat 8&9.
+        Calculates turbidity of water pixels using Normalized Difference Turbidity Index (NDTI; Lacaux et al., 2007 - https://doi.org/10.1016/j.rse.2006.07.012) 
+        and mask image based on threshold. Can specify separate thresholds for Landsat 5 vs 8&9 images, where the threshold argument applies to Landsat 5 and the ng_threshold argument applies to Landsat 8&9.
 
         Args:
-        image (ee.Image): input ee.Image
-        threshold (int): value between -1 and 1 where pixels less than threshold will be masked, applies to landsat 5 when ng_threshold is also set.
-        ng_threshold (int | optional): integer threshold to be applied to landsat 8 or 9 where pixels less than threshold are masked
+            image (ee.Image): input ee.Image
+            threshold (float): value between -1 and 1 where pixels less than threshold will be masked, applies to landsat 5 when ng_threshold is also set.
+            ng_threshold (float, optional): integer threshold to be applied to landsat 8 or 9 where pixels less than threshold are masked
 
         Returns:
-        image (ee.Image): turbidity ee.Image
+            ee.Image: turbidity ee.Image
         """
         NDTI = image.normalizedDifference(['SR_B4', 'SR_B3'])
         if ng_threshold != None:
@@ -434,18 +435,18 @@ class LandsatCollection:
     @staticmethod
     def landsat_kivu_chla_fn(image, threshold, ng_threshold=None):
         """
-        Function to calculate relative chlorophyll-a concentrations of water pixels using 3BDA/KIVU index 
+        Calculates relative chlorophyll-a concentrations of water pixels using 3BDA/KIVU index 
         (see Boucher et al., 2018 for review - https://esajournals.onlinelibrary.wiley.com/doi/10.1002/eap.1708) and mask image based on threshold. Can specify separate thresholds 
         for Landsat 5 vs 8&9 images, where the threshold argument applies to Landsat 5 and the ng_threshold
         argument applies to Landsat 8&9.
 
         Args:
-        image (ee.Image): input ee.Image
-        threshold (int): value between -1 and 1 where pixels less than threshold will be masked, applies to landsat 5 when ng_threshold is also set.
-        ng_threshold (int | optional): integer threshold to be applied to landsat 8 or 9 where pixels less than threshold are masked
+            image (ee.Image): input ee.Image
+            threshold (float): value between -1 and 1 where pixels less than threshold will be masked, applies to landsat 5 when ng_threshold is also set.
+            ng_threshold (float, optional): integer threshold to be applied to landsat 8 or 9 where pixels less than threshold are masked
 
         Returns:
-        image (ee.Image): chlorophyll-a ee.Image
+            ee.Image: chlorophyll-a ee.Image
         """
         KIVU = image.expression('(BLUE - RED) / GREEN', {'BLUE':image.select('SR_B2'), 'RED':image.select('SR_B4'), 'GREEN':image.select('SR_B3')})
         if ng_threshold != None:
@@ -460,13 +461,13 @@ class LandsatCollection:
     @staticmethod
     def MaskWaterLandsat(image):
         """
-        Function to mask water pixels based on Landsat image QA band.
+        Masks water pixels based on Landsat image QA band.
 
         Args:
-        image (ee.Image): input ee.Image
+            image (ee.Image): input ee.Image
 
         Returns:
-        image (ee.Image): ee.Image with water pixels masked.
+            ee.Image: ee.Image with water pixels masked.
         """
         WaterBitMask = ee.Number(2).pow(7).int()
         qa = image.select('QA_PIXEL')
@@ -477,17 +478,17 @@ class LandsatCollection:
     @staticmethod
     def MaskWaterLandsatByNDWI(image, threshold, ng_threshold=None):
         """
-        Function to mask water pixels (mask land and cloud pixels) for all bands based on NDWI and a set threshold where
+        Masks water pixels (mask land and cloud pixels) for all bands based on NDWI and a set threshold where
         all pixels less than NDWI threshold are masked out. Can specify separate thresholds for Landsat 5 vs 8&9 images, where the threshold
         argument applies to Landsat 5 and the ng_threshold argument applies to Landsat 8&9
 
         Args: 
-        image (ee.Image): input image
-        threshold (int): value between -1 and 1 where NDWI pixels greater than threshold will be masked, applies to landsat 5 when ng_threshold is also set.
-        ng_threshold (int | optional): integer threshold to be applied to landsat 8 or 9 where NDWI pixels greater than threshold are masked
+            image (ee.Image): input image
+            threshold (float): value between -1 and 1 where NDWI pixels greater than threshold will be masked, applies to landsat 5 when ng_threshold is also set.
+            ng_threshold (float, optional): integer threshold to be applied to landsat 8 or 9 where NDWI pixels greater than threshold are masked
         
         Returns:
-        image (ee.Image): ee.Image with water pixels masked
+            ee.Image: ee.Image with water pixels masked
         """
         ndwi_calc = image.normalizedDifference(['SR_B3', 'SR_B5']) #green-NIR / green+NIR -- full NDWI image
         water = ndwi_calc.updateMask(ndwi_calc.gte(threshold)).rename('ndwi').copyProperties(image) 
@@ -502,13 +503,13 @@ class LandsatCollection:
     @staticmethod
     def MaskToWaterLandsat(image):
         """
-        Function to mask to water pixels by masking land and cloud pixels based on Landsat image QA band.
+        Masks image to water pixels by masking land and cloud pixels based on Landsat image QA band.
 
         Args:
-        image (ee.Image): input ee.Image
+            image (ee.Image): input ee.Image
 
         Returns:
-        image (ee.Image): ee.Imagewith water pixels masked.
+            ee.Image: ee.Image with water pixels masked.
         """
         WaterBitMask = ee.Number(2).pow(7).int()
         qa = image.select('QA_PIXEL')
@@ -519,16 +520,16 @@ class LandsatCollection:
     @staticmethod
     def MaskToWaterLandsatByNDWI(image, threshold, ng_threshold=None):
         """
-        Function to mask water pixels using NDWI based on threshold. Can specify separate thresholds for Landsat 5 vs 8&9 images, where the threshold
+        Masks water pixels using NDWI based on threshold. Can specify separate thresholds for Landsat 5 vs 8&9 images, where the threshold
         argument applies to Landsat 5 and the ng_threshold argument applies to Landsat 8&9
 
         Args: 
-        image (ee.Image): input image
-        threshold (int): value between -1 and 1 where NDWI pixels less than threshold will be masked, applies to landsat 5 when ng_threshold is also set.
-        ng_threshold (int | optional): integer threshold to be applied to landsat 8 or 9 where NDWI pixels less than threshold are masked
+            image (ee.Image): input image
+            threshold (float): value between -1 and 1 where NDWI pixels less than threshold will be masked, applies to landsat 5 when ng_threshold is also set.
+            ng_threshold (float, optional): integer threshold to be applied to landsat 8 or 9 where NDWI pixels less than threshold are masked
         
         Returns:
-        image (ee.Image): ee.Image with water pixels masked.
+            ee.Image: ee.Image with water pixels masked.
         """
         ndwi_calc = image.normalizedDifference(['SR_B3', 'SR_B5']) #green-NIR / green+NIR -- full NDWI image
         water = ndwi_calc.updateMask(ndwi_calc.gte(threshold)).rename('ndwi').copyProperties(image) 
@@ -543,17 +544,18 @@ class LandsatCollection:
     @staticmethod
     def halite_mask(image, threshold, ng_threshold=None):
         """
-        Function to mask halite pixels after specifying index to isolate/mask-to halite pixels. 
+        Masks halite pixels after specifying index to isolate/mask-to halite pixels. 
+        
         Can specify separate thresholds for Landsat 5 vs 8&9 images where the threshold
         argument applies to Landsat 5 and the ng_threshold argument applies to Landsat 8&9.
 
         Args:
-        image (ee.Image): input ee.Image
-        threshold (int): value between -1 and 1 where pixels less than threshold will be masked, applies to landsat 5 when ng_threshold is also set.
-        ng_threshold (int | optional): integer threshold to be applied to landsat 8 or 9 where pixels less than threshold are masked 
+            image (ee.Image): input ee.Image
+            threshold (float): value between -1 and 1 where pixels less than threshold will be masked, applies to landsat 5 when ng_threshold is also set.
+            ng_threshold (float, optional): integer threshold to be applied to landsat 8 or 9 where pixels less than threshold are masked 
 
         Returns:
-        image (ee.Image): masked ee.Image
+            image (ee.Image): masked ee.Image
         """
         halite_index = image.normalizedDifference(['SR_B4', 'SR_B6']) # red-swir1 / red+swir1
         if ng_threshold != None:
@@ -567,19 +569,20 @@ class LandsatCollection:
     @staticmethod
     def gypsum_and_halite_mask(image, halite_threshold, gypsum_threshold, halite_ng_threshold=None, gypsum_ng_threshold=None):
         """
-        Function to mask both gypsum and halite pixels. Must specify threshold for isolating halite and gypsum pixels. 
+        Masks both gypsum and halite pixels. Must specify threshold for isolating halite and gypsum pixels. 
+        
         Can specify separate thresholds for Landsat 5 vs 8&9 images where the threshold argument applies to Landsat 5 
         and the ng_threshold argument applies to Landsat 8&9.
 
         Args:
-        image (ee.Image): input ee.Image
-        halite_threshold (int): integer threshold for halite where pixels less than threshold are masked, applies to landsat 5 when ng_threshold is also set.
-        gypsum_threshold (int): integer threshold for gypsum where pixels less than threshold are masked, applies to landsat 5 when ng_threshold is also set.
-        halite_ng_threshold (int | optional): integer threshold for halite to be applied to landsat 8 or 9 where pixels less than threshold are masked 
-        gypsum_ng_threshold (int | optional): integer threshold for gypsum to be applied to landsat 8 or 9 where pixels less than threshold are masked 
+            image (ee.Image): input ee.Image
+            halite_threshold (float): integer threshold for halite where pixels less than threshold are masked, applies to landsat 5 when ng_threshold is also set.
+            gypsum_threshold (float): integer threshold for gypsum where pixels less than threshold are masked, applies to landsat 5 when ng_threshold is also set.
+            halite_ng_threshold (float, optional): integer threshold for halite to be applied to landsat 8 or 9 where pixels less than threshold are masked 
+            gypsum_ng_threshold (float, optional): integer threshold for gypsum to be applied to landsat 8 or 9 where pixels less than threshold are masked 
 
         Returns:
-        image (ee.Image): masked ee.Image
+            image (ee.Image): masked ee.Image
         """
         halite_index = image.normalizedDifference(['SR_B4', 'SR_B6']) # red-swir1 / red+swir1
         gypsum_index = image.normalizedDifference(['SR_B6', 'SR_B7'])
@@ -594,13 +597,13 @@ class LandsatCollection:
     @staticmethod
     def maskL8clouds(image):
         """
-        Function to mask clouds baseed on Landsat 8 QA band.
+        Masks clouds baseed on Landsat 8 QA band.
 
         Args:
-        image (ee.Image): input ee.Image
+            image (ee.Image): input ee.Image
 
         Returns:
-        image (ee.Image): ee.Image
+            ee.Image: ee.Image
         """
         cloudBitMask = ee.Number(2).pow(3).int()
         CirrusBitMask = ee.Number(2).pow(2).int()
@@ -612,13 +615,13 @@ class LandsatCollection:
     @staticmethod
     def temperature_bands(img):
         """
-        Function to rename bands for temperature calculations.
+        Renames bands for temperature calculations.
 
         Args:
-        img: input ee.Image
+            img: input ee.Image
 
         Returns:
-        image (ee.Image): ee.Image
+            ee.Image: ee.Image
         """
         #date = ee.Number(img.date().format('YYYY-MM-dd'))
         scale1 = ['ST_ATRAN', 'ST_EMIS']
@@ -632,14 +635,14 @@ class LandsatCollection:
     @staticmethod
     def landsat_LST(image):
         """
-        Function to calculate land surface temperature (LST) from landsat TIR bands. 
+        Calculates land surface temperature (LST) from landsat TIR bands. 
         Based on Sekertekin, A., & Bonafoni, S. (2020) https://doi.org/10.3390/rs12020294
 
         Args:
-        image (ee.Image): input ee.Image
+            image (ee.Image): input ee.Image
 
         Returns:
-        image (ee.Image): LST ee.Image 
+            ee.Image: LST ee.Image 
         """
         # Based on Sekertekin, A., & Bonafoni, S. (2020) https://doi.org/10.3390/rs12020294
         
@@ -659,19 +662,19 @@ class LandsatCollection:
     @staticmethod
     def PixelAreaSum(image, band_name, geometry, threshold=-1, scale=30, maxPixels=1e12):
         """
-        Function to calculate the summation of area for pixels of interest (above a specific threshold) in a geometry
+        Calculates the summation of area for pixels of interest (above a specific threshold) in a geometry
         and store the value as image property (matching name of chosen band).
 
         Args:
-        image (ee.Image): input ee.Image
-        band_name (string): name of band (string) for calculating area
-        geometry (ee.Geometry): ee.Geometry object denoting area to clip to for area calculation
-        threshold (int): integer threshold to specify masking of pixels below threshold (defaults to -1)
-        scale (int): integer scale of image resolution (meters) (defaults to 30)
-        maxPixels (int): integer denoting maximum number of pixels for calculations
+            image (ee.Image): input ee.Image
+            band_name (string): name of band (string) for calculating area
+            geometry (ee.Geometry): ee.Geometry object denoting area to clip to for area calculation
+            threshold (float): integer threshold to specify masking of pixels below threshold (defaults to -1)
+            scale (int): integer scale of image resolution (meters) (defaults to 30)
+            maxPixels (int): integer denoting maximum number of pixels for calculations
         
         Returns:
-        image (ee.Image): ee.Image with area calculation stored as property matching name of band
+            ee.Image: ee.Image with area calculation stored as property matching name of band
         """
         area_image = ee.Image.pixelArea()
         mask = image.select(band_name).gte(threshold)
@@ -685,21 +688,21 @@ class LandsatCollection:
     
     def PixelAreaSumCollection(self, band_name, geometry, threshold=-1, scale=30, maxPixels=1e12):
         """
-        Function to calculate the summation of area for pixels of interest (above a specific threshold) 
+        Calculates the summation of area for pixels of interest (above a specific threshold) 
         within a geometry and store the value as image property (matching name of chosen band) for an entire
         image collection.
+
         The resulting value has units of square meters. 
 
         Args:
-        self: self is the input image collection
-        band_name: name of band (string) for calculating area.
-        geometry: ee.Geometry object denoting area to clip to for area calculation.
-        threshold: integer threshold to specify masking of pixels below threshold (defaults to -1).
-        scale: integer scale of image resolution (meters) (defaults to 30).
-        maxPixels: integer denoting maximum number of pixels for calculations.
+            band_name (string): name of band (string) for calculating area
+            geometry (ee.Geometry): ee.Geometry object denoting area to clip to for area calculation
+            threshold (float): integer threshold to specify masking of pixels below threshold (defaults to -1)
+            scale (int): integer scale of image resolution (meters) (defaults to 30)
+            maxPixels (int): integer denoting maximum number of pixels for calculations
         
         Returns:
-        image (ee.Image): Image with area calculation stored as property matching name of band.
+            ee.ImageCollection: Image with area calculation stored as property matching name of band.
         """
         if self._PixelAreaSumCollection is None:
             collection = self.collection
@@ -710,19 +713,19 @@ class LandsatCollection:
     @staticmethod
     def dNDWIPixelAreaSum(image, geometry, band_name='ndwi', scale=30, maxPixels=1e12):
         """
-        Function to dynamically calulate the summation of area for water pixels of interest and store the value as image property named 'ndwi'
+        Dynamically calulates the summation of area for water pixels of interest and store the value as image property named 'ndwi'
         Uses Otsu thresholding to dynamically choose the best threshold rather than needing to specify threshold.
         Note: An offset of 0.15 is added to the Otsu threshold.
 
         Args:
-        image (ee.Image): input ee.Image
-        geometry (ee.Geometry): ee.Geometry object denoting area to clip to for area calculation
-        band_name (string): name of ndwi band (string) for calculating area (defaults to 'ndwi')
-        scale (int): integer scale of image resolution (meters) (defaults to 30)
-        maxPixels (int): integer denoting maximum number of pixels for calculations
+            image (ee.Image): input ee.Image
+            geometry (ee.Geometry): ee.Geometry object denoting area to clip to for area calculation
+            band_name (string): name of ndwi band (string) for calculating area (defaults to 'ndwi')
+            scale (int): integer scale of image resolution (meters) (defaults to 30)
+            maxPixels (int): integer denoting maximum number of pixels for calculations
 
         Returns:
-        image (ee.Image): ee.Image with area calculation stored as property matching name of band
+            ee.Image: ee.Image with area calculation stored as property matching name of band
         """
         def OtsuThreshold(histogram):
             counts = ee.Array(ee.Dictionary(histogram).get('histogram'))
@@ -772,11 +775,8 @@ class LandsatCollection:
         """
         Property attribute to retrieve list of dates as server-side (GEE) object.
 
-        Args:
-        self: self is passed into argument.
-
         Returns:
-        ee.List: Server-side ee.List of dates.
+            ee.List: Server-side ee.List of dates.
         """
         if self._dates_list is None:
             dates = self.collection.aggregate_array('Date_Filter')
@@ -788,11 +788,8 @@ class LandsatCollection:
         """
         Property attribute to retrieve list of dates as readable and indexable client-side list object.
 
-        Args:
-        self: self is passed into argument.
-
         Returns:
-        list: list of date strings.
+            list: list of date strings.
         """
         if self._dates_list is None:
             dates = self.collection.aggregate_array('Date_Filter')
@@ -804,13 +801,10 @@ class LandsatCollection:
 
     def get_filtered_collection(self):
         """
-        Function to filter image collection based on LandsatCollection class arguments. Automatically calculated when using collection method, depending on provided class arguments (when tile info is provided).
-
-        Args:
-        self: self is passed into argument
+        Filters image collection based on LandsatCollection class arguments. Automatically calculated when using collection method, depending on provided class arguments (when tile info is provided).
 
         Returns:
-        ee.ImageCollection: Filtered image collection - used for subsequent analyses or to acquire ee.ImageCollection from LandsatCollection object
+            ee.ImageCollection: Filtered image collection - used for subsequent analyses or to acquire ee.ImageCollection from LandsatCollection object
         """
         landsat8 = ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")
         landsat9 = ee.ImageCollection("LANDSAT/LC09/C02/T1_L2")
@@ -821,13 +815,10 @@ class LandsatCollection:
     
     def get_boundary_filtered_collection(self):
         """
-        Function to filter and mask image collection based on LandsatCollection class arguments. Automatically calculated when using collection method, depending on provided class arguments (when boundary info is provided).
-
-        Args:
-        self: self is passed into argument
+        Filters and masks image collection based on LandsatCollection class arguments. Automatically calculated when using collection method, depending on provided class arguments (when boundary info is provided).
 
         Returns:
-        ee.ImageCollection: Filtered image collection - used for subsequent analyses or to acquire ee.ImageCollection from LandsatCollection object
+            ee.ImageCollection: Filtered image collection - used for subsequent analyses or to acquire ee.ImageCollection from LandsatCollection object
 
         """
         landsat8 = ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")
@@ -841,11 +832,8 @@ class LandsatCollection:
         """
         Property attribute function to calculate median image from image collection. Results are calculated once per class object then cached for future use.
 
-        Args:
-        self: self is passed into argument
-
         Returns:
-        image (ee.Image): median image from entire collection.
+            ee.Image: median image from entire collection.
         """
         if self._median is None:
             col = self.collection.median()
@@ -857,11 +845,8 @@ class LandsatCollection:
         """
         Property attribute function to calculate mean image from image collection. Results are calculated once per class object then cached for future use.
 
-        Args:
-        self: self is passed into argument
-
         Returns:
-        image (ee.Image): mean image from entire collection.
+            ee.Image: mean image from entire collection.
 
         """
         if self._mean is None:
@@ -874,11 +859,8 @@ class LandsatCollection:
         """
         Property attribute function to calculate max image from image collection. Results are calculated once per class object then cached for future use.
 
-        Args:
-        self: self is passed into argument
-
         Returns:
-        image (ee.Image): max image from entire collection.
+            ee.Image: max image from entire collection.
         """
         if self._max is None:
             col = self.collection.max()
@@ -889,12 +871,9 @@ class LandsatCollection:
     def min(self):
         """
         Property attribute function to calculate min image from image collection. Results are calculated once per class object then cached for future use.
-        
-        Args:
-        self: self is passed into argument
 
         Returns:
-        image (ee.Image): min image from entire collection.
+            ee.Image: min image from entire collection.
         """
         if self._min is None:
             col = self.collection.min()
@@ -909,11 +888,8 @@ class LandsatCollection:
         and caches the result. The calculation is performed only once when the property is first accessed, and the cached result is returned 
         on subsequent accesses.
 
-        Args:
-        self: self is passed into argument
-
         Returns:
-        image collection (LandsatCollection): A LandsatCollection image collection 
+            LandsatCollection: A LandsatCollection image collection 
         """
         if self._ndwi is None:
             self._ndwi = self.ndwi_collection(self.ndwi_threshold)
@@ -921,17 +897,16 @@ class LandsatCollection:
 
     def ndwi_collection(self, threshold, ng_threshold=None):
         """
-        Function to calculate ndwi and return collection as class object, allows specifying threshold(s) for masking.
+        Calculates ndwi and returns collection as class object, allows specifying threshold(s) for masking.
         Thresholds can be specified for Landsat 5 vs 8&9 images, where the threshold argument applies to Landsat 5 
         and the ng_threshold argument applies to Landsat 8&9. This function can be called as a method but is called 
         by default when using the ndwi property attribute. 
 
         Args:
-        self: self is passed into argument
-        threshold (int): specify threshold for NDWI function (values less than threshold are masked)
+            threshold (float): specify threshold for NDWI function (values less than threshold are masked)
 
         Returns:
-        image collection (LandsatCollection): A LandsatCollection image collection
+            LandsatCollection: A LandsatCollection image collection
         """
         first_image = self.collection.first()
         available_bands = first_image.bandNames()
@@ -951,11 +926,8 @@ class LandsatCollection:
         and caches the result. The calculation is performed only once when the property is first accessed, and the cached result is returned 
         on subsequent accesses.
 
-        Args:
-        self: self is passed into argument
-
         Returns:
-        image collection (LandsatCollection): A LandsatCollection image collection 
+            LandsatCollection: A LandsatCollection image collection 
         """
         if self._ndvi is None:
             self._ndvi = self.ndvi_collection(self.ndvi_threshold)
@@ -969,11 +941,10 @@ class LandsatCollection:
         by default when using the ndwi property attribute.
 
         Args:
-        self: self is passed into argument
-        threshold (int): specify threshold for NDVI function (values less than threshold are masked)
+            threshold (float): specify threshold for NDVI function (values less than threshold are masked)
 
         Returns:
-        image collection (LandsatCollection): A LandsatCollection image collection 
+            LandsatCollection: A LandsatCollection image collection 
         """
         first_image = self.collection.first()
         available_bands = first_image.bandNames()
@@ -992,11 +963,8 @@ class LandsatCollection:
         and caches the result. The calculation is performed only once when the property is first accessed, and the cached result is returned 
         on subsequent accesses.
 
-        Args:
-        self: self is passed into argument
-
         Returns:
-        image collection (LandsatCollection): A LandsatCollection image collection 
+            LandsatCollection: A LandsatCollection image collection 
         """
         if self._halite is None:
             self._halite = self.halite_collection(self.halite_threshold)
@@ -1010,12 +978,11 @@ class LandsatCollection:
         by default when using the ndwi property attribute.
 
         Args:
-        self: self is passed into argument
-        threshold (int): specify threshold for halite function (values less than threshold are masked)
-        ng_threshold (int): (optional) specify threshold for Landsat 8&9 halite function (values less than threshold are masked)
+            threshold (float): specify threshold for halite function (values less than threshold are masked)
+            ng_threshold (float, optional): specify threshold for Landsat 8&9 halite function (values less than threshold are masked)
 
         Returns:
-        image collection (LandsatCollection): A LandsatCollection image collection 
+            LandsatCollection: A LandsatCollection image collection 
         """
         first_image = self.collection.first()
         available_bands = first_image.bandNames()
@@ -1034,11 +1001,8 @@ class LandsatCollection:
         and caches the result. The calculation is performed only once when the property is first accessed, and the cached result is returned 
         on subsequent accesses.
 
-        Args:
-        self: self is passed into argument
-
         Returns:
-        image collection (LandsatCollection): A LandsatCollection image collection 
+            LandsatCollection: A LandsatCollection image collection 
         """
         if self._gypsum is None:
             self._gypsum = self.gypsum_collection(self.gypsum_threshold)
@@ -1052,12 +1016,11 @@ class LandsatCollection:
         by default when using the ndwi property attribute.
 
         Args:
-        self: self is passed into argument
-        threshold (int): specify threshold for gypsum function (values less than threshold are masked)
-        ng_threshold (int): (optional) specify threshold for Landsat 8&9 gypsum function (values less than threshold are masked)
+            threshold (float): specify threshold for gypsum function (values less than threshold are masked)
+            ng_threshold (float, optional): specify threshold for Landsat 8&9 gypsum function (values less than threshold are masked)
 
         Returns:
-        image collection (LandsatCollection): A LandsatCollection image collection 
+            LandsatCollection: A LandsatCollection image collection 
         """
         first_image = self.collection.first()
         available_bands = first_image.bandNames()
@@ -1076,11 +1039,8 @@ class LandsatCollection:
         and caches the result. The calculation is performed only once when the property is first accessed, and the cached result is returned 
         on subsequent accesses.
 
-        Args:
-        self: self is passed into argument
-
         Returns:
-        image collection (LandsatCollection): A LandsatCollection image collection 
+            LandsatCollection: A LandsatCollection image collection 
         """
         if self._turbidity is None:
             self._turbidity = self.turbidity_collection(self.turbidity_threshold)
@@ -1088,18 +1048,17 @@ class LandsatCollection:
 
     def turbidity_collection(self, threshold, ng_threshold=None):
         """
-        Function to calculate the turbidity (NDTI) index and return collection as class object, allows specifying threshold(s) for masking.
+        Calculates the turbidity (NDTI) index and return collection as class object, allows specifying threshold(s) for masking.
         Thresholds can be specified for Landsat 5 vs 8&9 images, where the threshold argument applies to Landsat 5 
         and the ng_threshold argument applies to Landsat 8&9. This function can be called as a method but is called 
         by default when using the ndwi property attribute.
 
         Args:
-        self: self is passed into argument
-        threshold (int): specify threshold for the turbidity function (values less than threshold are masked)
-        ng_threshold (int): (optional) specify threshold for Landsat 8&9 turbidity function (values less than threshold are masked)
+            threshold (float): specify threshold for the turbidity function (values less than threshold are masked)
+            ng_threshold (float, optional): specify threshold for Landsat 8&9 turbidity function (values less than threshold are masked)
 
         Returns:
-        image collection (LandsatCollection): A LandsatCollection image collection 
+            LandsatCollection: A LandsatCollection image collection 
         """
         first_image = self.collection.first()
         available_bands = first_image.bandNames()
@@ -1119,11 +1078,8 @@ class LandsatCollection:
         and caches the result. The calculation is performed only once when the property is first accessed, and the cached result is returned 
         on subsequent accesses.
 
-        Args:
-        self: self is passed into argument
-
         Returns:
-        image collection (LandsatCollection): A LandsatCollection image collection 
+            LandsatCollection: A LandsatCollection image collection 
         """
         if self._chlorophyll is None:
             self._chlorophyll = self.chlorophyll_collection(self.chlorophyll_threshold)
@@ -1131,18 +1087,17 @@ class LandsatCollection:
 
     def chlorophyll_collection(self, threshold, ng_threshold=None):
         """
-        Function to calculate the KIVU chlorophyll index and return collection as class object, allows specifying threshold(s) for masking.
+        Calculates the KIVU chlorophyll index and return collection as class object, allows specifying threshold(s) for masking.
         Thresholds can be specified for Landsat 5 vs 8&9 images, where the threshold argument applies to Landsat 5 
         and the ng_threshold argument applies to Landsat 8&9. This function can be called as a method but is called 
         by default when using the ndwi property attribute.
 
         Args:
-        self: self is passed into argument
-        threshold (int): specify threshold for the turbidity function (values less than threshold are masked)
-        ng_threshold (int): (optional) specify threshold for Landsat 8&9 turbidity function (values less than threshold are masked)
+            threshold (float): specify threshold for the turbidity function (values less than threshold are masked)
+            ng_threshold (float, optional): specify threshold for Landsat 8&9 turbidity function (values less than threshold are masked)
 
         Returns:
-        image collection (LandsatCollection): A LandsatCollection image collection
+            LandsatCollection: A LandsatCollection image collection
         """
         first_image = self.collection.first()
         available_bands = first_image.bandNames()
@@ -1158,11 +1113,8 @@ class LandsatCollection:
         """
         Property attribute to mask water and return collection as class object.
 
-        Args:
-        self: self is passed into argument
-
         Returns:
-        image collection (LandsatCollection): LandsatCollection image collection 
+            LandsatCollection: LandsatCollection image collection 
         """
         if self._masked_water_collection is None:
             col = self.collection.map(LandsatCollection.MaskWaterLandsat)
@@ -1171,14 +1123,13 @@ class LandsatCollection:
     
     def masked_water_collection_NDWI(self, threshold):
         """
-        Function to mask water pixels based on NDWI and user set threshold.
+        Masks water pixels based on NDWI and user set threshold.
 
         Args:
-        self: self is passed into argument
-        threshold (int): specify threshold for NDWI function (values greater than threshold are masked)
+            threshold (float): specify threshold for NDWI function (values greater than threshold are masked)
 
         Returns:
-        image collection (LandsatCollection): LandsatCollection image collection 
+            LandsatCollection: LandsatCollection image collection 
         """
         col = self.collection.map(lambda image: LandsatCollection.MaskWaterLandsatByNDWI(image, threshold=threshold))
         return LandsatCollection(collection=col)
@@ -1188,11 +1139,8 @@ class LandsatCollection:
         """
         Property attribute to mask image to water, removing land and cloud pixels, and return collection as class object.
 
-        Args:
-        self: self is passed into argument
-
         Returns:
-        image collection (LandsatCollection): LandsatCollection image collection
+            LandsatCollection: LandsatCollection image collection
         """
         if self._masked_to_water_collection is None:
             col = self.collection.map(LandsatCollection.MaskToWaterLandsat)
@@ -1204,11 +1152,10 @@ class LandsatCollection:
         Function to mask all but water pixels based on NDWI and user set threshold.
 
         Args:
-        self: self is passed into argument
-        threshold (int): specify threshold for NDWI function (values less than threshold are masked)
+            threshold (float): specify threshold for NDWI function (values less than threshold are masked)
 
         Returns:
-        image collection (LandsatCollection): LandsatCollection image collection 
+            LandsatCollection: LandsatCollection image collection 
         """
         col = self.collection.map(lambda image: LandsatCollection.MaskToWaterLandsatByNDWI(image, threshold=threshold))
         return LandsatCollection(collection=col)
@@ -1218,11 +1165,8 @@ class LandsatCollection:
         """
         Property attribute to mask clouds and return collection as class object.
 
-        Args:
-        self: self is passed into argument
-
         Returns:
-        image collection (LandsatCollection): LandsatCollection image collection 
+            LandsatCollection: LandsatCollection image collection 
         """
         if self._masked_clouds_collection is None:
             col = self.collection.map(LandsatCollection.maskL8clouds)
@@ -1236,11 +1180,8 @@ class LandsatCollection:
         This property initiates the calculation of LST and caches the result. The calculation is performed only once 
         when the property is first accessed, and the cached result is returned on subsequent accesses.
 
-        Args:
-        self: self is passed into argument
-
         Returns:
-        image collection (LandsatCollection): A LandsatCollection image collection object containing LST imagery (temperature in Celcius).
+            LandsatCollection: A LandsatCollection image collection object containing LST imagery (temperature in Celcius).
         """
         if self._LST is None:
             self._LST = self.surface_temperature_collection()
@@ -1250,11 +1191,8 @@ class LandsatCollection:
         """
         Function to calculate LST (Land Surface Temperature - in Celcius) and return collection as class object.
 
-        Args:
-        self: self is passed into argument
-
         Returns:
-        image collection (LandsatCollection): A LandsatCollection image collection
+            LandsatCollection: A LandsatCollection image collection
         """
         first_image = self.collection.first()
         available_bands = first_image.bandNames()
@@ -1270,11 +1208,10 @@ class LandsatCollection:
         Function to mask LandsatCollection image collection by a polygon (ee.Geometry), where pixels outside the polygon are masked out.
 
         Args:
-        self: self is passed into argument (image collection)
-        polygon (ee.Geometry): ee.Geometry polygon or shape used to mask image collection.
+            polygon (ee.Geometry): ee.Geometry polygon or shape used to mask image collection.
 
         Returns:
-        image collection (LandsatCollection): masked LandsatCollection image collection
+            LandsatCollection: masked LandsatCollection image collection
         
         """
         if self._geometry_masked_collection is None:
@@ -1295,11 +1232,10 @@ class LandsatCollection:
         Function to mask LandsatCollection image collection by a polygon (ee.Geometry), where pixels inside the polygon are masked out.
 
         Args:
-        self: self is passed into argument (image collection)
-        polygon (ee.Geometry): ee.Geometry polygon or shape used to mask image collection.
+            polygon (ee.Geometry): ee.Geometry polygon or shape used to mask image collection.
 
         Returns:
-        image collection (LandsatCollection): masked LandsatCollection image collection
+            LandsatCollection: masked LandsatCollection image collection
         
         """
         if self._geometry_masked_out_collection is None:
@@ -1320,49 +1256,46 @@ class LandsatCollection:
 
     def mask_halite(self, threshold, ng_threshold=None):
         """
-        Function to mask halite and return collection as class object. Can specify separate thresholds for Landsat 5 vs 8&9 images 
+        Masks halite and returns collection as class object. Can specify separate thresholds for Landsat 5 vs 8&9 images 
         where the threshold argument applies to Landsat 5 and the ng_threshold argument applies to Landsat 8&9.
 
         Args:
-        self: self is passed into argument
-        threshold (int): specify threshold for gypsum function (values less than threshold are masked)
-        ng_threshold (int): (optional) specify threshold for Landsat 8&9 gypsum function (values less than threshold are masked).
+            threshold (float): specify threshold for gypsum function (values less than threshold are masked)
+            ng_threshold (float, optional): specify threshold for Landsat 8&9 gypsum function (values less than threshold are masked).
 
         Returns:
-        image collection (LandsatCollection): LandsatCollection image collection
+            LandsatCollection: LandsatCollection image collection
         """
         col = self.collection.map(lambda image: LandsatCollection.halite_mask(image, threshold=threshold, ng_threshold=ng_threshold))
         return LandsatCollection(collection=col)
     
     def mask_halite_and_gypsum(self, halite_threshold, gypsum_threshold, halite_ng_threshold=None, gypsum_ng_threshold=None):
         """
-        Function to mask halite and gypsum and return collection as class object. 
+        Masks halite and gypsum and returns collection as class object. 
         Can specify separate thresholds for Landsat 5 vs 8&9 images where the threshold argument applies to Landsat 5
         and the ng_threshold argument applies to Landsat 8&9.
 
         Args:
-        self: self is passed into argument
-        halite_threshold (int): specify threshold for halite function (values less than threshold are masked)
-        halite_ng_threshold (int): (optional) specify threshold for Landsat 8&9 halite function (values less than threshold are masked)
-        gypsum_threshold (int): specify threshold for gypsum function (values less than threshold are masked)
-        gypsum_ng_threshold (int): (optional) specify threshold for Landsat 8&9 gypsum function (values less than threshold are masked)
+            halite_threshold (float): specify threshold for halite function (values less than threshold are masked)
+            halite_ng_threshold (float, optional): specify threshold for Landsat 8&9 halite function (values less than threshold are masked)
+            gypsum_threshold (float): specify threshold for gypsum function (values less than threshold are masked)
+            gypsum_ng_threshold (float, optional): specify threshold for Landsat 8&9 gypsum function (values less than threshold are masked)
 
         Returns:
-        image collection (LandsatCollection): LandsatCollection image collection 
+            LandsatCollection: LandsatCollection image collection 
         """
         col = self.collection.map(lambda image: LandsatCollection.gypsum_and_halite_mask(image, halite_threshold=halite_threshold, gypsum_threshold=gypsum_threshold, halite_ng_threshold=halite_ng_threshold, gypsum_ng_threshold=gypsum_ng_threshold))
         return LandsatCollection(collection=col)
 
     def image_grab(self, img_selector):
         """
-        Function to select ("grab") an image by index from the collection. Easy way to get latest image or browse imagery one-by-one.
+        Selects ("grabs") an image by index from the collection. Easy way to get latest image or browse imagery one-by-one.
 
         Args:
-        self: self is passed into argument
-        img_selector: index of image in the collection for which user seeks to select/"grab".
+            img_selector: index of image in the collection for which user seeks to select/"grab".
         
         Returns:
-        image (ee.Image): ee.Image of selected image
+            ee.Image: ee.Image of selected image
         """
         # Convert the collection to a list
         image_list = self.collection.toList(self.collection.size())
@@ -1377,12 +1310,11 @@ class LandsatCollection:
         Function to select ("grab") image of a specific index from an ee.ImageCollection object.
 
         Args:
-        self: self is passed into argument
-        img_col: ee.ImageCollection with same dates as another LandsatCollection image collection object.
-        img_selector: index of image in list of dates for which user seeks to "select".
+            img_col: ee.ImageCollection with same dates as another LandsatCollection image collection object.
+            img_selector: index of image in list of dates for which user seeks to "select".
         
         Returns:
-        image (ee.Image): ee.Image of selected image
+            ee.Image: ee.Image of selected image
         """
         # Convert the collection to a list
         image_list = img_col.toList(img_col.size())
@@ -1394,14 +1326,13 @@ class LandsatCollection:
     
     def image_pick(self, img_date):
         """
-        Function to select ("grab") image of a specific date in format of 'YYYY-MM-DD' - will not work correctly if collection is composed of multiple images of the same date.
+        Selects ("grabs") image of a specific date in format of 'YYYY-MM-DD' - will not work correctly if collection is composed of multiple images of the same date.
 
         Args:
-        self: self is passed into argument
-        img_date: date (str) of image to select in format of 'YYYY-MM-DD'
+            img_date: date (str) of image to select in format of 'YYYY-MM-DD'
 
         Returns:
-        image (ee.Image): ee.Image of selected image
+            ee.Image: ee.Image of selected image
         """
         new_col = self.collection.filter(ee.Filter.eq('Date_Filter', img_date))
         return new_col.first()
@@ -1413,11 +1344,10 @@ class LandsatCollection:
         Image properties are copied from the primary collection. Server-side friendly.
 
         Args:
-        self: self is passed into argument, which is a LandsatCollection image collection
-        img_col2: secondary LandsatCollection image collection to be mosaiced with the primary image collection
+            img_col2: secondary LandsatCollection image collection to be mosaiced with the primary image collection
 
         Returns:
-        image collection (LandsatCollection): LandsatCollection image collection
+            LandsatCollection: LandsatCollection image collection
         """
         dates_list = ee.List(self._dates_list).cat(ee.List(img_col2.dates_list)).distinct()
         filtered_dates1 = self._dates_list
@@ -1451,16 +1381,16 @@ class LandsatCollection:
     @property
     def MosaicByDate(self):
         """
-        Property attribute function to mosaic collection images that share the same date. 
+        Property attribute function to mosaic collection images that share the same date.
+
         The property CLOUD_COVER for each image is used to calculate an overall mean, 
         which replaces the CLOUD_COVER property for each mosaiced image. 
-        Server-side friendly. NOTE: if images are removed from the collection from cloud filtering, you may have mosaics composed of only one image.
-
-        Args:
-        self: self is passed into argument, which is a LandsatCollection image collection
+        Server-side friendly. 
+        
+        NOTE: if images are removed from the collection from cloud filtering, you may have mosaics composed of only one image.
 
         Returns:
-        image collection (LandsatCollection): LandsatCollection image collection with mosaiced imagery and mean CLOUD_COVER as a property
+            LandsatCollection: LandsatCollection image collection with mosaiced imagery and mean CLOUD_COVER as a property
         """
         if self._MosaicByDate is None:
             input_collection = self.collection
@@ -1689,7 +1619,6 @@ class LandsatCollection:
             Naming conventions for the csv files follows as: "image-date_transects.csv"
 
         Args:
-            self (LandsatCollection image collection): Image collection object to iterate for calculating transect values for each image.
             lines (list): List of ee.Geometry.LineString objects.
             line_names (list of strings): List of line string names.
             save_folder_path (str): The path to the folder where the csv files will be saved.
@@ -1829,7 +1758,6 @@ class LandsatCollection:
         The function returns a pandas DataFrame with the statistics for each coordinate and date, or optionally exports the data to a table in .csv format.
         
         Args:
-            self (RadGEEToolbox class object): The image collection from which to extract the statistics. Each image must be a singleband image or else resulting values will all be zero!
             coordinates (list): Single tuple or a list of tuples with the coordinates as decimal degrees in the format of (longitude, latitude) for which to extract the statistics. NOTE the format needs to be [(x1, y1), (x2, y2), ...].
             buffer_size (int, optional): The radial buffer size in meters around the coordinates. Defaults to 1.
             reducer_type (str, optional): The reducer type to use. Defaults to 'mean'. Options are 'mean', 'median', 'min', and 'max'.
