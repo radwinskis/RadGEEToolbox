@@ -129,6 +129,8 @@ water_classification_maps = cloud_masked_collection.ndwi_collection(
 ```
 ![Visualization of true color and classified water (in blue) from one of the dates in the collection](image-3.png)
 
+Visualization of true color and classified water (in blue) from one of the dates in the collection
+
 ### 3. Calculate Water Area Time Series
 ```python
 calculate_water_area = cloud_masked_NDWI_collection.PixelAreaSumCollection(
@@ -137,11 +139,13 @@ calculate_water_area = cloud_masked_NDWI_collection.PixelAreaSumCollection(
       threshold=0, #binary classification threshold for unclassified rasters,
       scale=90 #pixel size for zonal statistics
       )
-print('List of square meters of water in images:', 
-      calculate_water_area.aggregate_array('ndwi').getInfo())
+water_area_time_series = calculate_water_area.aggregate_array('ndwi').getInfo()
+print('List of square meters of water in images:', water_area_time_series)
 ```
 
 ![Plotted Results from Above Example - All Processed in Less Than 5 Seconds!](image-4.png)
+
+Plotted Results from Above Example - All Processed in Less Than 5 Seconds!
 
 For details about Sentinel-1 SAR and Sentinel-2 MSI modules, and all other available Landsat or cross-module functions, please refer to the [RadGEEToolbox documentation](https://radgeetoolbox.readthedocs.io/en/latest/). You can also explore [`/Example Notebooks`](https://github.com/radwinskis/RadGEEToolbox/tree/main/Example%20Notebooks) for more usage examples.
 
