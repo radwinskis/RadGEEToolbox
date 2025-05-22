@@ -38,15 +38,15 @@ _____________
 
 ### Installing via pip
 
-To install `RadGEEToolbox` version 1.6.1 using pip (NOTE: it is recommended to create a new virtual environment):
+To install `RadGEEToolbox` version 1.6.2 using pip (NOTE: it is recommended to create a new virtual environment):
 
 ```bash
-pip install RadGEEToolbox==1.6.1
+pip install RadGEEToolbox==1.6.2
 ```
 
 ### Installing via Conda
 
-To install `RadGEEToolbox` version 1.6.1 using conda-forge (NOTE: it is recommended to create a new virtual environment):
+To install `RadGEEToolbox` version 1.6.2 using conda-forge (NOTE: it is recommended to create a new virtual environment):
 
 ```bash
 conda install conda-forge::radgeetoolbox
@@ -77,7 +77,7 @@ To verify that `RadGEEToolbox` was installed correctly:
 python -c "import RadGEEToolbox; print(RadGEEToolbox.__version__)"
 ```
 
-You should see `1.6.1` printed as the version number.
+You should see `1.6.2` printed as the version number.
 
 ________
 # Usage Example
