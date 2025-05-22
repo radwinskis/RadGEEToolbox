@@ -3,214 +3,52 @@ import pandas as pd
 import numpy as np
 class Sentinel2Collection:
     """
-    Class object representing a collection of ESA Sentinel-2 MSI surface reflectance satellite images at 10 m/px resolution from Google Earth Engine.
+    Represents a user-defined collection of ESA Sentinel-2 MSI surface reflectance satellite images at 10 m/px from Google Earth Engine (GEE).
 
-    This class provides methods to filter, process, and analyze Sentinel-2 satellite imagery for a given period and region. 
+    This class enables simplified definition, filtering, masking, and processing of multispectral Sentinel-2 imagery.
+    It supports multiple spatial and temporal filters, caching for efficient computation, and direct computation of 
+    key spectral indices like NDWI, NDVI, halite index, and more. It also includes utilities for cloud masking,
+    mosaicking, zonal statistics, and transect analysis.
+
+    Initialization can be done by providing filtering parameters or directly passing in a pre-filtered GEE collection.
 
     Inspect the documentation or source code for details on the methods and properties available.
 
-    Arguments:
-        start_date (str): Start date string in format of yyyy-mm-dd for filtering collection (required unless collection is provided)
-        
-        end_date (str): End date string in format of yyyy-mm-dd for filtering collection (required unless collection is provided)
-        
-        tile (str or list): MGRS tile(s) of Sentinel image (required unless boundary, relative_orbit_number, or collection is provided) | user is allowed to provide multiple tiles as list (note tile specifications will override boundary or orbits) - see https://hls.gsfc.nasa.gov/products-description/tiling-system/
-        
-        cloud_percentage_threshold (int): Integer percentage threshold where only imagery with cloud % less than threshold will be provided (defaults to 100)
-
-        nodata_threshold (int): Integer percentage threshold where only imagery with nodata pixels encompassing a % less than the threshold will be provided (defaults to 100)
-
-        boundary (ee.Geometry): Boundary for filtering images to images that intersect with the boundary shape (optional) - can be used in conjunction with relative_orbit_number
-        
-        relative_orbit_number (int or list): Relative orbit number(s) to filter collection (optional) - can be used in conjunction with boundary | provide multiple values as list
-        
-        collection (ee.ImageCollection): Optional argument to convert an ee.ImageCollection object to a Sentinel2Collection object - will override other arguments!
+    Args:
+        start_date (str): Start date in 'YYYY-MM-DD' format. Required unless `collection` is provided.
+        end_date (str): End date in 'YYYY-MM-DD' format. Required unless `collection` is provided.
+        tile (str or list): MGRS tile(s) of Sentinel image. Required unless `boundary`, `relative_orbit_number`, or `collection` is provided. The user is allowed to provide multiple tiles as list (note tile specifications will override boundary or orbits). See https://hls.gsfc.nasa.gov/products-description/tiling-system/       
+        cloud_percentage_threshold (int, optional): Max allowed cloud cover percentage. Defaults to 100.
+        nodata_threshold (int, optional): Integer percentage threshold where only imagery with nodata pixels encompassing a % less than the threshold will be provided (defaults to 100)
+        boundary (ee.Geometry, optional): A geometry for filtering to images that intersect with the boundary shape. Overrides `tile` if provided.       
+        relative_orbit_number (int or list, optional): Relative orbit number(s) to filter collection. Provide multiple values as list 
+        collection (ee.ImageCollection, optional): A pre-filtered Sentinel-2 ee.ImageCollection object to be converted to a Sentinel2Collection object. Overrides all other filters.
 
     Attributes:
-        collection (returns: ee.ImageCollection): Returns an ee.ImageCollection object from any Sentinel2Collection image collection object
+        collection (ee.ImageCollection): The filtered or user-supplied image collection converted to an ee.ImageCollection object.  
+
+    Raises:
+        ValueError: Raised if required filter parameters are missing, or if both `collection` and other filters are provided.
+
+    Note:
+        See full usage examples in the documentation or notebooks:
+        https://github.com/radwinskis/RadGEEToolbox/tree/main/Example%20Notebooks
         
-        _dates_list: Cache storage for dates_list property attribute
-
-        _dates: Cahce storgage for dates property attribute
-        
-        ndwi_threshold: Default threshold for masking ndwi imagery
-        
-        ndvi_threshold: Default threshold for masking ndvi imagery
-        
-        halite_threshold: Default threshold for masking halite imagery
-        
-        gypsum_threshold: Default threshold for masking gypsum imagery
-
-        turbidity_threshold: Default threshold for masking turbidity imagery
-
-        chlorophyll_threshold: Default threshold for masking chlorophyll imagery
-
-        _masked_clouds_collection: Cache storage for masked_clouds_collection property attribute
-
-        _masked_water_collection: Cache storage for masked_water_collection property attribute
-
-        _masked_to_water_collection: Cache storage for masked_to_water_collection property attribute
-
-        _geometry_masked_collection: Cache storage for mask_to_polygon method
-
-        _geometry_masked_out_collection: Cache storage for mask_out_polygon method
-
-        _median: Cache storage for median property attribute
-
-        _mean: Cache storage for mean property attribute
-        
-        _max: Cache storage for max property attribute
-
-        _min: Cache storage for min property attribute
-
-        _ndwi: Cache storage for ndwi property attribute
-
-        _ndvi: Cache storage for ndvi property attribute
-
-        _halite: Cache storage for halite property attribute
-
-        _gypsum: Cache storage for gypsum property attribute
-
-        _turbidity: Cache storage for turbidity property attribute
-
-        _chlorophyll: Cache storage for chlorophyll property attribute
-
-        _MosaicByDate: Cache storage for MosaicByDate property attribute
-
-    Property Attributes:
-        dates_list (returns: Server-Side List): Unreadable Earth Engine list of image dates (server-side)
-        
-        dates (returns: Client-Side List): Readable pythonic list of image dates (client-side)
-        
-        masked_clouds_collection (returns: Sentinel2Collection image collection): Returns collection with clouds masked (transparent) for each image
-
-        masked_to_water_collection (returns: Sentinel2Collection image collection): Returns collection masked to just water pixels
-
-        masked_water_collection (returns: Sentinel2Collection image collection): Returns collection with water pixels masked
-        
-        max (returns: ee.Image): Returns a temporally reduced max image (calculates max at each pixel)
-        
-        median (returns: ee.Image): Returns a temporally reduced median image (calculates median at each pixel)
-        
-        mean (returns: ee.Image): Returns a temporally reduced mean image (calculates mean at each pixel)
-        
-        min (returns: ee.Image): Returns a temporally reduced min image (calculates min at each pixel)
-        
-        ndwi (returns: ee.ImageCollection): Returns Sentinel2Collection image collection of singleband NDWI (water) rasters
-        
-        ndvi (returns: ee.ImageCollection): Returns Sentinel2Collection image collection of singleband NDVI (vegetation) rasters
-
-        halite (returns: ee.ImageCollection): Returns Sentinel2Collection image collection of singleband halite index rasters
-
-        gypsum (returns: ee.ImageCollection): Returns Sentinel2Collection image collection of singleband gypsum index rasters
-
-        turbidity (returns: ee.ImageCollection): Returns Sentinel2Collection image collection of singleband NDTI (turbidity) rasters
-
-        chlorophyll (returns: ee.ImageCollection): Returns Sentinel2Collection image collection of singleband 2BDA (relative chlorophyll-a) rasters
-
-        MosaicByDate (returns: Sentinel2Collection image collection): Mosaics image collection where images with the same date are mosaiced into the same image. Calculates total cloud percentage for subsequent filtering of cloudy mosaics.
-
-    Methods:        
-        ndwi_collection(self, threshold)
-        
-        ndvi_collection(self, threshold)
-        
-        halite_collection(self, threshold)
-        
-        gypsum_collection(self, threshold)
-
-        turbidity_collection(self, threshold)
-
-        chlorophyll_collection(self, threshold)
-
-        get_filtered_collection(self)
-
-        get_boundary_filtered_collection(self)
-
-        get_orbit_filtered_collection(self)
-
-        get_orbit_and_boundary_filtered_collection(self)
-        
-        mask_to_polygon(self, polygon)
-
-        mask_out_polygon(self, polygon)
-
-        masked_water_collection_NDWI(self, threshold)
-
-        masked_to_water_collection_NDWI(self, threshold)
-        
-        mask_halite(self, threshold)
-        
-        mask_halite_and_gypsum(self, halite_threshold, gypsum_threshold)
-
-        PixelAreaSumCollection(self, band_name, geometry, threshold, scale, maxPixels)
-        
-        image_grab(self, img_selector)
-        
-        custom_image_grab(self, img_col, img_selector)
-        
-        image_pick(self, img_date)
-        
-        CollectionStitch(self, img_col2)
-
-        transect_iterator(self, lines, line_names, save_folder_path, reducer='mean', n_segments=None, dist_interval=30, to_pandas=True)
-        
-        iterate_zonal_stats(self, coordinates, buffer_size=1, reducer_type='mean', scale=10, tileScale=1, coordinate_names=None, file_path=None, dates=None)
-
-    Static Methods:
-        image_dater(image)
-        
-        sentinel_ndwi_fn(image, threshold)
-        
-        sentinel_ndvi_fn(image, threshold)
-        
-        sentinel_halite_fn(image, threshold)
-        
-        sentinel_gypsum_fn(image, threshold)
-
-        sentinel_turbidity_fn(image, threshold)
-        
-        sentinel_chlorophyll_fn(image, threshold)
-        
-        MaskWaterS2(image)
-
-        MaskToWaterS2(image)
-        
-        MaskWaterS2ByNDWI(image, threshold)
-
-        MaskToWaterS2ByNDWI(image, threshold)
-
-        halite_mask(image, threshold)
-        
-        gypsum_and_halite_mask(image, halite_threshold, gypsum_threshold)
-        
-        MaskCloudsS2(image)
-        
-        PixelAreaSum(image, band_name, geometry, threshold=-1, scale=30, maxPixels=1e12)
-
-        extract_transect(image, line, reducer="mean", n_segments=100, dist_interval=None, scale=None, crs=None, crsTransform=None, tileScale=1.0, to_pandas=False)
-
-        transect(image, lines, line_names, reducer='mean', n_segments=None, dist_interval=30, to_pandas=True)
-
-        extract_zonal_stats_from_buffer(image, coordinates, buffer_size=1, reducer_type='mean', scale=10, tileScale=1, coordinate_names=None)
-        
-
-    Usage:
-        The Sentinel2Collection object alone acts as a base object for which to further filter or process to indices or spatial reductions
-        
-        To use the Sentinel2Collection functionality, use any of the built in class attributes or method functions. For example, using class attributes:
-        
-        image_collection = Sentinel2Collection(start_date, end_date, tile, cloud_percentage_threshold)
-
-        ee_image_collection = image_collection.collection #returns ee.ImageCollection from provided argument filters
-
-        latest_image = image_collection.image_grab(-1) #returns latest image in collection as ee.Image
-
-        cloud_masked_collection = image_collection.masked_clouds_collection #returns cloud-masked Sentinel2Collection image collection
-
-        NDWI_collection = image_collection.ndwi #returns NDWI Sentinel2Collection image collection
-
-        latest_NDWI_image = NDWI_collection.image_grab(-1) #Example showing how class functions work with any Sentinel2Collection image collection object, returning latest ndwi image
+    Examples:
+        >>> from RadGEEToolbox import Sentinel2Collection
+        >>> import ee
+        >>> ee.Initialize()
+        >>> image_collection = Sentinel2Collection(
+        ...     start_date='2023-06-01', 
+        ...     end_date='2023-06-30', 
+        ...     tile=['12TUL', '12TUM', '12TUN'],
+        ...     cloud_percentage_threshold=20,
+        ...     nodata_threshold=10,
+        ... )
+        >>> mosaic_collection = image_collection.MosaicByDate #mosaic images/tiles with same date
+        >>> cloud_masked = mosaic_collection.masked_clouds_collection #mask out clouds
+        >>> latest_image = cloud_masked.image_grab(-1) #grab latest image for viewing
+        >>> ndwi_collection = cloud_masked.ndwi #calculate ndwi for all images
     """
 
     def __init__(self, start_date=None, end_date=None, tile=None, cloud_percentage_threshold=None, nodata_threshold=None, boundary=None, relative_orbit_number=None, collection=None):

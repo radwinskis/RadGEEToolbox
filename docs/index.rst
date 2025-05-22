@@ -17,12 +17,8 @@ Designed for both new and advanced users of Google Earth Engine, RadGEEToolbox m
    featurelist
    packagestructure
    usage
-   LandsatCollection
-   Sentinel1Collection
-   Sentinel2Collection
-   CollectionStitch
-   GetPalette
-   VisParams
+   example_notebooks
+   api_reference
    contributing
 
 Indices and tables

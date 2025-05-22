@@ -3,3 +3,6 @@ numpy
 pandas
 sphinx
 sphinx_rtd_theme
+nbsphinx
+ipython
+jupyter

@@ -34,7 +34,8 @@ release = '1.6.1'
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
-    'sphinx_rtd_theme']
+    'sphinx_rtd_theme',
+    'nbsphinx']
 
 napoleon_google_docstring = True
 napoleon_numpy_docstring = False

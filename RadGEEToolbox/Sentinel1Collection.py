@@ -4,144 +4,59 @@ import pandas as pd
 import numpy as np
 class Sentinel1Collection:
     """
-    Class object representing a collection of Sentinel-1 C-band Synthetic Aperture Radar (SAR) GRD data at 10 m/px resolution from Google Earth Engine (GEE). Units of backscatter are in decibels (dB) by default.
+    Represents a user-defined collection of ESA Sentinel-1 C-band Synthetic Aperture Radar (SAR) GRD data at 10 m/px resolution from Google Earth Engine (GEE). Units of backscatter are in decibels (dB) by default.
 
-    This class module provides methods to filter, process, and analyze Sentinel-1 satellite imagery for a given period and region.
+    This class enables simplified definition, filtering, masking, and processing of Seninel-1 SAR imagery.
+    It supports multiple spatial and temporal filters, multilooking and speckle filtering, caching for efficient computation, and direct conversion between log and linear backscatter scales. It also includes utilities for
+    mosaicking, zonal statistics, and transect analysis.
+
+    Initialization can be done by providing filtering parameters or directly passing in a pre-filtered GEE collection.
 
     Inspect the documentation or source code for details on the methods and properties available.
 
-    Arguments:
-        start_date (str): Start date string in format of yyyy-mm-dd for filtering collection (required unless collection is provided)
-
-        end_date (str): End date string in format of yyyy-mm-dd for filtering collection (required unless collection is provided)
-
-        relative_orbit_start (int or list): Relative orbit start number for filtering collection (required unless collection is provided)
-
-        relative_orbit_stop (int or list): Relative orbit stop number for filtering collection (required unless collection is provided)
-
-        instrument_mode (str or list): Instrument mode for filtering collection, with options of IW, EW, or SM (optional - defaults to IW)
-
-        polarization (str or list): Polarization bands in image for filtering collection. Options: ['VV'], ['HH'], ['VV', 'VH'], or ['HH', 'HV'] (optional; default is ['VV', 'VH'])
-
-        bands (str or list): Band(s) of interest in each image (optional, must match polarization type; default is ['VV', 'VH'])
-
-        orbit_direction (str or list): Orbit direction for filtering collection. Options: 'ASCENDING' and/or 'DESCENDING' (required unless collection is provided). For example, ['ASCENDING', 'DESCENDING'] will include both ascending and descending images.
-
-        boundary (ee.Geometry): Boundary for filtering images to images that intersect with the boundary shape (optional)
-
-        resolution_meters (int): Resolution in meters for filtering collection. Options of 10, 25, or 40 (required unless collection is provided; NOTE: this is for filtering the GEE collection, not multilooking/reprojecting)
-        
-        collection (ee.ImageCollection): Optional argument to provide an ee.ImageCollection object to be converted to a Sentinel1Collection object - will override other arguments!
+    Args:
+        start_date (str): Start date in 'YYYY-MM-DD' format. Required unless `collection` is provided.
+        end_date (str): End date in 'YYYY-MM-DD' format. Required unless `collection` is provided.
+        relative_orbit_start (int or list): Relative orbit start number for filtering collection. Required unless `collection` is provided.
+        relative_orbit_stop (int or list): Relative orbit stop number for filtering collection. Required unless `collection` is provided.
+        instrument_mode (str or list, optional): Instrument mode for filtering collection, with options of 'IW', 'EW', or 'SM'. Defaults to 'IW'
+        polarization (str or list, optional): Polarization bands in image for filtering collection. Options: ['VV'], ['HH'], ['VV', 'VH'], or ['HH', 'HV']. Default is ['VV', 'VH'].
+        bands (str or list, optional): Desired band(s). Must match polarization type. Default is ['VV', 'VH']
+        orbit_direction (str or list): Orbit direction for filtering collection. Options: 'ASCENDING' and/or 'DESCENDING'. Required unless `collection` is provided. For example, ['ASCENDING', 'DESCENDING'] will include both ascending and descending images.
+        boundary (ee.Geometry, optional): A geometry for filtering to images that intersect with the boundary shape. Overrides `relative_orbit_start` and `relative_orbit_stop` if provided.
+        resolution_meters (int): Resolution in meters for filtering collection. Options of 10, 25, or 40. Required unless collection is provided. NOTE: this is for filtering the GEE collection, not multilooking/reprojecting)
+        collection (ee.ImageCollection, optional): A pre-filtered Sentinel-1 ee.ImageCollection object to be converted to a Sentinel1Collection object. Overrides all other filters.
 
     Attributes:
-        collection: Returns an ee.ImageCollection object from any Sentinel1Collection image collection object
-        
-        _dates_list: Cache storage for dates_list property attribute
+        collection (ee.ImageCollection): The filtered or user-supplied image collection converted to an ee.ImageCollection object. 
 
-        _dates: Cahce storgage for dates property attribute
+    Raises:
+        ValueError: Raised if required filter parameters are missing, or if both `collection` and other filters are provided.
 
-        _geometry_masked_collection: Cache storage for mask_to_polygon method
+    Note:
+        See full usage examples in the documentation or notebooks:
+        https://github.com/radwinskis/RadGEEToolbox/tree/main/Example%20Notebooks
 
-        _geometry_masked_out_collection: Cache storage for mask_out_polygon method
-
-        _median: Cache storage for median property attribute
-
-        _mean: Cache storage for mean property attribute
-        
-        _max: Cache storage for max property attribute
-
-        _min: Cache storage for min property attribute
-
-        _MosaicByDate: Cache storage for MosaicByDate property attribute
-
-        _PixelAreaSumCollection: Cache storage for PixelAreaSumCollection property attribute
-
-        _speckle_filter: Cache storage for speckle_filter property attribute
-
-        _Sigma0FromDb: Cache storage for Sigma0FromDb property attribute
-
-        _DbFromSigma0: Cache storage for DbFromSigma0 property attribute
-
-        _multilook: Cache storage for multilook property attribute
-
-    Property attributes:
-        dates_list (returns: Server-Side List): Unreadable Earth Engine list of image dates (server-side)
-        
-        dates (returns: Client-Side List): Readable pythonic list of image dates (client-side)
-
-        max (returns: ee.Image): Returns a temporally reduced max image (calculates max at each pixel)
-        
-        median (returns: ee.Image): Returns a temporally reduced median image (calculates median at each pixel)
-        
-        mean (returns: ee.Image): Returns a temporally reduced mean image (calculates mean at each pixel)
-        
-        min (returns: ee.Image): Returns a temporally reduced min image (calculates min at each pixel)
-        
-        MosaicByDate (returns: Sentinel1Collection image collection): Mosaics image collection where images with the same date are mosaiced into the same image. Calculates total cloud percentage for subsequent filtering of cloudy mosaics.
-
-        Sigma0FromDb (returns: Sentinel1Collection image collection): Converts image collection from decibels to sigma0
-
-        DbFromSigma0 (returns: Sentinel1Collection image collection): Converts image collection from sigma0 to decibels
-
-        multilook (returns: Sentinel1Collection image collection): Multilooks image collection by specified number of looks (1, 2, 3, or 4)
-
-        speckle_filter (returns: Sentinel1Collection image collection): Applies speckle filter to image collection
-
-    Methods:
-        get_filtered_collection(self)
-
-        get_boundary_filtered_collection(self)
-        
-        mask_to_polygon(self, polygon)
-
-        mask_out_polygon(self, polygon)
-
-        PixelAreaSumCollection(self, band_name, geometry, threshold, scale, maxPixels)
-        
-        image_grab(self, img_selector)
-        
-        custom_image_grab(self, img_col, img_selector)
-        
-        image_pick(self, img_date)
-        
-        CollectionStitch(self, img_col2)
-
-        transect_iterator(self, lines, line_names, save_folder_path, reducer='mean', n_segments=None, dist_interval=30, to_pandas=True)
-
-        iterate_zonal_stats(self, coordinates, buffer_size=1, reducer_type='mean', scale=40, tileScale=1, coordinate_names=None, file_path=None, dates=None)
-
-    Static Methods:
-        image_dater(image)
-        
-        PixelAreaSum(image, band_name, geometry, threshold=-1, scale=30, maxPixels=1e12)
-
-        multilook_fn(image, looks)
-
-        leesigma(image, KERNEL_SIZE, geometry, Tk=7, sigma=0.9, looks=1)
-
-        extract_transect(image, line, reducer="mean", n_segments=100, dist_interval=None, scale=None, crs=None, crsTransform=None, tileScale=1.0, to_pandas=False)
-
-        transect(image, lines, line_names, reducer='mean', n_segments=None, dist_interval=30, to_pandas=True)
-
-        extract_zonal_stats_from_buffer(image, coordinates, buffer_size=1, reducer_type='mean', scale=40, tileScale=1, coordinate_names=None)
-
-
-    Usage:
-        The Sentinel1Collection object alone acts as a base object for which to further filter or process to indices or spatial reductions
-        
-        To use the Sentinel1Collection functionality, use any of the built in class attributes or method functions. For example, using class attributes:
-       
-        image_collection = Sentinel1Collection(start_date, end_date, tile_row, tile_path, cloud_percentage_threshold)
-
-        ee_image_collection = image_collection.collection #returns ee.ImageCollection from provided argument filters
-
-        latest_image = image_collection.image_grab(-1) #returns latest image in collection as ee.Image
-
-        cloud_masked_collection = image_collection.masked_clouds_collection #returns cloud-masked Sentinel1Collection image collection
-
-        NDWI_collection = image_collection.ndwi #returns NDWI Sentinel1Collection image collection
-
-        latest_NDWI_image = NDWI_collection.image_grab(-1) #Example showing how class functions work with any Sentinel1Collection image collection object, returning latest ndwi image
+    Examples:
+        >>> from RadGEEToolbox import Sentinel1Collection
+        >>> import ee
+        >>> ee.Initialize()
+        >>> counties = ee.FeatureCollection('TIGER/2018/Counties')
+        >>> salt_lake_county = counties.filter(ee.Filter.And(
+        ...    ee.Filter.eq('NAME', 'Salt Lake'),
+        ...    ee.Filter.eq('STATEFP', '49')))
+        >>> salt_lake_geometry = salt_lake_county.geometry()
+        >>> SAR_collection = Sentinel1Collection(
+        ...    start_date='2024-05-01',
+        ...    end_date='2024-05-31',
+        ...    instrument_mode='IW',
+        ...    polarization=['VV', 'VH'],
+        ...    orbit_direction='DESCENDING',
+        ...    boundary=salt_lake_geometry,
+        ...    resolution_meters=10
+        ... )
+        >>> latest_image = SAR_collection.image_grab(-1)
+        >>> mean_SAR_backscatter = SAR_collection.mean
     """
     def __init__(self, start_date=None, end_date=None, relative_orbit_start=None, relative_orbit_stop=None, instrument_mode=None, polarization=None, bands=None, orbit_direction=None, boundary=None, resolution=None, resolution_meters=None, collection=None):
         if collection is None and (start_date is None or end_date is None):
