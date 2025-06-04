@@ -7,6 +7,7 @@ These notebooks are designed to demonstrate the functionality of RadGEEToolbox a
 .. toctree::
    :maxdepth: 1
 
+   examples/Complete_ReadMe_Example.ipynb
    examples/Image_Collections_&_Useful_Operations.ipynb
    examples/Multispectral_Functions_Examples.ipynb
    examples/Palettes_and_Visualization.ipynb
