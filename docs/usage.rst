@@ -53,11 +53,15 @@ a time series of surface water area.
         threshold=0
     )
 
-.. image:: _static/image-3.png
-   :alt: Visualization of classified water from one date
+.. image:: _static/LakePowellNDWI.png
+   :alt: Visualization of classified water from 2024-11-15
    :width: 600px
 
-3. Calculate Water Area Time Series
+Visualization of true color and classified water (in blue) from one of the dates in the collection. 
+
+To see the code used to display this image, please view `this Example Notebook <https://github.com/radwinskis/RadGEEToolbox/blob/main/Example%20Notebooks/Complete_ReadMe_Example.ipynb>`_
+
+1. Calculate Water Area Time Series
 -----------------------------------
 
 ::
@@ -72,9 +76,11 @@ a time series of surface water area.
     print('List of square meters of water in images:',
           calculate_water_area.aggregate_array('ndwi').getInfo())
 
-.. image:: _static/image-4.png
+.. image:: _static/LakePowellPlot.png
    :alt: Water area plotted results
    :width: 600px
+
+To see the code used to display this plot, please view `this Example Notebook <https://github.com/radwinskis/RadGEEToolbox/blob/main/Example%20Notebooks/Complete_ReadMe_Example.ipynb>`_
 
 You can also explore the
 `Example Notebooks <https://github.com/radwinskis/RadGEEToolbox/tree/main/Example%20Notebooks>`_

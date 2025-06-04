@@ -13,6 +13,7 @@ Designed for both new and advanced users of Google Earth Engine, RadGEEToolbox m
    :maxdepth: 2
    :caption: Contents:
 
+   getting_started_with_gee
    installation
    featurelist
    packagestructure
