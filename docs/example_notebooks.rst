@@ -7,7 +7,7 @@ These notebooks are designed to demonstrate the functionality of RadGEEToolbox a
 .. toctree::
    :maxdepth: 1
 
-   examples/Image_Collections_&_Useful_Operations
-   examples/Multispectral_Functions_Examples
-   examples/Palettes_and_Visualization
-   examples/S1_SAR_Backscatter_Basic_Usage
+   examples/Image_Collections_&_Useful_Operations.ipynb
+   examples/Multispectral_Functions_Examples.ipynb
+   examples/Palettes_and_Visualization.ipynb
+   examples/S1_SAR_Backscatter_Basic_Usage.ipynb
