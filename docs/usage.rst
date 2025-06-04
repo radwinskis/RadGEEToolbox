@@ -61,7 +61,7 @@ Visualization of true color and classified water (in blue) from one of the dates
 
 To see the code used to display this image, please view `this Example Notebook <https://github.com/radwinskis/RadGEEToolbox/blob/main/Example%20Notebooks/Complete_ReadMe_Example.ipynb>`_
 
-1. Calculate Water Area Time Series
+3. Calculate Water Area Time Series
 -----------------------------------
 
 ::
