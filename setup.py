@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="RadGEEToolbox",
-    version="1.6.3",
+    version="1.6.4",
     author="Mark Radwin",
     author_email="markradwin@gmail.com",
     description="Streamlined Multispectral & SAR Analysis for Google Earth Engine Python API",
@@ -23,5 +23,5 @@ setup(
         "numpy",
         "pandas"
     ],
-    python_requires=">=3.6",
+    python_requires=">=3.8",
 )
