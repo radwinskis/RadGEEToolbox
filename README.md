@@ -95,7 +95,7 @@ _____________
 
 ### Prerequisites
 
-- **Python**: Ensure you have version 3.6 or higher installed.
+- **Python**: Ensure you have version 3.8 or higher installed.
 - **pip**: This is Python's package installer. 
 - **conda-forge**: Community led Conda package installer channel
 
