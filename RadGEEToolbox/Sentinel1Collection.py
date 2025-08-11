@@ -526,9 +526,6 @@ class Sentinel1Collection:
         Returns:
             ee.ImageCollection: Filtered image collection - used for subsequent analyses or to acquire ee.ImageCollection from Sentinel1Collection object
         """
-        # filtered_collection = ee.ImageCollection("COPERNICUS/S1_GRD").filterDate(self.start_date, self.end_date).filter(ee.Filter.inList('instrumentMode', self.instrument_mode)).filter(ee.Filter.And(ee.Filter.inList('relativeOrbitNumber_start', self.relative_orbit_stop),
-        #                         ee.Filter.inList('relativeOrbitNumber_stop', self.relative_orbit_stop))).filter(ee.Filter.inList('orbitProperties_pass', self.orbit_direction)).filter(ee.Filter.inList('transmitterReceiverPolarisation', 
-        #                         self.polarization)).filter(ee.Filter.eq('resolution', self.resolution)).map(self.image_dater).select(self.band)
 
         filtered_collection = ee.ImageCollection("COPERNICUS/S1_GRD").filterDate(self.start_date, self.end_date).filter(ee.Filter.inList('instrumentMode', self.instrument_mode)).filter(ee.Filter.And(ee.Filter.inList('relativeOrbitNumber_start', self.relative_orbit_start),
                                 ee.Filter.inList('relativeOrbitNumber_stop', self.relative_orbit_stop))).filter(ee.Filter.inList('orbitProperties_pass', self.orbit_direction)).filter(ee.Filter.eq('transmitterReceiverPolarisation', 

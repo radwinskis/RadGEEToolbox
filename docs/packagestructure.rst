@@ -7,7 +7,7 @@ The package is divided into six modules:
   Filter and process Landsat 5 TM, 8 OLI/TIRS, and 9 OLI/TIRS surface reflectance imagery.
 
 - ``Sentinel1Collection``  
-  Filter and process Sentinel-1 Synthetic Aperture Radar (SAR) GRB backscatter imagery.
+  Filter and process Sentinel-1 Synthetic Aperture Radar (SAR) Ground Range Detected (GRD) backscatter imagery.
 
 - ``Sentinel2Collection``  
   Filter and process Sentinel-2 MSI surface reflectance imagery.
