@@ -1,4 +1,4 @@
-__version__ = "1.6.5"
+__version__ = "1.6.6"
 
 from .CollectionStitch import CollectionStitch, MosaicByDate
 from .GetPalette import get_palette

@@ -19,10 +19,10 @@ def _scale_landsat_sr(img):
         ee.Image: Image with scaled reflectance bands.
     """
     img = ee.Image(img)
-    already = ee.String(img.get('rgt:scaled')).eq('landsat_sr')
+    is_scaled = ee.Algorithms.IsEqual(img.get('rgt:scaled'), 'landsat_sr')
     scaled = img.select(_LS_SR_BANDS).multiply(_LS_SCALE).add(_LS_OFFSET)
-    scaled = img.addBands(scaled, None, True).set('rgt:scaled','landsat_sr')
-    return ee.Image(ee.Algorithms.If(already, img, scaled))
+    out = img.addBands(scaled, None, True).set('rgt:scaled', 'landsat_sr')
+    return ee.Image(ee.Algorithms.If(is_scaled, img, out))
 
 class LandsatCollection:
     """

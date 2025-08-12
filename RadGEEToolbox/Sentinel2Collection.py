@@ -18,10 +18,10 @@ def _scale_s2_sr(img):
         ee.Image: Image with scaled reflectance bands.
     """
     img = ee.Image(img)
-    already = ee.String(img.get('rgt:scaled')).eq('sentinel2_sr')
+    is_scaled = ee.Algorithms.IsEqual(img.get('rgt:scaled'), 'sentinel2_sr')
     scaled = img.select(_S2_SR_BANDS).multiply(_S2_SCALE)
-    scaled = img.addBands(scaled, None, True).set('rgt:scaled','sentinel2_sr')
-    return ee.Image(ee.Algorithms.If(already, img, scaled))
+    out = img.addBands(scaled, None, True).set('rgt:scaled', 'sentinel2_sr')
+    return ee.Image(ee.Algorithms.If(is_scaled, img, out))
 
 class Sentinel2Collection:
     """
