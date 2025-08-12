@@ -2,6 +2,8 @@ import ee
 import math
 import pandas as pd
 import numpy as np
+
+
 class Sentinel1Collection:
     """
     Represents a user-defined collection of ESA Sentinel-1 C-band Synthetic Aperture Radar (SAR) GRD data at 10 m/px resolution from Google Earth Engine (GEE). Units of backscatter are in decibels (dB) by default.
@@ -28,7 +30,7 @@ class Sentinel1Collection:
         collection (ee.ImageCollection, optional): A pre-filtered Sentinel-1 ee.ImageCollection object to be converted to a Sentinel1Collection object. Overrides all other filters.
 
     Attributes:
-        collection (ee.ImageCollection): The filtered or user-supplied image collection converted to an ee.ImageCollection object. 
+        collection (ee.ImageCollection): The filtered or user-supplied image collection converted to an ee.ImageCollection object.
 
     Raises:
         ValueError: Raised if required filter parameters are missing, or if both `collection` and other filters are provided.
@@ -58,11 +60,35 @@ class Sentinel1Collection:
         >>> latest_image = SAR_collection.image_grab(-1)
         >>> mean_SAR_backscatter = SAR_collection.mean
     """
-    def __init__(self, start_date=None, end_date=None, relative_orbit_start=None, relative_orbit_stop=None, instrument_mode=None, polarization=None, bands=None, orbit_direction=None, boundary=None, resolution=None, resolution_meters=None, collection=None):
+
+    def __init__(
+        self,
+        start_date=None,
+        end_date=None,
+        relative_orbit_start=None,
+        relative_orbit_stop=None,
+        instrument_mode=None,
+        polarization=None,
+        bands=None,
+        orbit_direction=None,
+        boundary=None,
+        resolution=None,
+        resolution_meters=None,
+        collection=None,
+    ):
         if collection is None and (start_date is None or end_date is None):
-            raise ValueError("Either provide all required fields (start_date, end_date, tile_row, tile_path ; or boundary in place of tiles) or provide a collection.")
-        if relative_orbit_start is None and relative_orbit_stop is None and boundary is None is None and collection is None:
-            raise ValueError("Provide either tile or boundary/geometry specifications to filter the image collection")
+            raise ValueError(
+                "Either provide all required fields (start_date, end_date, tile_row, tile_path ; or boundary in place of tiles) or provide a collection."
+            )
+        if (
+            relative_orbit_start is None
+            and relative_orbit_stop is None
+            and boundary is None
+            and collection is None
+        ):
+            raise ValueError(
+                "Provide either tile or boundary/geometry specifications to filter the image collection"
+            )
         if collection is None:
             self.start_date = start_date
             self.end_date = end_date
@@ -77,8 +103,8 @@ class Sentinel1Collection:
             self.bands = bands
 
             if resolution is None:
-                self.resolution = 'H'
-            elif resolution not in ['H', 'M']:
+                self.resolution = "H"
+            elif resolution not in ["H", "M"]:
                 raise ValueError("Resolution must be either 'H' or 'M'")
             else:
                 pass
@@ -91,32 +117,36 @@ class Sentinel1Collection:
                 else:
                     self.resolution_meters = resolution_meters
             else:
-                pass    
+                pass
 
             if orbit_direction is None:
-                self.orbit_direction = ['ASCENDING', 'DESCENDING']
-            elif orbit_direction == ['ASCENDING', 'DESCENDING']:
+                self.orbit_direction = ["ASCENDING", "DESCENDING"]
+            elif orbit_direction == ["ASCENDING", "DESCENDING"]:
                 self.orbit_direction = orbit_direction
-            elif orbit_direction not in ['ASCENDING', 'DESCENDING']:
-                raise ValueError("Orbit direction must be either 'ASCENDING' or 'DESCENDING', or '['ASCENDING', 'DESCENDING']' ")
+            elif orbit_direction not in ["ASCENDING", "DESCENDING"]:
+                raise ValueError(
+                    "Orbit direction must be either 'ASCENDING' or 'DESCENDING', or '['ASCENDING', 'DESCENDING']' "
+                )
             else:
                 pass
 
             if instrument_mode is None:
-                self.instrument_mode = 'IW'
-            elif instrument_mode not in ['IW', 'EW', 'SM']:
+                self.instrument_mode = "IW"
+            elif instrument_mode not in ["IW", "EW", "SM"]:
                 raise ValueError("Instrument mode must be either 'IW', 'EW', or 'SM'")
             else:
                 pass
 
             if polarization is None:
-                self.polarization = ['VV', 'VH']
-            elif polarization not in [['VV'], ['HH'], ['VV', 'VH'], ['HH', 'HV']]:
-                raise ValueError("Polarization must be either ['VV'], ['HH'], ['VV, VH'], or ['HH, HV']")
+                self.polarization = ["VV", "VH"]
+            elif polarization not in [["VV"], ["HH"], ["VV", "VH"], ["HH", "HV"]]:
+                raise ValueError(
+                    "Polarization must be either ['VV'], ['HH'], ['VV, VH'], or ['HH, HV']"
+                )
             else:
                 pass
 
-            valid_bands = ['HH', 'HV', 'VV', 'VH', 'angle']
+            valid_bands = ["HH", "HV", "VV", "VH", "angle"]
 
             if bands is not None and isinstance(bands, str):
                 bands = [bands]
@@ -124,9 +154,14 @@ class Sentinel1Collection:
             if bands is None:
                 self.bands = self.polarization
             elif not all(band in valid_bands for band in bands):
-                raise ValueError("Band must be either 'HH', 'HV', 'VV', 'VH', or 'angle'")
+                raise ValueError(
+                    "Band must be either 'HH', 'HV', 'VV', 'VH', or 'angle'"
+                )
             elif not all(band in self.polarization for band in bands):
-                raise ValueError("Band must be associated with chosen polarization type, currently: "+str(self.polarization))
+                raise ValueError(
+                    "Band must be associated with chosen polarization type, currently: "
+                    + str(self.polarization)
+                )
             else:
                 self.bands = bands
 
@@ -160,7 +195,6 @@ class Sentinel1Collection:
             else:
                 self.bands = [self.bands]
 
-
             # Filter the collection
             if boundary and relative_orbit_start and relative_orbit_start is not None:
                 self.collection = self.get_boundary_and_orbit_filtered_collection()
@@ -171,7 +205,6 @@ class Sentinel1Collection:
         else:
             self.collection = collection
 
-        
         self._dates_list = None
         self._dates = None
         self._geometry_masked_collection = None
@@ -192,18 +225,19 @@ class Sentinel1Collection:
         """
         Adds date to image properties as 'Date_Filter'.
 
-        Args: 
+        Args:
             image (ee.Image): Input image
 
-        Returns: 
+        Returns:
             ee.Image: Image with date in properties.
         """
-        date = ee.Number(image.date().format('YYYY-MM-dd'))
-        return image.set({'Date_Filter': date})
-    
-    
+        date = ee.Number(image.date().format("YYYY-MM-dd"))
+        return image.set({"Date_Filter": date})
+
     @staticmethod
-    def PixelAreaSum(image, band_name, geometry, threshold=-1, scale=30, maxPixels=1e12):
+    def PixelAreaSum(
+        image, band_name, geometry, threshold=-1, scale=30, maxPixels=1e12
+    ):
         """
         Function to calculate the summation of area for pixels of interest (above a specific threshold) in a geometry
         and store the value as image property (matching name of chosen band).
@@ -215,26 +249,34 @@ class Sentinel1Collection:
             threshold (float): integer threshold to specify masking of pixels below threshold (defaults to -1)
             scale (int): integer scale of image resolution (meters) (defaults to 30)
             maxPixels (int): integer denoting maximum number of pixels for calculations
-            
-        Returns: 
+
+        Returns:
             ee.Image: ee.Image with area calculation stored as property matching name of band
         """
         area_image = ee.Image.pixelArea()
         mask = image.select(band_name).gte(threshold)
         final = image.addBands(area_image)
-        stats = final.select('area').updateMask(mask).rename(band_name).reduceRegion(
-            reducer = ee.Reducer.sum(),
-            geometry= geometry,
-            scale=scale,
-            maxPixels = maxPixels)
+        stats = (
+            final.select("area")
+            .updateMask(mask)
+            .rename(band_name)
+            .reduceRegion(
+                reducer=ee.Reducer.sum(),
+                geometry=geometry,
+                scale=scale,
+                maxPixels=maxPixels,
+            )
+        )
         return image.set(band_name, stats.get(band_name))
-    
-    def PixelAreaSumCollection(self, band_name, geometry, threshold=-1, scale=30, maxPixels=1e12):
+
+    def PixelAreaSumCollection(
+        self, band_name, geometry, threshold=-1, scale=30, maxPixels=1e12
+    ):
         """
-        Function to calculate the summation of area for pixels of interest (above a specific threshold) 
+        Function to calculate the summation of area for pixels of interest (above a specific threshold)
         within a geometry and store the value as image property (matching name of chosen band) for an entire
         image collection.
-        The resulting value has units of square meters. 
+        The resulting value has units of square meters.
 
         Args:
             band_name (str): name of band (string) for calculating area.
@@ -242,26 +284,41 @@ class Sentinel1Collection:
             threshold (int): integer threshold to specify masking of pixels below threshold (defaults to -1).
             scale (int): integer scale of image resolution (meters) (defaults to 30).
             maxPixels (int): integer denoting maximum number of pixels for calculations.
-        
-        Returns: 
+
+        Returns:
             ee.Image: Image with area calculation stored as property matching name of band.
         """
         if self._PixelAreaSumCollection is None:
             collection = self.collection
-            AreaCollection = collection.map(lambda image: Sentinel1Collection.PixelAreaSum(image, band_name=band_name, geometry=geometry, threshold=threshold, scale=scale, maxPixels=maxPixels))
+            AreaCollection = collection.map(
+                lambda image: Sentinel1Collection.PixelAreaSum(
+                    image,
+                    band_name=band_name,
+                    geometry=geometry,
+                    threshold=threshold,
+                    scale=scale,
+                    maxPixels=maxPixels,
+                )
+            )
             self._PixelAreaSumCollection = AreaCollection
         return self._PixelAreaSumCollection
-    
+
     @staticmethod
     def multilook_fn(image, looks):
         if looks not in [1, 2, 3, 4]:
-            raise ValueError("Looks must be either 1, 2, 3, or 4, corresponding to 1x1, 2x2, 3x3, or 4x4 multilooking")
+            raise ValueError(
+                "Looks must be either 1, 2, 3, or 4, corresponding to 1x1, 2x2, 3x3, or 4x4 multilooking"
+            )
 
         default_projection = image.projection()
         image = image.setDefaultProjection(default_projection)
-        looked_image = image.reduceResolution(reducer=ee.Reducer.mean(), maxPixels=1024).reproject(crs=default_projection, scale=10*looks)
+        looked_image = image.reduceResolution(
+            reducer=ee.Reducer.mean(), maxPixels=1024
+        ).reproject(crs=default_projection, scale=10 * looks)
 
-        return looked_image.copyProperties(image).set('number_of_processed_looks', looks)
+        return looked_image.copyProperties(image).set(
+            "number_of_processed_looks", looks
+        )
 
     def multilook(self, looks):
         """
@@ -274,21 +331,25 @@ class Sentinel1Collection:
             Sentinel1Collection: Sentinel1Collection image collection
         """
         if looks not in [1, 2, 3, 4]:
-            raise ValueError("Looks must be either 1, 2, 3, or 4, corresponding to 1x1, 2x2, 3x3, or 4x4 multilooking")
+            raise ValueError(
+                "Looks must be either 1, 2, 3, or 4, corresponding to 1x1, 2x2, 3x3, or 4x4 multilooking"
+            )
         else:
             pass
         if self._multilook is None:
             collection = self.collection
             looks = looks
-            multilook_collection = collection.map(lambda image: Sentinel1Collection.multilook_fn(image, looks=looks))
+            multilook_collection = collection.map(
+                lambda image: Sentinel1Collection.multilook_fn(image, looks=looks)
+            )
             self._multilook = multilook_collection
         return Sentinel1Collection(collection=self._multilook)
 
     @staticmethod
     def leesigma(image, KERNEL_SIZE, geometry=None, Tk=7, sigma=0.9, looks=1):
         """
-        Implements the improved lee sigma filter for speckle filtering, adapted from https://github.com/adugnag/gee_s1_ard (by Dr. Adugna Mullissa). 
-        See: Lee, J.-S. Wen, J.-H. Ainsworth, T.L. Chen, K.-S. Chen, A.J. Improved sigma filter for speckle filtering of SAR imagery. 
+        Implements the improved lee sigma filter for speckle filtering, adapted from https://github.com/adugnag/gee_s1_ard (by Dr. Adugna Mullissa).
+        See: Lee, J.-S. Wen, J.-H. Ainsworth, T.L. Chen, K.-S. Chen, A.J. Improved sigma filter for speckle filtering of SAR imagery.
         IEEE Trans. Geosci. Remote Sens. 2009, 47, 202–213.
 
         Args:
@@ -299,137 +360,157 @@ class Sentinel1Collection:
             sigma (float): noise standard deviation (default is 0.9)
             looks (int): number of looks (1, 2, 3, or 4) corresponding to the input image (default is 1). This does NOT perform multilooking, but rather is used to determine the sigma range for filtering.
 
-        Returns: 
+        Returns:
             ee.Image: Speckle filtered image
 
         """
 
-        #parameters
-        Tk = ee.Image.constant(Tk) #number of bright pixels in a 3x3 window
+        # parameters
+        Tk = ee.Image.constant(Tk)  # number of bright pixels in a 3x3 window
         sigma = 0.9
         enl = 4
         target_kernel = 3
-        bandNames = image.bandNames().remove('angle')
+        bandNames = image.bandNames().remove("angle")
 
         # Use image bounds as default geometry
         if geometry is None:
             geometry = image.geometry()
-    
-        #compute the 98 percentile intensity 
-        z98 = ee.Dictionary(image.select(bandNames).reduceRegion(
-                    reducer= ee.Reducer.percentile([98]),
-                    geometry= geometry,
-                    scale=10,
-                    maxPixels=1e13
-                )).toImage()
-    
 
-        #select the strong scatterers to retain
+        # compute the 98 percentile intensity
+        z98 = ee.Dictionary(
+            image.select(bandNames).reduceRegion(
+                reducer=ee.Reducer.percentile([98]),
+                geometry=geometry,
+                scale=10,
+                maxPixels=1e13,
+            )
+        ).toImage()
+
+        # select the strong scatterers to retain
         brightPixel = image.select(bandNames).gte(z98)
-        K = brightPixel.reduceNeighborhood(ee.Reducer.countDistinctNonNull()
-                ,ee.Kernel.square(target_kernel/2)) 
+        K = brightPixel.reduceNeighborhood(
+            ee.Reducer.countDistinctNonNull(), ee.Kernel.square(target_kernel / 2)
+        )
         retainPixel = K.gte(Tk)
-    
-    
-        #compute the a-priori mean within a 3x3 local window
-        #original noise standard deviation since the data is 5 look
-        eta = 1.0/math.sqrt(enl) 
+
+        # compute the a-priori mean within a 3x3 local window
+        # original noise standard deviation since the data is 5 look
+        eta = 1.0 / math.sqrt(enl)
         eta = ee.Image.constant(eta)
-        #MMSE applied to estimate the apriori mean
-        reducers = ee.Reducer.mean().combine( \
-                        reducer2= ee.Reducer.variance(), \
-                        sharedInputs= True
-                        )
-        stats = image.select(bandNames).reduceNeighborhood( \
-                        reducer= reducers, \
-                            kernel= ee.Kernel.square(target_kernel/2,'pixels'), \
-                                optimization= 'window')
-        meanBand = bandNames.map(lambda bandName: ee.String(bandName).cat('_mean'))
-        varBand = bandNames.map(lambda bandName:  ee.String(bandName).cat('_variance'))
-            
+        # MMSE applied to estimate the apriori mean
+        reducers = ee.Reducer.mean().combine(
+            reducer2=ee.Reducer.variance(), sharedInputs=True
+        )
+        stats = image.select(bandNames).reduceNeighborhood(
+            reducer=reducers,
+            kernel=ee.Kernel.square(target_kernel / 2, "pixels"),
+            optimization="window",
+        )
+        meanBand = bandNames.map(lambda bandName: ee.String(bandName).cat("_mean"))
+        varBand = bandNames.map(lambda bandName: ee.String(bandName).cat("_variance"))
+
         z_bar = stats.select(meanBand)
         varz = stats.select(varBand)
-        
-        oneImg = ee.Image.constant(1)
-        varx = (varz.subtract(z_bar.abs().pow(2).multiply(eta.pow(2)))).divide(oneImg.add(eta.pow(2)))
-        b = varx.divide(varz)
-        xTilde = oneImg.subtract(b).multiply(z_bar.abs()).add(b.multiply(image.select(bandNames)))
-    
-        #step 3: compute the sigma range using lookup tables (J.S.Lee et al 2009) for range and eta values for intensity
-        if looks == 1:
-            LUT = ee.Dictionary({
-                0.5: ee.Dictionary({'I1': 0.436, 'I2': 1.92, 'eta': 0.4057}),
-                0.6: ee.Dictionary({'I1': 0.343, 'I2': 2.21, 'eta': 0.4954}),
-                0.7: ee.Dictionary({'I1': 0.254, 'I2': 2.582, 'eta': 0.5911}),
-                0.8: ee.Dictionary({'I1': 0.168, 'I2': 3.094, 'eta': 0.6966}),
-                0.9: ee.Dictionary({'I1': 0.084, 'I2': 3.941, 'eta': 0.8191}),
-                0.95: ee.Dictionary({'I1': 0.043, 'I2': 4.840, 'eta': 0.8599})
-            })
-        elif looks == 2:
-            LUT = ee.Dictionary({
-                0.5: ee.Dictionary({'I1': 0.582, 'I2': 1.584, 'eta': 0.2763}),
-                0.6: ee.Dictionary({'I1': 0.501, 'I2': 1.755, 'eta': 0.3388}),
-                0.7: ee.Dictionary({'I1': 0.418, 'I2': 1.972, 'eta': 0.4062}),
-                0.8: ee.Dictionary({'I1': 0.327, 'I2': 2.260, 'eta': 0.4810}),
-                0.9: ee.Dictionary({'I1': 0.221, 'I2': 2.744, 'eta': 0.5699}),
-                0.95: ee.Dictionary({'I1': 0.152, 'I2': 3.206, 'eta': 0.6254})
-            })
-        elif looks == 3:
-            LUT = ee.Dictionary({
-                0.5: ee.Dictionary({'I1': 0.652, 'I2': 1.458, 'eta': 0.2222}),
-                0.6: ee.Dictionary({'I1': 0.580, 'I2': 1.586, 'eta': 0.2736}),
-                0.7: ee.Dictionary({'I1': 0.505, 'I2': 1.751, 'eta': 0.3280}),
-                0.8: ee.Dictionary({'I1': 0.419, 'I2': 1.965, 'eta': 0.3892}),
-                0.9: ee.Dictionary({'I1': 0.313, 'I2': 2.320, 'eta': 0.4624}),
-                0.95: ee.Dictionary({'I1': 0.238, 'I2': 2.656, 'eta': 0.5084})
-            })
-        elif looks == 4:
-            LUT = ee.Dictionary({
-                0.5: ee.Dictionary({'I1': 0.694, 'I2': 1.385, 'eta': 0.1921}),
-                0.6: ee.Dictionary({'I1': 0.630, 'I2': 1.495, 'eta': 0.2348}),
-                0.7: ee.Dictionary({'I1': 0.560, 'I2': 1.627, 'eta': 0.2825}),
-                0.8: ee.Dictionary({'I1': 0.480, 'I2': 1.804, 'eta': 0.3354}),
-                0.9: ee.Dictionary({'I1': 0.378, 'I2': 2.094, 'eta': 0.3991}),
-                0.95: ee.Dictionary({'I1': 0.302, 'I2': 2.360, 'eta': 0.4391})
-            })
-        else:
-            raise ValueError("Invalid number of looks. Please choose from 1, 2, 3, or 4.")
 
-    
-        #extract data from lookup
+        oneImg = ee.Image.constant(1)
+        varx = (varz.subtract(z_bar.abs().pow(2).multiply(eta.pow(2)))).divide(
+            oneImg.add(eta.pow(2))
+        )
+        b = varx.divide(varz)
+        xTilde = (
+            oneImg.subtract(b)
+            .multiply(z_bar.abs())
+            .add(b.multiply(image.select(bandNames)))
+        )
+
+        # step 3: compute the sigma range using lookup tables (J.S.Lee et al 2009) for range and eta values for intensity
+        if looks == 1:
+            LUT = ee.Dictionary(
+                {
+                    0.5: ee.Dictionary({"I1": 0.436, "I2": 1.92, "eta": 0.4057}),
+                    0.6: ee.Dictionary({"I1": 0.343, "I2": 2.21, "eta": 0.4954}),
+                    0.7: ee.Dictionary({"I1": 0.254, "I2": 2.582, "eta": 0.5911}),
+                    0.8: ee.Dictionary({"I1": 0.168, "I2": 3.094, "eta": 0.6966}),
+                    0.9: ee.Dictionary({"I1": 0.084, "I2": 3.941, "eta": 0.8191}),
+                    0.95: ee.Dictionary({"I1": 0.043, "I2": 4.840, "eta": 0.8599}),
+                }
+            )
+        elif looks == 2:
+            LUT = ee.Dictionary(
+                {
+                    0.5: ee.Dictionary({"I1": 0.582, "I2": 1.584, "eta": 0.2763}),
+                    0.6: ee.Dictionary({"I1": 0.501, "I2": 1.755, "eta": 0.3388}),
+                    0.7: ee.Dictionary({"I1": 0.418, "I2": 1.972, "eta": 0.4062}),
+                    0.8: ee.Dictionary({"I1": 0.327, "I2": 2.260, "eta": 0.4810}),
+                    0.9: ee.Dictionary({"I1": 0.221, "I2": 2.744, "eta": 0.5699}),
+                    0.95: ee.Dictionary({"I1": 0.152, "I2": 3.206, "eta": 0.6254}),
+                }
+            )
+        elif looks == 3:
+            LUT = ee.Dictionary(
+                {
+                    0.5: ee.Dictionary({"I1": 0.652, "I2": 1.458, "eta": 0.2222}),
+                    0.6: ee.Dictionary({"I1": 0.580, "I2": 1.586, "eta": 0.2736}),
+                    0.7: ee.Dictionary({"I1": 0.505, "I2": 1.751, "eta": 0.3280}),
+                    0.8: ee.Dictionary({"I1": 0.419, "I2": 1.965, "eta": 0.3892}),
+                    0.9: ee.Dictionary({"I1": 0.313, "I2": 2.320, "eta": 0.4624}),
+                    0.95: ee.Dictionary({"I1": 0.238, "I2": 2.656, "eta": 0.5084}),
+                }
+            )
+        elif looks == 4:
+            LUT = ee.Dictionary(
+                {
+                    0.5: ee.Dictionary({"I1": 0.694, "I2": 1.385, "eta": 0.1921}),
+                    0.6: ee.Dictionary({"I1": 0.630, "I2": 1.495, "eta": 0.2348}),
+                    0.7: ee.Dictionary({"I1": 0.560, "I2": 1.627, "eta": 0.2825}),
+                    0.8: ee.Dictionary({"I1": 0.480, "I2": 1.804, "eta": 0.3354}),
+                    0.9: ee.Dictionary({"I1": 0.378, "I2": 2.094, "eta": 0.3991}),
+                    0.95: ee.Dictionary({"I1": 0.302, "I2": 2.360, "eta": 0.4391}),
+                }
+            )
+        else:
+            raise ValueError(
+                "Invalid number of looks. Please choose from 1, 2, 3, or 4."
+            )
+
+        # extract data from lookup
         sigmaImage = ee.Dictionary(LUT.get(str(sigma))).toImage()
-        I1 = sigmaImage.select('I1')
-        I2 = sigmaImage.select('I2')
-        #new speckle sigma
-        nEta = sigmaImage.select('eta')
-        #establish the sigma ranges
+        I1 = sigmaImage.select("I1")
+        I2 = sigmaImage.select("I2")
+        # new speckle sigma
+        nEta = sigmaImage.select("eta")
+        # establish the sigma ranges
         I1 = I1.multiply(xTilde)
         I2 = I2.multiply(xTilde)
-    
-        #step 3: apply MMSE filter for pixels in the sigma range
-        #MMSE estimator
+
+        # step 3: apply MMSE filter for pixels in the sigma range
+        # MMSE estimator
         mask = image.select(bandNames).gte(I1).Or(image.select(bandNames).lte(I2))
         z = image.select(bandNames).updateMask(mask)
-    
-        stats = z.reduceNeighborhood(reducer= reducers, kernel= ee.Kernel.square(KERNEL_SIZE/2,'pixels'), optimization= 'window')
-            
+
+        stats = z.reduceNeighborhood(
+            reducer=reducers,
+            kernel=ee.Kernel.square(KERNEL_SIZE / 2, "pixels"),
+            optimization="window",
+        )
+
         z_bar = stats.select(meanBand)
         varz = stats.select(varBand)
-        
-        
-        varx = (varz.subtract(z_bar.abs().pow(2).multiply(nEta.pow(2)))).divide(oneImg.add(nEta.pow(2)))
+
+        varx = (varz.subtract(z_bar.abs().pow(2).multiply(nEta.pow(2)))).divide(
+            oneImg.add(nEta.pow(2))
+        )
         b = varx.divide(varz)
-        #if b is negative set it to zero
+        # if b is negative set it to zero
         new_b = b.where(b.lt(0), 0)
         xHat = oneImg.subtract(new_b).multiply(z_bar.abs()).add(new_b.multiply(z))
-    
-        #remove the applied masks and merge the retained pixels and the filtered pixels
+
+        # remove the applied masks and merge the retained pixels and the filtered pixels
         xHat = image.select(bandNames).updateMask(retainPixel).unmask(xHat)
         output = ee.Image(xHat).rename(bandNames)
         # return image.addBands(output, None, True)
         return output.copyProperties(image)
-    
-    
+
     def speckle_filter(self, KERNEL_SIZE, geometry=None, Tk=7, sigma=0.9, looks=1):
         """
         Property attribute function to apply speckle filter to entire image collection. Results are calculated once per class object then cached for future use.
@@ -446,10 +527,19 @@ class Sentinel1Collection:
         """
         if self._speckle_filter is None:
             collection = self.collection
-            speckle_filtered_collection = collection.map(lambda image: Sentinel1Collection.leesigma(image, KERNEL_SIZE, geometry=geometry, Tk=Tk, sigma=sigma, looks=looks))
+            speckle_filtered_collection = collection.map(
+                lambda image: Sentinel1Collection.leesigma(
+                    image,
+                    KERNEL_SIZE,
+                    geometry=geometry,
+                    Tk=Tk,
+                    sigma=sigma,
+                    looks=looks,
+                )
+            )
             self._speckle_filter = speckle_filtered_collection
         return Sentinel1Collection(collection=self._speckle_filter)
-    
+
     @property
     def Sigma0FromDb(self):
         """
@@ -458,10 +548,16 @@ class Sentinel1Collection:
         Returns:
             Sentinel1Collection: Sentinel1Collection image collection
         """
+
         def conversion(image):
             image = ee.Image(image)
             band_names = image.bandNames()
-            sigma_nought = ee.Image(10).pow(image.divide(ee.Image(10))).rename(band_names).copyProperties(image)
+            sigma_nought = (
+                ee.Image(10)
+                .pow(image.divide(ee.Image(10)))
+                .rename(band_names)
+                .copyProperties(image)
+            )
             return sigma_nought
 
         if self._Sigma0FromDb is None:
@@ -469,7 +565,7 @@ class Sentinel1Collection:
             sigma0_collection = collection.map(conversion)
             self._Sigma0FromDb = sigma0_collection
         return Sentinel1Collection(collection=self._Sigma0FromDb)
-    
+
     @property
     def DbFromSigma0(self):
         """
@@ -478,18 +574,24 @@ class Sentinel1Collection:
         Returns:
             Sentinel1Collection: Sentinel1Collection image collection
         """
+
         def conversion(image):
             image = ee.Image(image)
             band_names = image.bandNames()
-            dB = ee.Image(10).multiply(image.log10()).rename(band_names).copyProperties(image)
+            dB = (
+                ee.Image(10)
+                .multiply(image.log10())
+                .rename(band_names)
+                .copyProperties(image)
+            )
             return dB
 
-        if self._Sigma0FromDb is None:
+        if self._DbFromSigma0 is None:
             collection = self.collection
             dB_collection = collection.map(conversion)
             self._DbFromSigma0 = dB_collection
         return Sentinel1Collection(collection=self._DbFromSigma0)
-    
+
     @property
     def dates_list(self):
         """
@@ -499,7 +601,7 @@ class Sentinel1Collection:
             ee.List: Server-side ee.List of dates.
         """
         if self._dates_list is None:
-            dates = self.collection.aggregate_array('Date_Filter')
+            dates = self.collection.aggregate_array("Date_Filter")
             self._dates_list = dates
         return self._dates_list
 
@@ -512,7 +614,7 @@ class Sentinel1Collection:
             list: list of date strings.
         """
         if self._dates_list is None:
-            dates = self.collection.aggregate_array('Date_Filter')
+            dates = self.collection.aggregate_array("Date_Filter")
             self._dates_list = dates
         if self._dates is None:
             dates = self._dates_list.getInfo()
@@ -527,11 +629,28 @@ class Sentinel1Collection:
             ee.ImageCollection: Filtered image collection - used for subsequent analyses or to acquire ee.ImageCollection from Sentinel1Collection object
         """
 
-        filtered_collection = ee.ImageCollection("COPERNICUS/S1_GRD").filterDate(self.start_date, self.end_date).filter(ee.Filter.inList('instrumentMode', self.instrument_mode)).filter(ee.Filter.And(ee.Filter.inList('relativeOrbitNumber_start', self.relative_orbit_start),
-                                ee.Filter.inList('relativeOrbitNumber_stop', self.relative_orbit_stop))).filter(ee.Filter.inList('orbitProperties_pass', self.orbit_direction)).filter(ee.Filter.eq('transmitterReceiverPolarisation', 
-                                self.polarization)).filter(ee.Filter.eq('resolution_meters', self.resolution_meters)).map(self.image_dater).select(self.bands)
+        filtered_collection = (
+            ee.ImageCollection("COPERNICUS/S1_GRD")
+            .filterDate(self.start_date, self.end_date)
+            .filter(ee.Filter.inList("instrumentMode", self.instrument_mode))
+            .filter(
+                ee.Filter.And(
+                    ee.Filter.inList(
+                        "relativeOrbitNumber_start", self.relative_orbit_start
+                    ),
+                    ee.Filter.inList(
+                        "relativeOrbitNumber_stop", self.relative_orbit_stop
+                    ),
+                )
+            )
+            .filter(ee.Filter.inList("orbitProperties_pass", self.orbit_direction))
+            .filter(ee.Filter.eq("transmitterReceiverPolarisation", self.polarization))
+            .filter(ee.Filter.eq("resolution_meters", self.resolution_meters))
+            .map(self.image_dater)
+            .select(self.bands)
+        )
         return filtered_collection
-    
+
     def get_boundary_filtered_collection(self):
         """
         Function to filter and mask image collection based on Sentinel1Collection class arguments. Automatically calculated when using collection method, depending on provided class arguments (when boundary info is provided).
@@ -540,10 +659,19 @@ class Sentinel1Collection:
             ee.ImageCollection: Filtered image collection - used for subsequent analyses or to acquire ee.ImageCollection from Sentinel1Collection object
 
         """
-        filtered_collection = ee.ImageCollection("COPERNICUS/S1_GRD").filterDate(self.start_date, self.end_date).filterBounds(self.boundary).filter(ee.Filter.inList('instrumentMode', self.instrument_mode)).filter(ee.Filter.inList('orbitProperties_pass', self.orbit_direction)).filter(ee.Filter.eq('transmitterReceiverPolarisation', 
-                                self.polarization)).filter(ee.Filter.eq('resolution_meters', self.resolution_meters)).map(self.image_dater).select(self.bands)
+        filtered_collection = (
+            ee.ImageCollection("COPERNICUS/S1_GRD")
+            .filterDate(self.start_date, self.end_date)
+            .filterBounds(self.boundary)
+            .filter(ee.Filter.inList("instrumentMode", self.instrument_mode))
+            .filter(ee.Filter.inList("orbitProperties_pass", self.orbit_direction))
+            .filter(ee.Filter.eq("transmitterReceiverPolarisation", self.polarization))
+            .filter(ee.Filter.eq("resolution_meters", self.resolution_meters))
+            .map(self.image_dater)
+            .select(self.bands)
+        )
         return filtered_collection
-    
+
     def get_boundary_and_orbit_filtered_collection(self):
         """
         Function to filter image collection based on Sentinel1Collection class arguments. Automatically calculated when using collection method, depending on provided class arguments (when tile info is provided).
@@ -552,33 +680,51 @@ class Sentinel1Collection:
             ee.ImageCollection: Filtered image collection - used for subsequent analyses or to acquire ee.ImageCollection from Sentinel1Collection object
         """
         # filtered_collection = ee.ImageCollection("COPERNICUS/S1_GRD").filterDate(self.start_date, self.end_date).filter(ee.Filter.inList('instrumentMode', self.instrument_mode)).filter(ee.Filter.And(ee.Filter.inList('relativeOrbitNumber_start', self.relative_orbit_stop),
-        #                         ee.Filter.inList('relativeOrbitNumber_stop', self.relative_orbit_stop))).filter(ee.Filter.inList('orbitProperties_pass', self.orbit_direction)).filter(ee.Filter.inList('transmitterReceiverPolarisation', 
+        #                         ee.Filter.inList('relativeOrbitNumber_stop', self.relative_orbit_stop))).filter(ee.Filter.inList('orbitProperties_pass', self.orbit_direction)).filter(ee.Filter.inList('transmitterReceiverPolarisation',
         #                         self.polarization)).filter(ee.Filter.eq('resolution', self.resolution)).map(self.image_dater).select(self.band)
 
-        filtered_collection = ee.ImageCollection("COPERNICUS/S1_GRD").filterDate(self.start_date, self.end_date).filter(ee.Filter.inList('instrumentMode', self.instrument_mode)).filterBounds(self.boundary).filter(ee.Filter.And(ee.Filter.inList('relativeOrbitNumber_start', self.relative_orbit_start),
-                                ee.Filter.inList('relativeOrbitNumber_stop', self.relative_orbit_stop))).filter(ee.Filter.inList('orbitProperties_pass', self.orbit_direction)).filter(ee.Filter.eq('transmitterReceiverPolarisation', 
-                                self.polarization)).filter(ee.Filter.eq('resolution_meters', self.resolution_meters)).map(self.image_dater).select(self.bands)
+        filtered_collection = (
+            ee.ImageCollection("COPERNICUS/S1_GRD")
+            .filterDate(self.start_date, self.end_date)
+            .filter(ee.Filter.inList("instrumentMode", self.instrument_mode))
+            .filterBounds(self.boundary)
+            .filter(
+                ee.Filter.And(
+                    ee.Filter.inList(
+                        "relativeOrbitNumber_start", self.relative_orbit_start
+                    ),
+                    ee.Filter.inList(
+                        "relativeOrbitNumber_stop", self.relative_orbit_stop
+                    ),
+                )
+            )
+            .filter(ee.Filter.inList("orbitProperties_pass", self.orbit_direction))
+            .filter(ee.Filter.eq("transmitterReceiverPolarisation", self.polarization))
+            .filter(ee.Filter.eq("resolution_meters", self.resolution_meters))
+            .map(self.image_dater)
+            .select(self.bands)
+        )
         return filtered_collection
-    
+
     @property
     def median(self):
         """
         Property attribute function to calculate median image from image collection. Results are calculated once per class object then cached for future use.
 
-        Returns: 
+        Returns:
             ee.Image: median image from entire collection.
         """
         if self._median is None:
             col = self.collection.median()
             self._median = col
         return self._median
-    
+
     @property
     def mean(self):
         """
         Property attribute function to calculate mean image from image collection. Results are calculated once per class object then cached for future use.
 
-        Returns: 
+        Returns:
             ee.Image: mean image from entire collection.
 
         """
@@ -586,33 +732,33 @@ class Sentinel1Collection:
             col = self.collection.mean()
             self._mean = col
         return self._mean
-    
+
     @property
     def max(self):
         """
         Property attribute function to calculate max image from image collection. Results are calculated once per class object then cached for future use.
 
-        Returns: 
+        Returns:
             ee.Image: max image from entire collection.
         """
         if self._max is None:
             col = self.collection.max()
             self._max = col
         return self._max
-    
+
     @property
     def min(self):
         """
         Property attribute function to calculate min image from image collection. Results are calculated once per class object then cached for future use.
-        
-        Returns: 
+
+        Returns:
             ee.Image: min image from entire collection.
         """
         if self._min is None:
             col = self.collection.min()
             self._min = col
         return self._min
-    
+
     def mask_to_polygon(self, polygon):
         """
         Function to mask Sentinel1Collection image collection by a polygon (ee.Geometry), where pixels outside the polygon are masked out.
@@ -622,21 +768,23 @@ class Sentinel1Collection:
 
         Returns:
             Sentinel1Collection: masked Sentinel1Collection image collection
-        
+
         """
         if self._geometry_masked_collection is None:
             # Convert the polygon to a mask
             mask = ee.Image.constant(1).clip(polygon)
-            
+
             # Update the mask of each image in the collection
             masked_collection = self.collection.map(lambda img: img.updateMask(mask))
-            
+
             # Update the internal collection state
-            self._geometry_masked_collection = Sentinel1Collection(collection=masked_collection)
-        
+            self._geometry_masked_collection = Sentinel1Collection(
+                collection=masked_collection
+            )
+
         # Return the updated object
         return self._geometry_masked_collection
-    
+
     def mask_out_polygon(self, polygon):
         """
         Function to mask Sentinel1Collection image collection by a polygon (ee.Geometry), where pixels inside the polygon are masked out.
@@ -646,7 +794,7 @@ class Sentinel1Collection:
 
         Returns:
             Sentinel1Collection: masked Sentinel1Collection image collection
-        
+
         """
         if self._geometry_masked_out_collection is None:
             # Convert the polygon to a mask
@@ -654,17 +802,17 @@ class Sentinel1Collection:
 
             # Use paint to set pixels inside polygon as 0
             area = full_mask.paint(polygon, 0)
-            
+
             # Update the mask of each image in the collection
             masked_collection = self.collection.map(lambda img: img.updateMask(area))
-            
+
             # Update the internal collection state
-            self._geometry_masked_out_collection = Sentinel1Collection(collection=masked_collection)
-        
+            self._geometry_masked_out_collection = Sentinel1Collection(
+                collection=masked_collection
+            )
+
         # Return the updated object
         return self._geometry_masked_out_collection
-    
-    
 
     def image_grab(self, img_selector):
         """
@@ -672,8 +820,8 @@ class Sentinel1Collection:
 
         Args:
             img_selector (int): index of image in the collection for which user seeks to select/"grab".
-        
-        Returns: 
+
+        Returns:
             ee.Image: ee.Image of selected image
         """
         # Convert the collection to a list
@@ -691,8 +839,8 @@ class Sentinel1Collection:
         Args:
             img_col (ee.ImageCollection): ee.ImageCollection with same dates as another Sentinel1Collection image collection object.
             img_selector (int): index of image in list of dates for which user seeks to "select".
-        
-        Returns: 
+
+        Returns:
             ee.Image: ee.Image of selected image
         """
         # Convert the collection to a list
@@ -702,7 +850,7 @@ class Sentinel1Collection:
         image = ee.Image(image_list.get(img_selector))
 
         return image
-    
+
     def image_pick(self, img_date):
         """
         Function to select ("grab") image of a specific date in format of 'YYYY-MM-DD' - will not work correctly if collection is composed of multiple images of the same date.
@@ -710,16 +858,16 @@ class Sentinel1Collection:
         Args:
             img_date (str): date of image to select from collection, in format of 'YYYY-MM-DD'
 
-        Returns: 
+        Returns:
             ee.Image: ee.Image of selected image
         """
-        new_col = self.collection.filter(ee.Filter.eq('Date_Filter', img_date))
+        new_col = self.collection.filter(ee.Filter.eq("Date_Filter", img_date))
         return new_col.first()
 
     def CollectionStitch(self, img_col2):
         """
-        Function to mosaic two Sentinel1Collection objects which share image dates. 
-        Mosaics are only formed for dates where both image collections have images. 
+        Function to mosaic two Sentinel1Collection objects which share image dates.
+        Mosaics are only formed for dates where both image collections have images.
         Image properties are copied from the primary collection. Server-side friendly.
 
         Args:
@@ -728,26 +876,38 @@ class Sentinel1Collection:
         Returns:
             Sentinel1Collection: Sentinel1Collection image collection
         """
-        dates_list = ee.List(self._dates_list).cat(ee.List(img_col2.dates_list)).distinct()
+        dates_list = (
+            ee.List(self._dates_list).cat(ee.List(img_col2.dates_list)).distinct()
+        )
         filtered_dates1 = self._dates_list
         filtered_dates2 = img_col2._dates_list
 
-        filtered_col2 = img_col2.collection.filter(ee.Filter.inList('Date_Filter', filtered_dates1))
-        filtered_col1 = self.collection.filter(ee.Filter.inList('Date_Filter', filtered_col2.aggregate_array('Date_Filter')))
+        filtered_col2 = img_col2.collection.filter(
+            ee.Filter.inList("Date_Filter", filtered_dates1)
+        )
+        filtered_col1 = self.collection.filter(
+            ee.Filter.inList(
+                "Date_Filter", filtered_col2.aggregate_array("Date_Filter")
+            )
+        )
 
         # Create a function that will be mapped over filtered_col1
         def mosaic_images(img):
             # Get the date of the image
-            date = img.get('Date_Filter')
-            
+            date = img.get("Date_Filter")
+
             # Get the corresponding image from filtered_col2
-            img2 = filtered_col2.filter(ee.Filter.equals('Date_Filter', date)).first()
+            img2 = filtered_col2.filter(ee.Filter.equals("Date_Filter", date)).first()
 
             # Create a mosaic of the two images
             mosaic = ee.ImageCollection.fromImages([img, img2]).mosaic()
 
             # Copy properties from the first image and set the 'Date_Filter' property
-            mosaic = mosaic.copyProperties(img).set('Date_Filter', date).set('system:time_start', img.get('system:time_start'))
+            mosaic = (
+                mosaic.copyProperties(img)
+                .set("Date_Filter", date)
+                .set("system:time_start", img.get("system:time_start"))
+            )
 
             return mosaic
 
@@ -756,13 +916,13 @@ class Sentinel1Collection:
 
         # Return a Sentinel1Collection instance
         return Sentinel1Collection(collection=new_col)
-    
+
     @property
     def MosaicByDate(self):
         """
-        Property attribute function to mosaic collection images that share the same date. 
-        The property CLOUD_COVER for each image is used to calculate an overall mean, 
-        which replaces the CLOUD_COVER property for each mosaiced image. 
+        Property attribute function to mosaic collection images that share the same date.
+        The property CLOUD_COVER for each image is used to calculate an overall mean,
+        which replaces the CLOUD_COVER property for each mosaiced image.
         Server-side friendly. NOTE: if images are removed from the collection from cloud filtering, you may have mosaics composed of only one image.
 
         Returns:
@@ -770,11 +930,12 @@ class Sentinel1Collection:
         """
         if self._MosaicByDate is None:
             input_collection = self.collection
+
             # Function to mosaic images of the same date and accumulate them
             def mosaic_and_accumulate(date, list_accumulator):
 
                 list_accumulator = ee.List(list_accumulator)
-                date_filter = ee.Filter.eq('Date_Filter', date)
+                date_filter = ee.Filter.eq("Date_Filter", date)
                 date_collection = input_collection.filter(date_filter)
                 # Convert the collection to a list
                 image_list = date_collection.toList(date_collection.size())
@@ -782,16 +943,29 @@ class Sentinel1Collection:
                 # Get the image at the specified index
                 first_image = ee.Image(image_list.get(0))
                 # Create mosaic
-                mosaic = date_collection.mosaic().set('Date_Filter', date)
+                mosaic = date_collection.mosaic().set("Date_Filter", date)
 
-                props_of_interest = ['platform_number', 'instrument', 'instrumentMode', 'orbitNumber_start', 'orbitNumber_stop', 'orbitProperties_pass', 'resolution_meters', 'transmitterReceiverPolarisation','system:time_start', 'crs']
+                props_of_interest = [
+                    "platform_number",
+                    "instrument",
+                    "instrumentMode",
+                    "orbitNumber_start",
+                    "orbitNumber_stop",
+                    "orbitProperties_pass",
+                    "resolution_meters",
+                    "transmitterReceiverPolarisation",
+                    "system:time_start",
+                    "crs",
+                ]
 
-                mosaic = mosaic.setDefaultProjection(first_image.projection()).copyProperties(first_image, props_of_interest)
+                mosaic = mosaic.setDefaultProjection(
+                    first_image.projection()
+                ).copyProperties(first_image, props_of_interest)
 
                 return list_accumulator.add(mosaic)
 
             # Get distinct dates
-            distinct_dates = input_collection.aggregate_array('Date_Filter').distinct()
+            distinct_dates = input_collection.aggregate_array("Date_Filter").distinct()
 
             # Initialize an empty list as the accumulator
             initial = ee.List([])
@@ -805,9 +979,11 @@ class Sentinel1Collection:
 
         # Convert the list of mosaics to an ImageCollection
         return self._MosaicByDate
-    
+
     @staticmethod
-    def ee_to_df(ee_object, columns=None, remove_geom=True, sort_columns=False, **kwargs):
+    def ee_to_df(
+        ee_object, columns=None, remove_geom=True, sort_columns=False, **kwargs
+    ):
         """Converts an ee.FeatureCollection to pandas dataframe. Adapted from the geemap package (https://geemap.org/common/#geemap.common.ee_to_df)
 
         Args:
@@ -857,8 +1033,19 @@ class Sentinel1Collection:
             raise Exception(e)
 
     @staticmethod
-    def extract_transect(image, line, reducer="mean", n_segments=100, dist_interval=None, scale=None, crs=None, crsTransform=None, tileScale=1.0, to_pandas=False, **kwargs):
-
+    def extract_transect(
+        image,
+        line,
+        reducer="mean",
+        n_segments=100,
+        dist_interval=None,
+        scale=None,
+        crs=None,
+        crsTransform=None,
+        tileScale=1.0,
+        to_pandas=False,
+        **kwargs,
+    ):
         """Extracts transect from an image. Adapted from the geemap package (https://geemap.org/common/#geemap.common.extract_transect). Exists as an alternative to RadGEEToolbox 'transect' function.
 
         Args:
@@ -922,9 +1109,17 @@ class Sentinel1Collection:
 
         except Exception as e:
             raise Exception(e)
-    
+
     @staticmethod
-    def transect(image, lines, line_names, reducer='mean', n_segments=None, dist_interval=10, to_pandas=True):
+    def transect(
+        image,
+        lines,
+        line_names,
+        reducer="mean",
+        n_segments=None,
+        dist_interval=10,
+        to_pandas=True,
+    ):
         """Computes and stores the values along a transect for each line in a list of lines. Builds off of the extract_transect function from the geemap package
             where checks are ran to ensure that the reducer column is present in the transect data. If the reducer column is not present, a column of NaNs is created.
             An ee reducer is used to aggregate the values along the transect, depending on the number of segments or distance interval specified. Defaults to 'mean' reducer.
@@ -941,46 +1136,71 @@ class Sentinel1Collection:
         Returns:
             pd.DataFrame or ee.FeatureCollection: organized list of values along the transect(s)
         """
-        #Create empty dataframe
+        # Create empty dataframe
         transects_df = pd.DataFrame()
 
-        #Check if line is a list of lines or a single line - if single line, convert to list
+        # Check if line is a list of lines or a single line - if single line, convert to list
         if isinstance(lines, list):
             pass
         else:
             lines = [lines]
-        
+
         for i, line in enumerate(lines):
             if n_segments is None:
-                transect_data = Sentinel1Collection.extract_transect(image=image, line=line, reducer=reducer, dist_interval=dist_interval, to_pandas=to_pandas)
+                transect_data = Sentinel1Collection.extract_transect(
+                    image=image,
+                    line=line,
+                    reducer=reducer,
+                    dist_interval=dist_interval,
+                    to_pandas=to_pandas,
+                )
                 if reducer in transect_data.columns:
                     # Extract the 'mean' column and rename it
-                    mean_column = transect_data[['mean']]
+                    mean_column = transect_data[["mean"]]
                 else:
                     # Handle the case where 'mean' column is not present
-                    print(f"{reducer} column not found in transect data for line {line_names[i]}")
+                    print(
+                        f"{reducer} column not found in transect data for line {line_names[i]}"
+                    )
                     # Create a column of NaNs with the same length as the longest column in transects_df
                     max_length = max(transects_df.shape[0], transect_data.shape[0])
                     mean_column = pd.Series([np.nan] * max_length)
             else:
-                transect_data = Sentinel1Collection.extract_transect(image=image, line=line, reducer=reducer, n_segments=n_segments, to_pandas=to_pandas)
+                transect_data = Sentinel1Collection.extract_transect(
+                    image=image,
+                    line=line,
+                    reducer=reducer,
+                    n_segments=n_segments,
+                    to_pandas=to_pandas,
+                )
                 if reducer in transect_data.columns:
                     # Extract the 'mean' column and rename it
-                    mean_column = transect_data[['mean']]
+                    mean_column = transect_data[["mean"]]
                 else:
                     # Handle the case where 'mean' column is not present
-                    print(f"{reducer} column not found in transect data for line {line_names[i]}")
+                    print(
+                        f"{reducer} column not found in transect data for line {line_names[i]}"
+                    )
                     # Create a column of NaNs with the same length as the longest column in transects_df
                     max_length = max(transects_df.shape[0], transect_data.shape[0])
                     mean_column = pd.Series([np.nan] * max_length)
-            
+
             transects_df = pd.concat([transects_df, mean_column], axis=1)
 
         transects_df.columns = line_names
-                
+
         return transects_df
-    
-    def transect_iterator(self, lines, line_names, save_folder_path, reducer='mean', n_segments=None, dist_interval=10, to_pandas=True):
+
+    def transect_iterator(
+        self,
+        lines,
+        line_names,
+        save_folder_path,
+        reducer="mean",
+        n_segments=None,
+        dist_interval=10,
+        to_pandas=True,
+    ):
         """Computes and stores the values along a transect for each line in a list of lines for each image in a Sentinel1Collection image collection, then saves the data for each image to a csv file. Builds off of the extract_transect function from the geemap package
             where checks are ran to ensure that the reducer column is present in the transect data. If the reducer column is not present, a column of NaNs is created.
             An ee reducer is used to aggregate the values along the transect, depending on the number of segments or distance interval specified. Defaults to 'mean' reducer.
@@ -1001,21 +1221,37 @@ class Sentinel1Collection:
         Returns:
             csv file: file for each image with an organized list of values along the transect(s)
         """
-        image_collection = self 
+        image_collection = self
         image_collection_dates = self.dates
         for i, date in enumerate(image_collection_dates):
             try:
                 print(f"Processing image {i+1}/{len(image_collection_dates)}: {date}")
                 image = image_collection.image_grab(i)
-                transects_df = Sentinel1Collection.transect(image, lines, line_names, reducer=reducer, n_segments=n_segments, dist_interval=dist_interval, to_pandas=to_pandas)
+                transects_df = Sentinel1Collection.transect(
+                    image,
+                    lines,
+                    line_names,
+                    reducer=reducer,
+                    n_segments=n_segments,
+                    dist_interval=dist_interval,
+                    to_pandas=to_pandas,
+                )
                 image_id = date
-                transects_df.to_csv(f'{save_folder_path}{image_id}_transects.csv')
-                print(f'{image_id}_transects saved to csv')
+                transects_df.to_csv(f"{save_folder_path}{image_id}_transects.csv")
+                print(f"{image_id}_transects saved to csv")
             except Exception as e:
                 print(f"An error occurred while processing image {i+1}: {e}")
 
     @staticmethod
-    def extract_zonal_stats_from_buffer(image, coordinates, buffer_size=1, reducer_type='mean', scale=40, tileScale=1, coordinate_names=None):
+    def extract_zonal_stats_from_buffer(
+        image,
+        coordinates,
+        buffer_size=1,
+        reducer_type="mean",
+        scale=40,
+        tileScale=1,
+        coordinate_names=None,
+    ):
         """
         Function to extract spatial statistics from an image for a list of coordinates, providing individual statistics for each location.
         A radial buffer is applied around each coordinate to extract the statistics, which defaults to 1 meter.
@@ -1037,15 +1273,26 @@ class Sentinel1Collection:
         # Check if coordinates is a single tuple and convert it to a list of tuples if necessary
         if isinstance(coordinates, tuple) and len(coordinates) == 2:
             coordinates = [coordinates]
-        elif not (isinstance(coordinates, list) and all(isinstance(coord, tuple) and len(coord) == 2 for coord in coordinates)):
-            raise ValueError("Coordinates must be a list of tuples with two elements each (latitude, longitude).")
-        
+        elif not (
+            isinstance(coordinates, list)
+            and all(
+                isinstance(coord, tuple) and len(coord) == 2 for coord in coordinates
+            )
+        ):
+            raise ValueError(
+                "Coordinates must be a list of tuples with two elements each (latitude, longitude)."
+            )
+
         # Check if coordinate_names is a list of strings
         if coordinate_names is not None:
-            if not isinstance(coordinate_names, list) or not all(isinstance(name, str) for name in coordinate_names):
+            if not isinstance(coordinate_names, list) or not all(
+                isinstance(name, str) for name in coordinate_names
+            ):
                 raise ValueError("coordinate_names must be a list of strings.")
             if len(coordinate_names) != len(coordinates):
-                raise ValueError("coordinate_names must have the same length as the coordinates list.")
+                raise ValueError(
+                    "coordinate_names must have the same length as the coordinates list."
+                )
         else:
             coordinate_names = [f"Location {i+1}" for i in range(len(coordinates))]
 
@@ -1057,75 +1304,97 @@ class Sentinel1Collection:
         # Check if the image is a singleband image
         image = ee.Image(check_singleband(image))
 
-        #Convert coordinates to ee.Geometry.Point, buffer them, and add label/name to feature
-        points = [ee.Feature(ee.Geometry.Point([coord[0], coord[1]]).buffer(buffer_size), {'name': str(coordinate_names[i])}) for i, coord in enumerate(coordinates)]
+        # Convert coordinates to ee.Geometry.Point, buffer them, and add label/name to feature
+        points = [
+            ee.Feature(
+                ee.Geometry.Point([coord[0], coord[1]]).buffer(buffer_size),
+                {"name": str(coordinate_names[i])},
+            )
+            for i, coord in enumerate(coordinates)
+        ]
         # Create a feature collection from the buffered points
         features = ee.FeatureCollection(points)
         # Reduce the image to the buffered points - handle different reducer types
-        if reducer_type == 'mean':
+        if reducer_type == "mean":
             img_stats = image.reduceRegions(
-                    collection=features,
-                    reducer=ee.Reducer.mean(),
-                    scale=scale,
-                    tileScale=tileScale)
+                collection=features,
+                reducer=ee.Reducer.mean(),
+                scale=scale,
+                tileScale=tileScale,
+            )
             mean_values = img_stats.getInfo()
             means = []
             names = []
-            for feature in mean_values['features']:
-                names.append(feature['properties']['name'])
-                means.append(feature['properties']['mean'])
+            for feature in mean_values["features"]:
+                names.append(feature["properties"]["name"])
+                means.append(feature["properties"]["mean"])
             organized_values = pd.DataFrame([means], columns=names)
-        elif reducer_type == 'median':
+        elif reducer_type == "median":
             img_stats = image.reduceRegions(
-                    collection=features,
-                    reducer=ee.Reducer.median(),
-                    scale=scale,
-                    tileScale=tileScale)
+                collection=features,
+                reducer=ee.Reducer.median(),
+                scale=scale,
+                tileScale=tileScale,
+            )
             median_values = img_stats.getInfo()
             medians = []
             names = []
-            for feature in median_values['features']:
-                names.append(feature['properties']['name'])
-                medians.append(feature['properties']['median'])
+            for feature in median_values["features"]:
+                names.append(feature["properties"]["name"])
+                medians.append(feature["properties"]["median"])
             organized_values = pd.DataFrame([medians], columns=names)
-        elif reducer_type == 'min':
+        elif reducer_type == "min":
             img_stats = image.reduceRegions(
-                    collection=features,
-                    reducer=ee.Reducer.min(),
-                    scale=scale,
-                    tileScale=tileScale)
+                collection=features,
+                reducer=ee.Reducer.min(),
+                scale=scale,
+                tileScale=tileScale,
+            )
             min_values = img_stats.getInfo()
             mins = []
             names = []
-            for feature in min_values['features']:
-                names.append(feature['properties']['name'])
-                mins.append(feature['properties']['min'])
+            for feature in min_values["features"]:
+                names.append(feature["properties"]["name"])
+                mins.append(feature["properties"]["min"])
             organized_values = pd.DataFrame([mins], columns=names)
-        elif reducer_type == 'max':
+        elif reducer_type == "max":
             img_stats = image.reduceRegions(
-                    collection=features,
-                    reducer=ee.Reducer.max(),
-                    scale=scale,
-                    tileScale=tileScale)
+                collection=features,
+                reducer=ee.Reducer.max(),
+                scale=scale,
+                tileScale=tileScale,
+            )
             max_values = img_stats.getInfo()
             maxs = []
             names = []
-            for feature in max_values['features']:
-                names.append(feature['properties']['name'])
-                maxs.append(feature['properties']['max'])
+            for feature in max_values["features"]:
+                names.append(feature["properties"]["name"])
+                maxs.append(feature["properties"]["max"])
             organized_values = pd.DataFrame([maxs], columns=names)
         else:
-            raise ValueError("reducer_type must be one of 'mean', 'median', 'min', or 'max'.")
+            raise ValueError(
+                "reducer_type must be one of 'mean', 'median', 'min', or 'max'."
+            )
         return organized_values
 
-    def iterate_zonal_stats(self, coordinates, buffer_size=1, reducer_type='mean', scale=40, tileScale=1, coordinate_names=None, file_path=None, dates=None):
+    def iterate_zonal_stats(
+        self,
+        coordinates,
+        buffer_size=1,
+        reducer_type="mean",
+        scale=40,
+        tileScale=1,
+        coordinate_names=None,
+        file_path=None,
+        dates=None,
+    ):
         """
         Function to iterate over a collection of images and extract spatial statistics for a list of coordinates (defaults to mean). Individual statistics are provided for each location.
         A radial buffer is applied around each coordinate to extract the statistics, which defaults to 1 meter.
         The function returns a pandas DataFrame with the statistics for each coordinate and date, or optionally exports the data to a table in .csv format.
 
         NOTE: The input RadGEEToolbox class object but be a collection of singleband images or else resulting values will all be zero!
-        
+
         Args:
             coordinates (list): Single tuple or a list of tuples with the coordinates as decimal degrees in the format of (longitude, latitude) for which to extract the statistics. NOTE the format needs to be [(x1, y1), (x2, y2), ...].
             buffer_size (int, optional): The radial buffer size in meters around the coordinates. Defaults to 1.
@@ -1141,22 +1410,32 @@ class Sentinel1Collection:
             .csv file: Optionally exports the data to a table in .csv format. If file_path is None, the function returns the DataFrame - otherwise the function will only export the csv file.
         """
         img_collection = self
-        #Create empty DataFrame to accumulate results
+        # Create empty DataFrame to accumulate results
         accumulated_df = pd.DataFrame()
-        #Check if dates is None, if not use the dates provided
+        # Check if dates is None, if not use the dates provided
         if dates is None:
             dates = img_collection.dates
         else:
             dates = dates
-        #Iterate over the dates and extract the zonal statistics for each date
+        # Iterate over the dates and extract the zonal statistics for each date
         for date in dates:
-            image = img_collection.collection.filter(ee.Filter.eq('Date_Filter', date)).first()
-            single_df = Sentinel1Collection.extract_zonal_stats_from_buffer(image, coordinates, buffer_size=buffer_size, reducer_type=reducer_type, scale=scale, tileScale=tileScale, coordinate_names=coordinate_names)
-            single_df['Date'] = date
-            single_df.set_index('Date', inplace=True)
+            image = img_collection.collection.filter(
+                ee.Filter.eq("Date_Filter", date)
+            ).first()
+            single_df = Sentinel1Collection.extract_zonal_stats_from_buffer(
+                image,
+                coordinates,
+                buffer_size=buffer_size,
+                reducer_type=reducer_type,
+                scale=scale,
+                tileScale=tileScale,
+                coordinate_names=coordinate_names,
+            )
+            single_df["Date"] = date
+            single_df.set_index("Date", inplace=True)
             accumulated_df = pd.concat([accumulated_df, single_df])
-        #Return the DataFrame or export the data to a .csv file
+        # Return the DataFrame or export the data to a .csv file
         if file_path is None:
             return accumulated_df
         else:
-            return accumulated_df.to_csv(f'{file_path}.csv')
+            return accumulated_df.to_csv(f"{file_path}.csv")

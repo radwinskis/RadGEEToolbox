@@ -12,6 +12,23 @@
 
 Designed for both new and advanced users of Google Earth Engine, RadGEEToolbox minimizes repetitive scripting, accelerates common remote sensing workflows, and aims to maximize efficiency within the constraints of the Google Earth Engine API. Whether you’re building a time series of vegetation indices or extracting surface properties along transects, this package helps get results faster.
 
+Although similar packages exist (eemont, geetools, etc.), `RadGEEToolbox` extends functionality and provides cohesive, chainable methods for research oriented projects working with Landsat TM & OLI, Sentinel-1 SAR, and/or Sentinel-2 MSI datasets (Table 1). The ultimate goal of `RadGEEToolbox` is to make satellite image processing easier and faster for real world applications relying on the most commonly utilized remote sensing platforms.
+
+***Table 1.*** *Comparison of functionality between RadGEEToolbox, eemont, and geetools.*
+
+| Capability | **RadGEEToolbox** | **eemont** | **geetools** |
+|---|:---:|:---:|:---:|
+| **Dataset & Workflow Specific API's** | **YES** | NO | NO |
+| **Synthetic Aperture Radar (S1) Support** | **YES** | NO | NO |
+| **Zonal Time-series Extraction** | **YES** | **YES** | **YES** |
+| **Area Time-series Extraction** | **YES** | NO | NO |
+| **Transect Time-series Extraction** | **YES** | NO | NO |
+| **Comprehensive Preprocessing Operations** | **YES** | **YES** | **YES** |
+| **Reflectance Scaling (DN to ρ)** | **YES** | **YES** | **YES** |
+| **Land Surface Temperature Calculation (Landsat)** | **YES** | NO | NO |
+| **Image Selection by Date or Index** | **YES** | **YES** | NO |
+| **Visualization Presets/Tools** | **YES** | NO | NO |
+
 _________
 ## Getting Started with Google Earth Engine
 
@@ -87,6 +104,8 @@ _________
 - Easy conversion between RadGEEToolbox and standard Earth Engine objects
 - Server-side–friendly workflows and caching for faster, scalable processing
 
+Features of `RadGEEToolbox` will be expanded in the future - if there is something you would like to see implemented in `RadGEEToolbox`, please open an issue or discussion on GitHub.
+
 🔍 For a full breakdown of available tools, see the [RadGEEToolbox documentation »](https://radgeetoolbox.readthedocs.io/en/latest/)
 
 _____________
@@ -101,15 +120,15 @@ _____________
 
 ### Installing via pip
 
-To install `RadGEEToolbox` version 1.6.4 using pip (NOTE: it is recommended to create a new virtual environment):
+To install `RadGEEToolbox` version 1.6.5 using pip (NOTE: it is recommended to create a new virtual environment):
 
 ```bash
-pip install RadGEEToolbox==1.6.4
+pip install RadGEEToolbox==1.6.5
 ```
 
 ### Installing via Conda
 
-To install `RadGEEToolbox` version 1.6.4 using conda-forge (NOTE: it is recommended to create a new virtual environment):
+To install `RadGEEToolbox` version 1.6.5 using conda-forge (NOTE: it is recommended to create a new virtual environment):
 
 ```bash
 conda install conda-forge::radgeetoolbox
@@ -140,7 +159,7 @@ To verify that `RadGEEToolbox` was installed correctly:
 python -c "import RadGEEToolbox; print(RadGEEToolbox.__version__)"
 ```
 
-You should see `1.6.4` printed as the version number.
+You should see `1.6.5` printed as the version number.
 
 ### Want to Visualize Data? Install These Too
 

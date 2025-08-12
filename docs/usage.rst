@@ -5,6 +5,8 @@ Below is an example use case using the ``LandsatCollection`` module to create
 an NDWI image collection, generate water classification maps, and calculate
 a time series of surface water area.
 
+Please see example notebooks for more details and examples, or feel free to request additional examples or assistance on GitHub.
+
 1. Create a Filtered Landsat Image Collection
 ---------------------------------------------
 

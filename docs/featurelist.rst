@@ -3,11 +3,38 @@ Why use RadGEEToolbox?
 
 If you are a new or expert user of GEE and/or Landsat or Sentinel imagery, these tools greatly help reduce the amount of code needed for satellite image filtering, processing, analysis, and visualization. 
 
-Although similar toolset packages exist, RadGEEToolbox offers differing functionality and additional functionality not found in other existing toolsets. 
+Although similar toolset packages exist, RadGEEToolbox offers differing functionality and additional functionality not found in other existing toolsets (Table 1). 
 
 The most commonly used remote sensing data management and image processing workflows are built-in to RadGEEToolbox, so you can more easily get to your goal: an informative dataset, stored in a friendly format. 
 
 RadGEEToolbox is about **quality-of-life** for everday Google Earth Engine users. Every function is very useful for everday tasks not otherwise readily achievable using the GEE API alone. 
+
+
+**Table 1.** Comparison of functionality between RadGEEToolbox, eemont, and geetools packages.
+
++----------------------------------------------------+-------------------+------------+--------------+
+| Capability                                         | **RadGEEToolbox** | **eemont** | **geetools** |
++====================================================+===================+============+==============+
+| **Dataset & Workflow Specific API's**              | **YES**           | NO         | NO           |
++----------------------------------------------------+-------------------+------------+--------------+
+| **Synthetic Aperture Radar (S1) Support**          | **YES**           | NO         | NO           |
++----------------------------------------------------+-------------------+------------+--------------+
+| **Zonal Time-series Extraction**                   | **YES**           | **YES**    | **YES**      |
++----------------------------------------------------+-------------------+------------+--------------+
+| **Area Time-series Extraction**                    | **YES**           | NO         | NO           |
++----------------------------------------------------+-------------------+------------+--------------+
+| **Transect Time-series Extraction**                | **YES**           | NO         | NO           |
++----------------------------------------------------+-------------------+------------+--------------+
+| **Comprehensive Preprocessing Operations**         | **YES**           | **YES**    | **YES**      |
++----------------------------------------------------+-------------------+------------+--------------+
+| **Reflectance Scaling**                            | **YES**           | **YES**    | **YES**      |
++----------------------------------------------------+-------------------+------------+--------------+
+| **Land Surface Temperature Calculation (Landsat)** | **YES**           | NO         | NO           |
++----------------------------------------------------+-------------------+------------+--------------+
+| **Image Selection by Date or Index**               | **YES**           | **YES**    | NO           |
++----------------------------------------------------+-------------------+------------+--------------+
+| **Visualization Presets/Tools**                    | **YES**           | NO         | NO           |
++----------------------------------------------------+-------------------+------------+--------------+
 
 Statement of Need
 =================
@@ -30,6 +57,7 @@ Data Management
 - **Mosaic image collections** that share dates of observation and copy all image properties from the collection of choice
 - **Mosaic images that share the same date** from a single image collection
 - **Select an image from an image collection** using a positional index or date string
+- Scale Landsat and Sentinel-2 DN pixel values to **reflectance** (surface reflectance)
 - Access a variety of useful **color palettes** for image visualization
 - Define **visualization** parameter dictionaries easily
 
@@ -40,6 +68,7 @@ Multispectral Image Processing
 - **Mask water** in image collections via two methods
 - Mask to water in image collections via two methods
 - Calculate a variety of **spectral index products**: NDWI, NDVI, LST (Celsius), NDTI (turbidity), relative chlorophyll-a concentrations, halite index (see Radwin & Bowen, 2021), and gypsum index (modified from Radwin & Bowen, 2021)
+- Binary mask images based on a **threshold** of a spectral index, providing methods for retaining pixel values of classified pixels or setting them to a pixel value of 1.
 
 SAR Image Processing
 --------------------

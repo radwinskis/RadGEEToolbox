@@ -1,4 +1,4 @@
-__version__ = "1.6.4"
+__version__ = "1.6.5"
 
 from .CollectionStitch import CollectionStitch, MosaicByDate
 from .GetPalette import get_palette
@@ -14,5 +14,5 @@ __all__ = [
     "LandsatCollection",
     "Sentinel1Collection",
     "Sentinel2Collection",
-    "get_visualization_params"
+    "get_visualization_params",
 ]
