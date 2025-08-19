@@ -17,7 +17,7 @@ Although similar packages exist (eemont, geetools, etc.), `RadGEEToolbox` extend
 ***Table 1.*** *Comparison of functionality between RadGEEToolbox, eemont, and geetools.*
 
 | Capability | **RadGEEToolbox** | **eemont** | **geetools** |
-|---|:---:|:---:|:---:|
+|:--------------:|:---:|:---:|:---:|
 | **Dataset & Workflow Specific API's** | **YES** | NO | NO |
 | **Synthetic Aperture Radar (S1) Support** | **YES** | NO | NO |
 | **Zonal Time-series Extraction** | **YES** | **YES** | **YES** |
