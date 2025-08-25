@@ -11,14 +11,14 @@ Prerequisites
 Installing via pip
 ------------------
 
-To install ``RadGEEToolbox`` version 1.6.6 using pip (recommended: use a virtual environment)::
+To install ``RadGEEToolbox`` version 1.6.7 using pip (recommended: use a virtual environment)::
 
-    pip install RadGEEToolbox==1.6.6
+    pip install RadGEEToolbox==1.6.7
 
 Installing via Conda
 --------------------
 
-To install ``RadGEEToolbox`` version 1.6.6 using conda-forge (recommended: use a virtual environment)::
+To install ``RadGEEToolbox`` version 1.6.7 using conda-forge (recommended: use a virtual environment)::
 
     conda install conda-forge::radgeetoolbox
 
@@ -44,4 +44,4 @@ To verify that ``RadGEEToolbox`` was installed correctly::
 
     python -c "import RadGEEToolbox; print(RadGEEToolbox.__version__)"
 
-You should see ``1.6.6`` printed as the version number.
+You should see ``1.6.7`` printed as the version number.
