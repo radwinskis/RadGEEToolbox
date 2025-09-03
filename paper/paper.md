@@ -9,7 +9,6 @@ tags:
 authors:
   - name: Mark Radwin
     orcid: 0000-0002-7236-1425
-    equal-contrib: true
     affiliation: 1
 affiliations:
  - name: Dept. of Geology & Geophysics, University of Utah, United States
