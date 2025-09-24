@@ -3,7 +3,7 @@ from .GetPalette import get_palette
 
 
 def get_visualization_params(
-    satellite, index, min_val=None, max_val=None, palette=None
+    satellite, index, min_val=None, max_val=None, palette=None, scaled_bands=False
 ):
     """
     Function to define visualization paramaters for image visualization. Outputs an vis_params dictionary.
@@ -20,91 +20,179 @@ def get_visualization_params(
     """
     # Define visualization parameters for various image types
     if satellite == "Landsat" or satellite == "landsat":
-        params_dict = {
-            "TrueColor": {"min": 0, "max": 30000, "bands": ["SR_B4", "SR_B3", "SR_B2"]},
-            "NDVI": {
-                "min": 0,
-                "max": 0.5,
-                "bands": ["ndvi"],
-                "palette": get_palette("greens"),
-            },
-            "NDWI": {
-                "min": -0.2,
-                "max": 0.2,
-                "bands": ["ndwi"],
-                "palette": get_palette("inferno"),
-            },
-            "halite": {
-                "min": 0.1,
-                "max": 0.5,
-                "bands": ["halite"],
-                "palette": get_palette("haline"),
-            },
-            "gypsum": {
-                "min": 0.0,
-                "max": 0.5,
-                "bands": ["gypsum"],
-                "palette": get_palette("ylord"),
-            },
-            "LST": {
-                "min": 0,
-                "max": 40,
-                "bands": ["LST"],
-                "palette": get_palette("thermal"),
-            },
-            "NDTI": {
-                "min": -0.2,
-                "max": 0.2,
-                "bands": ["ndti"],
-                "palette": get_palette("turbid"),
-            },
-            "KIVU": {
-                "min": -0.5,
-                "max": 0.2,
-                "bands": ["kivu"],
-                "palette": get_palette("algae"),
-            },
-        }
+        if scaled_bands == False:
+            params_dict = {
+                "TrueColor": {"min": 0, "max": 30000, "bands": ["SR_B4", "SR_B3", "SR_B2"]},
+                "NDVI": {
+                    "min": 0,
+                    "max": 0.5,
+                    "bands": ["ndvi"],
+                    "palette": get_palette("greens"),
+                },
+                "NDWI": {
+                    "min": -0.2,
+                    "max": 0.2,
+                    "bands": ["ndwi"],
+                    "palette": get_palette("inferno"),
+                },
+                "halite": {
+                    "min": 0.1,
+                    "max": 0.5,
+                    "bands": ["halite"],
+                    "palette": get_palette("haline"),
+                },
+                "gypsum": {
+                    "min": 0.0,
+                    "max": 0.5,
+                    "bands": ["gypsum"],
+                    "palette": get_palette("ylord"),
+                },
+                "LST": {
+                    "min": 0,
+                    "max": 40,
+                    "bands": ["LST"],
+                    "palette": get_palette("thermal"),
+                },
+                "NDTI": {
+                    "min": -0.2,
+                    "max": 0.2,
+                    "bands": ["ndti"],
+                    "palette": get_palette("turbid"),
+                },
+                "KIVU": {
+                    "min": -0.5,
+                    "max": 0.2,
+                    "bands": ["kivu"],
+                    "palette": get_palette("algae"),
+                },
+            }
+        else:
+            params_dict = {
+                "TrueColor": {"min": 0, "max": 1, "bands": ["SR_B4", "SR_B3", "SR_B2"]},
+                "NDVI": {
+                    "min": 0,
+                    "max": 0.5,
+                    "bands": ["ndvi"],
+                    "palette": get_palette("greens"),
+                },
+                "NDWI": {
+                    "min": -0.2,
+                    "max": 0.2,
+                    "bands": ["ndwi"],
+                    "palette": get_palette("inferno"),
+                },
+                "halite": {
+                    "min": 0.1,
+                    "max": 0.5,
+                    "bands": ["halite"],
+                    "palette": get_palette("haline"),
+                },
+                "gypsum": {
+                    "min": 0.0,
+                    "max": 0.5,
+                    "bands": ["gypsum"],
+                    "palette": get_palette("ylord"),
+                },
+                "LST": {
+                    "min": 0,
+                    "max": 40,
+                    "bands": ["LST"],
+                    "palette": get_palette("thermal"),
+                },
+                "NDTI": {
+                    "min": -0.2,
+                    "max": 0.2,
+                    "bands": ["ndti"],
+                    "palette": get_palette("turbid"),
+                },
+                "KIVU": {
+                    "min": -0.5,
+                    "max": 0.2,
+                    "bands": ["kivu"],
+                    "palette": get_palette("algae"),
+                },
+            }
     elif satellite == "Sentinel2" or satellite == "sentinel2":
-        params_dict = {
-            "TrueColor": {"min": 0, "max": 3500, "bands": ["B4", "B3", "B2"]},
-            "NDVI": {
-                "min": 0.5,
-                "max": 0.9,
-                "bands": ["ndvi"],
-                "palette": get_palette("greens"),
-            },
-            "NDWI": {
-                "min": -0.2,
-                "max": 0.2,
-                "bands": ["ndwi"],
-                "palette": get_palette("inferno"),
-            },
-            "halite": {
-                "min": 0.1,
-                "max": 0.7,
-                "bands": ["halite"],
-                "palette": get_palette("haline"),
-            },
-            "gypsum": {
-                "min": 0.0,
-                "max": 0.7,
-                "bands": ["gypsum"],
-                "palette": get_palette("ylord"),
-            },
-            "NDTI": {
-                "min": -0.2,
-                "max": 0.5,
-                "bands": ["ndti"],
-                "palette": get_palette("turbid"),
-            },
-            "2BDA": {
-                "min": 0.5,
-                "max": 1.75,
-                "bands": ["2BDA"],
-                "palette": get_palette("algae"),
-            },
-        }
+        if scaled_bands == False:
+            params_dict = {
+                "TrueColor": {"min": 0, "max": 3500, "bands": ["B4", "B3", "B2"]},
+                "NDVI": {
+                    "min": 0.5,
+                    "max": 0.9,
+                    "bands": ["ndvi"],
+                    "palette": get_palette("greens"),
+                },
+                "NDWI": {
+                    "min": -0.2,
+                    "max": 0.2,
+                    "bands": ["ndwi"],
+                    "palette": get_palette("inferno"),
+                },
+                "halite": {
+                    "min": 0.1,
+                    "max": 0.7,
+                    "bands": ["halite"],
+                    "palette": get_palette("haline"),
+                },
+                "gypsum": {
+                    "min": 0.0,
+                    "max": 0.7,
+                    "bands": ["gypsum"],
+                    "palette": get_palette("ylord"),
+                },
+                "NDTI": {
+                    "min": -0.2,
+                    "max": 0.5,
+                    "bands": ["ndti"],
+                    "palette": get_palette("turbid"),
+                },
+                "2BDA": {
+                    "min": 0.5,
+                    "max": 1.75,
+                    "bands": ["2BDA"],
+                    "palette": get_palette("algae"),
+                },
+            }
+        else:
+            params_dict = {
+                "TrueColor": {"min": 0, "max": 1, "bands": ["B4", "B3", "B2"]},
+                "NDVI": {
+                    "min": 0.5,
+                    "max": 0.9,
+                    "bands": ["ndvi"],
+                    "palette": get_palette("greens"),
+                },
+                "NDWI": {
+                    "min": -0.2,
+                    "max": 0.2,
+                    "bands": ["ndwi"],
+                    "palette": get_palette("inferno"),
+                },
+                "halite": {
+                    "min": 0.1,
+                    "max": 0.7,
+                    "bands": ["halite"],
+                    "palette": get_palette("haline"),
+                },
+                "gypsum": {
+                    "min": 0.0,
+                    "max": 0.7,
+                    "bands": ["gypsum"],
+                    "palette": get_palette("ylord"),
+                },
+                "NDTI": {
+                    "min": -0.2,
+                    "max": 0.5,
+                    "bands": ["ndti"],
+                    "palette": get_palette("turbid"),
+                },
+                "2BDA": {
+                    "min": 0.5,
+                    "max": 1.75,
+                    "bands": ["2BDA"],
+                    "palette": get_palette("algae"),
+                },
+            }
     else:
         raise ValueError(
             "Incorrect definition of satellite. Options: 'Landsat', 'landsat', 'Sentinel2', or 'sentinel2'"
