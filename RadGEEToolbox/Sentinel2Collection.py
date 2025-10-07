@@ -151,6 +151,12 @@ class Sentinel2Collection:
         self.gypsum_threshold = -1
         self.turbidity_threshold = -1
         self.chlorophyll_threshold = 0.5
+        self.ndsi_threshold = -1
+        self.evi_threshold = -1
+        self.savi_threshold = -1.5
+        self.msavi_threshold = -1
+        self.ndmi_threshold = -1
+        self.nbr_threshold = -1
 
         self._geometry_masked_collection = None
         self._geometry_masked_out_collection = None
@@ -164,10 +170,17 @@ class Sentinel2Collection:
         self._ndwi = None
         self._mndwi = None
         self._ndvi = None
+        self._ndsi = None
+        self._evi = None
+        self._savi = None
+        self._msavi = None
+        self._ndmi = None
+        self._nbr = None
         self._halite = None
         self._gypsum = None
         self._turbidity = None
         self._chlorophyll = None
+        self._albedo = None
         self._MosaicByDate = None
         self._PixelAreaSumCollection = None
         self._Reflectance = None
@@ -253,6 +266,35 @@ class Sentinel2Collection:
         return vegetation
 
     @staticmethod
+    def sentinel_broadband_albedo_fn(image, snow_free=True):
+        """
+        Calculates broadband albedo for Sentinel-2 images, based on Li et al., 2018
+        (https://doi.org/10.1016/j.rse.2018.08.025) for snow-free or snow-included conditions.
+
+        Args:
+            image (ee.Image): input ee.Image
+            snow_free (bool): If True, calculates albedo for snow-free conditions. If False, calculates for snow-included conditions.
+
+        Returns:
+            ee.Image: broadband albedo ee.Image
+
+        Raises: 
+            ValueError: if snow_free argument is not True or False
+        """
+        # Conversion using Li et al., 2018 as reference
+        MSI_expression_snow_free = '0.2688*b("B2") + 0.0362*b("B3") + 0.1501*b("B4") + 0.3045*b("B8A") + 0.1644*b("B11") + 0.0356*b("B12") - 0.0049'
+        MSI_expression_snow_included = '-0.1992*b("B2") + 2.3002*b("B3") + -1.9121*b("B4") + 0.6715*b("B8A") - 2.2728*b("B11") + 1.9341*b("B12") - 0.0001'
+        # If spacecraft is Landsat 5 TM, use the correct expression,
+        # otherwise treat as OLI and copy properties after renaming band to "albedo"
+        if snow_free == True:
+            albedo = image.expression(MSI_expression_snow_free).rename("albedo").copyProperties(image)
+        elif snow_free == False:
+            albedo = image.expression(MSI_expression_snow_included).rename("albedo").copyProperties(image)
+        else:
+            raise ValueError("snow_free argument must be True or False")
+        return albedo
+
+    @staticmethod
     def sentinel_halite_fn(image, threshold):
         """
         Calculates multispectral halite index for Sentinel2 imagery and mask image based on threshold.
@@ -329,6 +371,113 @@ class Sentinel2Collection:
             .copyProperties(image)
         )
         return chlorophyll
+    
+    @staticmethod
+    def sentinel_ndsi_fn(image, threshold):
+        """
+        Calculates the Normalized Difference Snow Index (NDSI) for Sentinel2 images. Masks image based on threshold.
+
+        Args:
+            image (ee.Image): input ee.Image
+            threshold (float): value between -1 and 1 where NDSI pixels greater than threshold will be masked.
+        Returns:
+            ee.Image: NDSI ee.Image
+        """
+        ndsi_calc = image.normalizedDifference(["B3", "B11"])
+        ndsi = ndsi_calc.updateMask(ndsi_calc.gte(threshold)).rename("ndsi").copyProperties(image).set("threshold", threshold)
+        return ndsi
+
+    @staticmethod
+    def sentinel_evi_fn(image, threshold, gain_factor=2.5, l=1, c1=6, c2=7.5):
+        """
+        Calculates the Enhanced Vegetation Index (EVI) for Sentinel-2 images. Masks image based on threshold. 
+
+        Args:
+            image (ee.Image): input ee.Image
+            threshold (float): value between -1 and 1 where EVI pixels less than threshold will be masked.
+            gain_factor (float, optional): Gain factor, typically set to 2.5. Defaults to 2.5.
+            l (float, optional): Canopy background adjustment factor, typically set to 1. Defaults to 1.
+            c1 (float, optional): Coefficient for the aerosol resistance term, typically set to 6. Defaults to 6.
+            c2 (float, optional): Coefficient for the aerosol resistance term, typically set to 7.5. Defaults to 7.5.
+
+        Returns:
+            ee.Image: EVI ee.Image
+        """
+        evi_expression = f'{gain_factor} * ((b("B8") - b("B4")) / (b("B8") + {c1} * b("B4") - {c2} * b("B2") + {l}))'
+        evi_calc = image.expression(evi_expression)
+        evi = evi_calc.updateMask(evi_calc.gte(threshold)).rename("evi").copyProperties(image).set("threshold", threshold)
+        return evi
+    
+    @staticmethod
+    def sentinel_savi_fn(image, threshold, l=0.5):
+        """
+        Calculates the Soil-Adjusted Vegetation Index (SAVI) for Sentinel2 images. Masks image based on threshold.
+        See Huete, 1988 - https://doi.org/10.1016/0034-4257(88)90106-X
+
+        Args:
+            image (ee.Image): input ee.Image
+            threshold (float): value between -1 and 1 where SAVI pixels less than threshold will be masked.
+            l (float, optional): Soil brightness correction factor, typically set to 0.5. Defaults to 0.5.
+        Returns:
+            ee.Image: SAVI ee.Image
+        """
+        savi_expression = f'((b("B8") - b("B4")) / (b("B8") + b("B4") + {l})) * (1 + {l})'
+        savi_calc = image.expression(savi_expression)
+        savi = savi_calc.updateMask(savi_calc.gte(threshold)).rename("savi").copyProperties(image).set("threshold", threshold)
+        return savi
+    
+    @staticmethod
+    def sentinel_msavi_fn(image, threshold):
+        """
+        Calculates the Modified Soil-Adjusted Vegetation Index (MSAVI) for Sentinel-2 images. Masks image based on threshold. 
+        See Qi et al., 1994 - https://doi.org/10.1016/0034-4257(94)90134-1 
+
+        Args:
+            image (ee.Image): input ee.Image
+            threshold (float): value between -1 and 1 where MSAVI pixels less than threshold will be masked
+        
+        Returns:
+            ee.Image: MSAVI ee.Image
+        """
+        msavi_expression = '0.5 * (2 * b("B8") + 1 - ((2 * b("B8") + 1) ** 2 - 8 * (b("B8") - b("B4"))) ** 0.5)'
+        msavi_calc = image.expression(msavi_expression)
+        msavi = msavi_calc.updateMask(msavi_calc.gte(threshold)).rename("msavi").copyProperties(image).set("threshold", threshold)
+        return msavi
+
+    @staticmethod
+    def sentinel_ndmi_fn(image, threshold):
+        """
+        Calculates the Normalized Difference Moisture Index (NDMI) for Sentinel-2 images. Masks image based on threshold.
+        See Wilson & Sader, 2002 - https://doi.org/10.1016/S0034-4257(02)00074-7
+
+        Args:
+            image (ee.Image): input ee.Image
+            threshold (float): value between -1 and 1 where NDMI pixels less than threshold will be masked
+        
+        Returns:
+            ee.Image: NDMI ee.Image
+        """
+        ndmi_expression = '(b("B8") - b("B11")) / (b("B8") + b("B11"))'
+        ndmi_calc = image.expression(ndmi_expression)
+        ndmi = ndmi_calc.updateMask(ndmi_calc.gte(threshold)).rename("ndmi").copyProperties(image).set("threshold", threshold)
+        return ndmi
+
+    @staticmethod
+    def sentinel_nbr_fn(image, threshold):
+        """
+        Calculates the Normalized Burn Ratio (NBR) for Sentinel-2 images. Masks image based on threshold.
+
+        Args:
+            image (ee.Image): input ee.Image
+            threshold (float): value between -1 and 1 where NBR pixels less than threshold will be masked.
+
+        Returns:
+            ee.Image: NBR ee.Image
+        """
+        nbr_expression = '(b("B8") - b("B12")) / (b("B8") + b("B12"))'
+        nbr_calc = image.expression(nbr_expression)
+        nbr = nbr_calc.updateMask(nbr_calc.gte(threshold)).rename("nbr").copyProperties(image).set("threshold", threshold)
+        return nbr
 
     @staticmethod
     def MaskCloudsS2(image):
@@ -457,59 +606,88 @@ class Sentinel2Collection:
         image, band_name, geometry, threshold=-1, scale=10, maxPixels=1e12
     ):
         """
-        Calculates the summation of area for pixels of interest (above a specific threshold) within a geometry and store the value as image property (matching name of chosen band).
-        The resulting value has units of square meters.
+        Calculates the summation of area for pixels of interest (above a specific threshold) in a geometry
+        and store the value as image property (matching name of chosen band). If multiple band names are provided in a list,
+        the function will calculate area for each band in the list and store each as a separate property.
+
+        NOTE: The resulting value has units of square meters.
 
         Args:
             image (ee.Image): input ee.Image
-            band_name: name of band (string) for calculating area.
-            geometry: ee.Geometry object denoting area to clip to for area calculation.
-            threshold: integer threshold to specify masking of pixels below threshold (defaults to -1).
-            scale: integer scale of image resolution (meters) (defaults to 10).
-            maxPixels: integer denoting maximum number of pixels for calculations.
+            band_name (string or list of strings): name of band(s) (string) for calculating area. If providing multiple band names, pass as a list of strings.
+            geometry (ee.Geometry): ee.Geometry object denoting area to clip to for area calculation
+            threshold (float): integer threshold to specify masking of pixels below threshold (defaults to -1). If providing multiple band names, the same threshold will be applied to all bands. Best practice in this case is to mask the bands prior to passing to this function and leave threshold at default of -1.
+            scale (int): integer scale of image resolution (meters) (defaults to 10)
+            maxPixels (int): integer denoting maximum number of pixels for calculations
 
         Returns:
-            ee.Image: Image with area calculation stored as property matching name of band.
+            ee.Image: ee.Image with area calculation in square meters stored as property matching name of band
         """
+        # Ensure band_name is a server-side ee.List for consistent processing. Wrap band_name in a list if it's a single string.
+        bands = ee.List(band_name) if isinstance(band_name, list) else ee.List([band_name])
+        # Create an image representing the area of each pixel in square meters
         area_image = ee.Image.pixelArea()
-        mask = image.select(band_name).gte(threshold)
-        final = image.addBands(area_image)
-        stats = (
-            final.select("area")
-            .updateMask(mask)
-            .rename(band_name)
-            .reduceRegion(
-                reducer=ee.Reducer.sum(),
-                geometry=geometry,
-                scale=scale,
-                maxPixels=maxPixels,
+
+        # Function to iterate over each band and calculate area, storing the result as a property on the image
+        def calculate_and_set_area(band, img_accumulator):
+            # Explcitly cast inputs to expected types
+            img_accumulator = ee.Image(img_accumulator)
+            band = ee.String(band)
+
+            # Create a mask from the input image for the current band
+            mask = img_accumulator.select(band).gte(threshold)
+            # Combine the original image with the area image
+            final = img_accumulator.addBands(area_image)
+
+            # Calculation of area for a given band, utilizing other inputs
+            stats = (
+                final.select("area").updateMask(mask)
+                .rename(band) # renames 'area' to band name like 'ndwi'
+                .reduceRegion(
+                    reducer=ee.Reducer.sum(),
+                    geometry=geometry,
+                    scale=scale,
+                    maxPixels=maxPixels,
+                )
             )
-        )
-        return image.set(
-            band_name, stats.get(band_name)
-        )  # calculates and returns summed pixel area as image property titled the same as the band name of the band used for calculation
+            # Retrieving the area value from the stats dictionary with stats.get(band), as the band name is now the key
+            reduced_area = stats.get(band)
+            # Checking whether the calculated area is valid and replaces with 0 if not. This avoids breaking the loop for erroneous images.
+            area_value = ee.Algorithms.If(reduced_area, reduced_area, 0)
+            
+            # Set the property on the image, named after the band
+            return img_accumulator.set(band, area_value)
+
+        # Call to iterate the calculate_and_set_area function over the list of bands, starting with the original image
+        final_image = ee.Image(bands.iterate(calculate_and_set_area, image))
+        return final_image
 
     def PixelAreaSumCollection(
-        self, band_name, geometry, threshold=-1, scale=10, maxPixels=1e12
+        self, band_name, geometry, threshold=-1, scale=10, maxPixels=1e12, output_type='ImageCollection', area_data_export_path=None
     ):
         """
-        Calculates the summation of area for pixels of interest (above a specific threshold)
-        within a geometry and store the value as image property (matching name of chosen band) for an entire
-        image collection.
-        The resulting value has units of square meters.
+        Calculates the geodesic summation of area for pixels of interest (above a specific threshold)
+        within a geometry and stores the value as an image property (matching name of chosen band) for an entire
+        image collection. Optionally exports the area data to a CSV file.
+
+        NOTE: The resulting value has units of square meters.
 
         Args:
-            band_name: name of band (string) for calculating area.
-            geometry: ee.Geometry object denoting area to clip to for area calculation.
-            threshold: integer threshold to specify masking of pixels below threshold (defaults to -1).
-            scale: integer scale of image resolution (meters) (defaults to 10).
-            maxPixels: integer denoting maximum number of pixels for calculations.
+            band_name (string or list of strings): name of band(s) (string) for calculating area. If providing multiple band names, pass as a list of strings.
+            geometry (ee.Geometry): ee.Geometry object denoting area to clip to for area calculation
+            threshold (float): integer threshold to specify masking of pixels below threshold (defaults to -1). If providing multiple band names, the same threshold will be applied to all bands. Best practice in this case is to mask the bands prior to passing to this function and leave threshold at default of -1.
+            scale (int): integer scale of image resolution (meters) (defaults to 10)
+            maxPixels (int): integer denoting maximum number of pixels for calculations
+            output_type (str): 'ImageCollection' to return an ee.ImageCollection, 'Sentinel2Collection' to return a Sentinel2Collection object (defaults to 'ImageCollection')
+            area_data_export_path (str, optional): If provided, the function will save the resulting area data to a CSV file at the specified path.
 
         Returns:
-            ee.Image: Image with area calculation stored as property matching name of band.
+            ee.ImageCollection or Sentinel2Collection: Image collection of images with area calculation (square meters) stored as property matching name of band. Type of output depends on output_type argument.
         """
+        # If the area calculation has not been computed for this Sentinel2Collection instance, the area will be calculated for the provided bands
         if self._PixelAreaSumCollection is None:
             collection = self.collection
+            # Area calculation for each image in the collection, using the PixelAreaSum function
             AreaCollection = collection.map(
                 lambda image: Sentinel2Collection.PixelAreaSum(
                     image,
@@ -520,8 +698,38 @@ class Sentinel2Collection:
                     maxPixels=maxPixels,
                 )
             )
+            # Storing the result in the instance variable to avoid redundant calculations
             self._PixelAreaSumCollection = AreaCollection
-        return self._PixelAreaSumCollection
+
+        # If an export path is provided, the area data will be exported to a CSV file
+        if area_data_export_path:
+            Sentinel2Collection(collection=self._PixelAreaSumCollection).ExportProperties(property_names=band_name, file_path=area_data_export_path+'.csv')
+
+        # Returning the result in the desired format based on output_type argument or raising an error for invalid input
+        if output_type == 'ImageCollection':
+            return self._PixelAreaSumCollection
+        elif output_type == 'Sentinel2Collection':
+            return Sentinel2Collection(collection=self._PixelAreaSumCollection)
+        else:
+            raise ValueError("output_type must be 'ImageCollection' or 'Sentinel2Collection'")
+
+    def merge(self, other):
+        """
+        Merges the current Sentinel2Collection with another Sentinel2Collection, where images/bands with the same date are combined to a single multiband image.
+
+        Args:
+            other (Sentinel2Collection): Another Sentinel2Collection to merge with current collection.
+
+        Returns:
+            Sentinel2Collection: A new Sentinel2Collection containing images from both collections.
+        """
+        # Checking if 'other' is an instance of Sentinel2Collection
+        if not isinstance(other, Sentinel2Collection):
+            raise ValueError("The 'other' parameter must be an instance of Sentinel2Collection.")
+        
+        # Merging the collections using the .combine() method
+        merged_collection = self.collection.combine(other.collection)
+        return Sentinel2Collection(collection=merged_collection)
 
     @property
     def dates_list(self):
@@ -551,6 +759,60 @@ class Sentinel2Collection:
             dates = self._dates_list.getInfo()
             self._dates = dates
         return self._dates
+    
+    def ExportProperties(self, property_names, file_path=None):
+        """
+        Fetches and returns specified properties from each image in the collection as a list, and returns a pandas DataFrame and optionally saves the results to a csv file.
+
+        Args:
+            property_names (list or str): A property name or list of property names to retrieve. The 'Date_Filter' property is always included to provide temporal context.
+            file_path (str, optional): If provided, the function will save the resulting DataFrame to a CSV file at this path. Defaults to None.
+
+        Returns:
+            pd.DataFrame: A pandas DataFrame containing the requested properties for each image, sorted chronologically by 'Date_Filter'.
+        """
+        # Ensure property_names is a list for consistent processing
+        if isinstance(property_names, str):
+            property_names = [property_names]
+
+        # Ensure properties are included without duplication, including 'Date_Filter'
+        all_properties_to_fetch = list(set(['Date_Filter'] + property_names))
+
+        # Defining the helper function to create features with specified properties
+        def create_feature_with_properties(image):
+            """A function to map over the collection and store the image properties as an ee.Feature.
+            Args:
+                image (ee.Image): An image from the collection.
+            Returns:
+                ee.Feature: A feature containing the specified properties from the image.
+            """
+            properties = image.toDictionary(all_properties_to_fetch)
+            return ee.Feature(None, properties)
+
+        # Map the feature creation function over the server-side collection.
+        # The result is an ee.FeatureCollection where each feature holds the properties of one image.
+        mapped_collection = self.collection.map(create_feature_with_properties)
+        # Explicitly cast to ee.FeatureCollection for clarity
+        feature_collection = ee.FeatureCollection(mapped_collection)
+
+        # Use the existing ee_to_df static method. This performs the single .getInfo() call
+        # and converts the structured result directly to a pandas DataFrame.
+        df = Sentinel2Collection.ee_to_df(feature_collection, columns=all_properties_to_fetch)
+        
+        # Sort by date for a clean, chronological output.
+        if 'Date_Filter' in df.columns:
+            df = df.sort_values(by='Date_Filter').reset_index(drop=True)
+        
+        # Check condition for saving to CSV
+        if file_path:
+            # Check whether file_path ends with .csv, if not, append it
+            if not file_path.lower().endswith('.csv'):
+                file_path += '.csv'
+            # Save DataFrame to CSV
+            df.to_csv(file_path, index=True)
+            print(f"Properties saved to {file_path}")
+            
+        return df
 
     def get_filtered_collection(self):
         """
@@ -826,6 +1088,278 @@ class Sentinel2Collection:
                 image, threshold=threshold
             )
         )
+        return Sentinel2Collection(collection=col)
+    
+    @property
+    def evi(self):
+        """
+        Property attribute to calculate and access the EVI (Enhanced Vegetation Index) imagery of the Sentinel2Collection.
+        This property initiates the calculation of EVI and caches the result. The calculation is performed only once when 
+        the property is first accessed, and the cached result is returned on subsequent accesses.
+
+        Returns:
+            Sentinel2Collection: A Sentinel2Collection image collection
+        """
+        if self._evi is None:
+            self._evi = self.evi_collection(self.evi_threshold)
+        return self._evi
+
+    def evi_collection(self, threshold):
+        """
+        Function to calculate the EVI (Enhanced Vegetation Index) and return collection as class object, allows specifying threshold(s) for masking.
+        This function can be called as a method but is called by default when using the evi property attribute.
+
+        Args:
+            threshold (float): specify threshold for EVI function (values less than threshold are masked)
+
+        Returns:
+            Sentinel2Collection: A Sentinel2Collection image collection
+        """
+        first_image = self.collection.first()
+        available_bands = first_image.bandNames()
+        if available_bands.contains("B4") and available_bands.contains("B8") and available_bands.contains("B2"):
+            pass
+        else:
+            raise ValueError("Insufficient Bands for evi calculation")
+        col = self.collection.map(
+            lambda image: Sentinel2Collection.sentinel_evi_fn(
+                image, threshold=threshold
+            )
+        )
+        return Sentinel2Collection(collection=col)
+    
+    @property
+    def savi(self):
+        """
+        Property attribute to calculate and access the SAVI (Soil Adjusted Vegetation Index) imagery of the Sentinel2Collection.
+        This property initiates the calculation of SAVI and caches the result. The calculation is performed only once when the 
+        property is first accessed, and the cached result is returned on subsequent accesses.
+
+        Returns:
+            Sentinel2Collection: A Sentinel2Collection image collection
+        """
+        if self._savi is None:
+            self._savi = self.savi_collection(self.savi_threshold)
+        return self._savi
+
+    def savi_collection(self, threshold, l=0.5):
+        """
+        Function to calculate the SAVI (Soil Adjusted Vegetation Index) and return collection as class object, allows specifying threshold(s) for masking.
+        This function can be called as a method but is called by default when using the savi property attribute.
+
+        Args:
+            threshold (float): specify threshold for SAVI function (values less than threshold are masked)
+            l (float, optional): Soil brightness correction factor, typically set to 0.5 for intermediate vegetation cover. Defaults to 0.5.
+
+        Returns:
+            Sentinel2Collection: A Sentinel2Collection image collection
+        """
+        first_image = self.collection.first()
+        available_bands = first_image.bandNames()
+        if available_bands.contains("B4") and available_bands.contains("B8"):
+            pass
+        else:
+            raise ValueError("Insufficient Bands for savi calculation")
+        col = self.collection.map(
+            lambda image: Sentinel2Collection.sentinel_savi_fn(
+                image, threshold=threshold, l=l
+            )
+        )
+        return Sentinel2Collection(collection=col)
+
+    @property
+    def msavi(self):
+        """
+        Property attribute to calculate and access the MSAVI (Modified Soil Adjusted Vegetation Index) imagery of the Sentinel2Collection.
+        This property initiates the calculation of MSAVI and caches the result. The calculation is performed only once when the property 
+        is first accessed, and the cached result is returned on subsequent accesses.
+
+        Returns:
+            Sentinel2Collection: A Sentinel2Collection image collection
+        """
+        if self._msavi is None:
+            self._msavi = self.msavi_collection(self.msavi_threshold)
+        return self._msavi  
+
+    def msavi_collection(self, threshold):
+        """
+        Function to calculate the MSAVI (Modified Soil Adjusted Vegetation Index) and return collection as class object, allows specifying threshold(s) for masking.
+        This function can be called as a method but is called by default when using the msavi property attribute.
+
+        Args:
+            threshold (float): specify threshold for MSAVI function (values less than threshold are masked)
+
+        Returns:
+            Sentinel2Collection: A Sentinel2Collection image collection
+        """
+        first_image = self.collection.first()
+        available_bands = first_image.bandNames()
+        if available_bands.contains("B4") and available_bands.contains("B8"):
+            pass
+        else:
+            raise ValueError("Insufficient Bands for msavi calculation")
+        col = self.collection.map(
+            lambda image: Sentinel2Collection.sentinel_msavi_fn(
+                image, threshold=threshold
+            )
+        )
+        return Sentinel2Collection(collection=col)
+
+    @property
+    def ndmi(self):
+        """
+        Property attribute to calculate and access the NDMI (Normalized Difference Moisture Index) imagery of the Sentinel2Collection.
+        This property initiates the calculation of NDMI and caches the result. The calculation is performed only once when the property 
+        is first accessed, and the cached result is returned on subsequent accesses.
+
+        Returns:
+            Sentinel2Collection: A Sentinel2Collection image collection
+        """
+        if self._ndmi is None:
+            self._ndmi = self.ndmi_collection(self.ndmi_threshold)
+        return self._ndmi
+    
+    def ndmi_collection(self, threshold):
+        """
+        Function to calculate the NDMI (Normalized Difference Moisture Index) and return collection as class object, allows specifying threshold(s) for masking.
+        This function can be called as a method but is called by default when using the ndmi property attribute.
+
+        Args:
+            threshold (float): specify threshold for NDMI function (values less than threshold are masked)
+        Returns:
+            Sentinel2Collection: A Sentinel2Collection image collection
+        """
+        first_image = self.collection.first()
+        available_bands = first_image.bandNames()
+        if available_bands.contains("B8") and available_bands.contains("B11"):
+            pass
+        else:
+            raise ValueError("Insufficient Bands for ndmi calculation")
+        col = self.collection.map(
+            lambda image: Sentinel2Collection.sentinel_ndmi_fn(
+                image, threshold=threshold
+            )
+        )
+        return Sentinel2Collection(collection=col)
+    
+    @property
+    def nbr(self):
+        """
+        Property attribute to calculate and access the NBR (Normalized Burn Ratio) imagery of the Sentinel2Collection.
+        This property initiates the calculation of NBR and caches the result. The calculation is performed only once 
+        when the property is first accessed, and the cached result is returned on subsequent accesses.
+
+        Returns:
+            Sentinel2Collection: A Sentinel2Collection image collection
+        """
+        if self._nbr is None:
+            self._nbr = self.nbr_collection(self.nbr_threshold)
+        return self._nbr
+    
+    def nbr_collection(self, threshold):
+        """
+        Function to calculate the NBR (Normalized Burn Ratio) and return collection as class object, allows specifying threshold(s) for masking. 
+        This function can be called as a method but is called by default when using the nbr property attribute.
+
+        Args:
+            threshold (float): specify threshold for NBR function (values less than threshold are masked)
+
+        Returns:
+            Sentinel2Collection: A Sentinel2Collection image collection
+        """
+        first_image = self.collection.first()
+        available_bands = first_image.bandNames()
+        if available_bands.contains("B8") and available_bands.contains("B12"):
+            pass
+        else:
+            raise ValueError("Insufficient Bands for nbr calculation")
+        col = self.collection.map(
+            lambda image: Sentinel2Collection.sentinel_nbr_fn(
+                image, threshold=threshold
+            )
+        )
+        return Sentinel2Collection(collection=col)
+    
+    @property
+    def ndsi(self):
+        """
+        Property attribute to calculate and access the NDSI (Normalized Difference Snow Index) imagery of the Sentinel2Collection.
+        This property initiates the calculation of NDSI and caches the result. The calculation is performed only once when the 
+        property is first accessed, and the cached result is returned on subsequent accesses.
+
+        Returns:
+            Sentinel2Collection: A Sentinel2Collection image collection
+        """
+        if self._ndsi is None:
+            self._ndsi = self.ndsi_collection(self.ndsi_threshold)
+        return self._ndsi
+    
+    def ndsi_collection(self, threshold):
+        """
+        Function to calculate the NDSI (Normalized Difference Snow Index) and return collection as class object, allows specifying threshold(s) for masking.
+        This function can be called as a method but is called
+        by default when using the ndsi property attribute.
+
+        Args:
+            threshold (float): specify threshold for NDSI function (values less than threshold are masked)
+
+        Returns:
+            Sentinel2Collection: A Sentinel2Collection image collection
+        """
+        first_image = self.collection.first()
+        available_bands = first_image.bandNames()
+        if available_bands.contains("B3") and available_bands.contains("B11"):
+            pass
+        else:
+            raise ValueError("Insufficient Bands for ndsi calculation")
+        col = self.collection.map(
+            lambda image: Sentinel2Collection.sentinel_ndsi_fn(
+                image, threshold=threshold
+            )
+        )
+        return Sentinel2Collection(collection=col)
+
+    @property
+    def albedo(self):
+        """
+        Property attribute to calculate albedo imagery for snow-free conditions, based on Li et al., 2018 (https://doi.org/10.1016/j.rse.2018.08.025).
+        Use `albedo_collection(snow_free=False)` for images with snow present. This property initiates the calculation of albedo and caches the result. 
+        The calculation is performed only once when the property is first accessed, and the cached result is returned on subsequent accesses.
+
+        Returns:
+            LandsatCollection: A LandsatCollection image collection
+        """
+        if self._albedo is None:
+            self._albedo = self.albedo_collection(snow_free=True)
+        return self._albedo
+
+
+    def albedo_collection(self, snow_free=True):
+        """
+        Calculates albedo for snow or snow-free conditions and returns collection as class object, allows specifying threshold(s) for masking.
+        This function can be called as a method but is called by default when using the ndwi property attribute.
+        Albedo calculation based on Li et al., 2018 (https://doi.org/10.1016/j.rse.2018.08.025).
+
+        Args:
+            snow_free (bool): If True, applies a snow mask to the albedo calculation. Defaults to True.
+
+        Returns:
+            LandsatCollection: A LandsatCollection image collection
+        """
+        first_image = self.collection.first()
+        available_bands = first_image.bandNames()
+        if (
+            available_bands.contains("B2")
+            and available_bands.contains("B3")
+            and available_bands.contains("B4")
+            and available_bands.contains("B8A")
+            and available_bands.contains("B11")
+            and available_bands.contains("B12")
+        ):
+            pass
+        else:
+            raise ValueError("Insufficient Bands for albedo calculation")
+        col = self.collection.map(lambda image:Sentinel2Collection.sentinel_broadband_albedo_fn(image, snow_free=snow_free))
         return Sentinel2Collection(collection=col)
 
     @property
@@ -1407,7 +1941,8 @@ class Sentinel2Collection:
         to_pandas=False,
         **kwargs,
     ):
-        """Extracts transect from an image. Adapted from the geemap package (https://geemap.org/common/#geemap.common.extract_transect). Exists as an alternative to RadGEEToolbox 'transect' function.
+        """
+        Extracts transect from an image. Adapted from the geemap package (https://geemap.org/common/#geemap.common.extract_transect).
 
         Args:
             image (ee.Image): The image to extract transect from.
@@ -1481,9 +2016,10 @@ class Sentinel2Collection:
         dist_interval=10,
         to_pandas=True,
     ):
-        """Computes and stores the values along a transect for each line in a list of lines. Builds off of the extract_transect function from the geemap package
-            where checks are ran to ensure that the reducer column is present in the transect data. If the reducer column is not present, a column of NaNs is created.
-            An ee reducer is used to aggregate the values along the transect, depending on the number of segments or distance interval specified. Defaults to 'mean' reducer.
+        """
+        Computes and stores the values along a transect for each line in a list of lines. Builds off of the extract_transect function from the geemap package
+        where checks are ran to ensure that the reducer column is present in the transect data. If the reducer column is not present, a column of NaNs is created.
+        An ee reducer is used to aggregate the values along the transect, depending on the number of segments or distance interval specified. Defaults to 'mean' reducer.
 
         Args:
             image (ee.Image): ee.Image object to use for calculating transect values.
@@ -1556,52 +2092,201 @@ class Sentinel2Collection:
         self,
         lines,
         line_names,
-        save_folder_path,
         reducer="mean",
+        dist_interval= 10,
         n_segments=None,
-        dist_interval=10,
-        to_pandas=True,
+        scale=10,
+        processing_mode='aggregated',
+        save_folder_path=None,
+        sampling_method='line',
+        point_buffer_radius=5
     ):
-        """Computes and stores the values along a transect for each line in a list of lines for each image in a Sentinel2Collection image collection, then saves the data for each image to a csv file. Builds off of the extract_transect function from the geemap package
-            where checks are ran to ensure that the reducer column is present in the transect data. If the reducer column is not present, a column of NaNs is created.
-            An ee reducer is used to aggregate the values along the transect, depending on the number of segments or distance interval specified. Defaults to 'mean' reducer.
-            Naming conventions for the csv files follows as: "image-date_transects.csv"
+        """
+        Computes and returns pixel values along transects for each image in a collection.
+
+        This iterative function generates time-series data along one or more lines, and 
+        supports two different geometric sampling methods ('line' and 'buffered_point') 
+        for maximum flexibility and performance.
+
+        There are two processing modes available, aggregated and iterative:
+        - 'aggregated' (default; suggested): Fast, server-side processing. Fetches all results
+            in a single request. Highly recommended. Returns a dictionary of pandas DataFrames.
+        - 'iterative': Slower, client-side loop that processes one image at a time.
+            Kept for backward compatibility (effectively depreciated). Returns None and saves individual CSVs.
+            This method is not recommended unless absolutely necessary, as it is less efficient and may be subject to client-side timeouts.
 
         Args:
-            lines (list): List of ee.Geometry.LineString objects.
-            line_names (list of strings): List of line string names.
-            save_folder_path (str): The path to the folder where the csv files will be saved.
-            reducer (str): The ee reducer to use. Defaults to 'mean'.
-            n_segments (int): The number of segments that the LineString will be split into. Defaults to None.
-            dist_interval (float): The distance interval in meters used for splitting the LineString. If specified, the n_segments parameter will be ignored. Defaults to 10.
-            to_pandas (bool): Whether to convert the result to a pandas dataframe. Defaults to True.
-
-        Raises:
-            Exception: If the program fails to compute.
+            lines (list): A list of one or more ee.Geometry.LineString objects that
+                define the transects.
+            line_names (list): A list of string names for each transect. The length
+                of this list must match the length of the `lines` list.
+            reducer (str, optional): The name of the ee.Reducer to apply at each
+                transect point (e.g., 'mean', 'median', 'first'). Defaults to 'mean'.
+            dist_interval (float, optional): The distance interval in meters for
+                sampling points along each transect. Will be overridden if `n_segments` is provided.
+                Defaults to 10. Recommended to increase this value when using the 
+                'line' processing method, or else you may get blank rows.
+            n_segments (int, optional): The number of equal-length segments to split
+                each transect line into for sampling. This parameter overrides `dist_interval`. 
+                Defaults to None.
+            scale (int, optional): The nominal scale in meters for the reduction,
+                which should typically match the pixel resolution of the imagery.
+                Defaults to 10.
+            processing_mode (str, optional): The method for processing the collection.
+                - 'aggregated' (default): Fast, server-side processing. Fetches all
+                  results in a single request. Highly recommended. Returns a dictionary
+                  of pandas DataFrames.
+                - 'iterative': Slower, client-side loop that processes one image at a
+                  time. Kept for backward compatibility. Returns None and saves
+                  individual CSVs.
+            save_folder_path (str, optional): If provided, the function will save the
+                resulting transect data to CSV files. The behavior depends on the
+                `processing_mode`:
+                - In 'aggregated' mode, one CSV is saved for each transect,
+                  containing all dates. (e.g., 'MyTransect_transects.csv').
+                - In 'iterative' mode, one CSV is saved for each date,
+                  containing all transects. (e.g., '2022-06-15_transects.csv').
+            sampling_method (str, optional): The geometric method used for sampling.
+                - 'line' (default): Reduces all pixels intersecting each small line
+                  segment. This can be unreliable and produce blank rows if
+                  `dist_interval` is too small relative to the `scale`.
+                - 'buffered_point': Reduces all pixels within a buffer around the
+                  midpoint of each line segment. This method is more robust and
+                  reliably avoids blank rows, but may not reduce all pixels along a line segment.
+            point_buffer_radius (int, optional): The radius in meters for the buffer
+                when `sampling_method` is 'buffered_point'. Defaults to 5.
 
         Returns:
-            csv file: file for each image with an organized list of values along the transect(s)
+            dict or None:
+            - If `processing_mode` is 'aggregated', returns a dictionary where each
+              key is a transect name and each value is a pandas DataFrame. In the
+              DataFrame, the index is the distance along the transect and each
+              column represents an image date. Optionally saves CSV files if
+                `save_folder_path` is provided.
+            - If `processing_mode` is 'iterative', returns None as it saves
+              files directly.
+
+        Raises:
+            ValueError: If `lines` and `line_names` have different lengths, or if
+                an unknown reducer or processing mode is specified.
         """
-        image_collection = self  # .collection
-        image_collection_dates = self.dates
-        for i, date in enumerate(image_collection_dates):
+        # Validating inputs
+        if len(lines) != len(line_names):
+            raise ValueError("'lines' and 'line_names' must have the same number of elements.")
+        ### Current, server-side processing method ###
+        if processing_mode == 'aggregated':
+            # Validating reducer type
             try:
-                print(f"Processing image {i+1}/{len(image_collection_dates)}: {date}")
-                image = image_collection.image_grab(i)
-                transects_df = Sentinel2Collection.transect(
-                    image,
-                    lines,
-                    line_names,
-                    reducer=reducer,
-                    n_segments=n_segments,
-                    dist_interval=dist_interval,
-                    to_pandas=to_pandas,
-                )
-                image_id = date
-                transects_df.to_csv(f"{save_folder_path}{image_id}_transects.csv")
-                print(f"{image_id}_transects saved to csv")
-            except Exception as e:
-                print(f"An error occurred while processing image {i+1}: {e}")
+                ee_reducer = getattr(ee.Reducer, reducer)()
+            except AttributeError:
+                raise ValueError(f"Unknown reducer: '{reducer}'.")
+            ### Function to extract transects for a single image
+            def get_transects_for_image(image):
+                image_date = image.get('Date_Filter')
+                # Initialize an empty list to hold all transect FeatureCollections
+                all_transects_for_image = ee.List([])
+                # Looping through each line and processing
+                for i, line in enumerate(lines):
+                    # Index line and name
+                    line_name = line_names[i]
+                    # Determine maxError based on image projection, used for geometry operations
+                    maxError = image.projection().nominalScale().divide(5)
+                    # Calculate effective distance interval
+                    length = line.length(maxError) # using maxError here ensures consistency with cutLines
+                    # Determine effective distance interval based on n_segments or dist_interval
+                    effective_dist_interval = ee.Algorithms.If(
+                        n_segments,
+                        length.divide(n_segments),
+                        dist_interval or 30 # Defaults to 30 if both are None
+                    )
+                    # Generate distances along the line(s) for segmentation
+                    distances = ee.List.sequence(0, length, effective_dist_interval)
+                    # Segmenting the line into smaller lines at the specified distances
+                    cut_lines_geoms = line.cutLines(distances, maxError).geometries()
+                    # Function to create features with distance attributes
+                    # Adjusted to ensure consistent return types
+                    def set_dist_attr(l):
+                        # l is a list: [geometry, distance]
+                        # Extracting geometry portion of line
+                        geom_segment = ee.Geometry(ee.List(l).get(0))
+                        # Extracting distance value for attribute
+                        distance = ee.Number(ee.List(l).get(1))
+                        ### Determine final geometry based on sampling method
+                        # If the sampling method is 'buffered_point', 
+                        # create a buffered point feature at the centroid of each segment,
+                        # otherwise create a line feature
+                        final_feature = ee.Algorithms.If(
+                            ee.String(sampling_method).equals('buffered_point'),
+                            # True Case: Create the buffered point feature
+                            ee.Feature(
+                                geom_segment.centroid(maxError).buffer(point_buffer_radius),
+                                {'distance': distance}
+                            ),
+                            # False Case: Create the line segment feature
+                            ee.Feature(geom_segment, {'distance': distance})
+                        )
+                        # Return either the line segment feature or the buffered point feature
+                        return final_feature
+                    # Creating a FeatureCollection of the cut lines with distance attributes
+                    # Using map to apply the set_dist_attr function to each cut line geometry
+                    line_features = ee.FeatureCollection(cut_lines_geoms.zip(distances).map(set_dist_attr))
+                    # Reducing the image over the line features to get transect values
+                    transect_fc = image.reduceRegions(
+                        collection=line_features, reducer=ee_reducer, scale=scale
+                    )
+                    # Adding image date and line name properties to each feature
+                    def set_props(feature):
+                        return feature.set({'image_date': image_date, 'transect_name': line_name})
+                    # Append to the list of all transects for this image
+                    all_transects_for_image = all_transects_for_image.add(transect_fc.map(set_props))
+                # Combine all transect FeatureCollections into a single FeatureCollection and flatten
+                # Flatten is used to merge the list of FeatureCollections into one
+                return ee.FeatureCollection(all_transects_for_image).flatten()
+            # Map the function over the entire image collection and flatten the results
+            results_fc = ee.FeatureCollection(self.collection.map(get_transects_for_image)).flatten()
+            # Convert the results to a pandas DataFrame
+            df = Sentinel2Collection.ee_to_df(results_fc, remove_geom=True)
+            # Check if the DataFrame is empty
+            if df.empty:
+                print("Warning: No transect data was generated.")
+                return {}
+            # Initialize dictionary to hold output DataFrames for each transect
+            output_dfs = {}
+            # Loop through each unique transect name and create a pivot table
+            for name in sorted(df['transect_name'].unique()):
+                transect_df = df[df['transect_name'] == name]
+                pivot_df = transect_df.pivot(index='distance', columns='image_date', values=reducer)
+                pivot_df.columns.name = 'Date'
+                output_dfs[name] = pivot_df
+            # Optionally save each transect DataFrame to CSV
+            if save_folder_path:
+                for transect_name, transect_df in output_dfs.items():
+                    safe_filename = "".join(x for x in transect_name if x.isalnum() or x in "._-")
+                    file_path = f"{save_folder_path}{safe_filename}_transects.csv"
+                    transect_df.to_csv(file_path)
+                    print(f"Saved transect data to {file_path}")
+            
+            return output_dfs
+
+        ### old, depreciated iterative client-side processing method ###
+        elif processing_mode == 'iterative':
+            if not save_folder_path:
+                raise ValueError("`save_folder_path` is required for 'iterative' processing mode.")
+            
+            image_collection_dates = self.dates
+            for i, date in enumerate(image_collection_dates):
+                try:
+                    print(f"Processing image {i+1}/{len(image_collection_dates)}: {date}")
+                    image = self.image_grab(i)
+                    transects_df = Sentinel2Collection.transect(
+                        image, lines, line_names, reducer, n_segments, dist_interval, to_pandas=True
+                    )
+                    transects_df.to_csv(f"{save_folder_path}{date}_transects.csv")
+                    print(f"{date}_transects saved to csv")
+                except Exception as e:
+                    print(f"An error occurred while processing image {i+1}: {e}")
+        else:
+            raise ValueError("`processing_mode` must be 'iterative' or 'aggregated'.")
 
     @staticmethod
     def extract_zonal_stats_from_buffer(
@@ -1614,37 +2299,35 @@ class Sentinel2Collection:
         coordinate_names=None,
     ):
         """
-        Function to extract spatial statistics from an image for a list of coordinates, providing individual statistics for each location.
+        Function to extract spatial statistics from an image for a list or single set of (long, lat) coordinates, providing individual statistics for each location.
         A radial buffer is applied around each coordinate to extract the statistics, which defaults to 1 meter.
         The function returns a pandas DataFrame with the statistics for each coordinate.
 
+        NOTE: Be sure the coordinates are provided as longitude, latitude (x, y) tuples!
+
         Args:
-            image (ee.Image): The image from which to extract the statistics. Must be a singleband image or else resulting values will all be zero!
-            coordinates (list): Single tuple or list of tuples with the decimal degrees coordinates in the format of (longitude, latitude) for which to extract the statistics. NOTE the format needs to be [(x1, y1), (x2, y2), ...].
-            buffer_size (int, optional): The radial buffer size around the coordinates in meters. Defaults to 1.
-            reducer_type (str, optional): The reducer type to use. Defaults to 'mean'. Options are 'mean', 'median', 'min', and 'max'.
-            scale (int, optional): The scale (pixel size) to use in meters. Defaults to 10.
-            tileScale (int, optional): The tile scale to use. Defaults to 1.
-            coordinate_names (list, optional): A list of strings with the names of the coordinates. Defaults to None.
+            image (ee.Image): The image from which to extract statistics. Should be single-band.
+            coordinates (list or tuple): A single (lon, lat) tuple or a list of (lon, lat) tuples.
+            buffer_size (int, optional): The radial buffer size in meters. Defaults to 1.
+            reducer_type (str, optional): The ee.Reducer to use ('mean', 'median', 'min', etc.). Defaults to 'mean'.
+            scale (int, optional): The scale in meters for the reduction. Defaults to 10.
+            tileScale (int, optional): The tile scale factor. Defaults to 1.
+            coordinate_names (list, optional): A list of names for the coordinates.
 
         Returns:
-            pd.DataFrame: A pandas DataFrame with the statistics for each coordinate, each column name corresponds to the name of the coordinate feature (which may be blank if no names are supplied).
+            pd.DataFrame: A pandas DataFrame with the image's 'Date_Filter' as the index and a
+                          column for each coordinate location.
         """
-
-        # Check if coordinates is a single tuple and convert it to a list of tuples if necessary
         if isinstance(coordinates, tuple) and len(coordinates) == 2:
             coordinates = [coordinates]
         elif not (
             isinstance(coordinates, list)
-            and all(
-                isinstance(coord, tuple) and len(coord) == 2 for coord in coordinates
-            )
+            and all(isinstance(coord, tuple) and len(coord) == 2 for coord in coordinates)
         ):
             raise ValueError(
-                "Coordinates must be a list of tuples with two elements each (latitude, longitude)."
+                "Coordinates must be a list of tuples with two elements each (longitude, latitude)."
             )
 
-        # Check if coordinate_names is a list of strings
         if coordinate_names is not None:
             if not isinstance(coordinate_names, list) or not all(
                 isinstance(name, str) for name in coordinate_names
@@ -1657,146 +2340,184 @@ class Sentinel2Collection:
         else:
             coordinate_names = [f"Location {i+1}" for i in range(len(coordinates))]
 
-        # Check if the image is a singleband image
-        def check_singleband(image):
-            band_count = image.bandNames().size()
-            return ee.Algorithms.If(band_count.eq(1), image, ee.Image.constant(0))
+        image_date = image.get('Date_Filter')
 
-        # image = ee.Image(check_singleband(image))
-        image = ee.Image(check_singleband(image))
-
-        # Convert coordinates to ee.Geometry.Point, buffer them, and add label/name to feature
         points = [
             ee.Feature(
-                ee.Geometry.Point([coord[0], coord[1]]).buffer(buffer_size),
-                {"name": str(coordinate_names[i])},
+                ee.Geometry.Point(coord).buffer(buffer_size),
+                {"location_name": str(name)},
             )
-            for i, coord in enumerate(coordinates)
+            for coord, name in zip(coordinates, coordinate_names)
         ]
-        # Create a feature collection from the buffered points
         features = ee.FeatureCollection(points)
-        # Reduce the image to the buffered points - handle different reducer types
-        if reducer_type == "mean":
-            img_stats = image.reduceRegions(
-                collection=features,
-                reducer=ee.Reducer.mean(),
-                scale=scale,
-                tileScale=tileScale,
-            )
-            mean_values = img_stats.getInfo()
-            means = []
-            names = []
-            for feature in mean_values["features"]:
-                names.append(feature["properties"]["name"])
-                means.append(feature["properties"]["mean"])
-            organized_values = pd.DataFrame([means], columns=names)
-        elif reducer_type == "median":
-            img_stats = image.reduceRegions(
-                collection=features,
-                reducer=ee.Reducer.median(),
-                scale=scale,
-                tileScale=tileScale,
-            )
-            median_values = img_stats.getInfo()
-            medians = []
-            names = []
-            for feature in median_values["features"]:
-                names.append(feature["properties"]["name"])
-                medians.append(feature["properties"]["median"])
-            organized_values = pd.DataFrame([medians], columns=names)
-        elif reducer_type == "min":
-            img_stats = image.reduceRegions(
-                collection=features,
-                reducer=ee.Reducer.min(),
-                scale=scale,
-                tileScale=tileScale,
-            )
-            min_values = img_stats.getInfo()
-            mins = []
-            names = []
-            for feature in min_values["features"]:
-                names.append(feature["properties"]["name"])
-                mins.append(feature["properties"]["min"])
-            organized_values = pd.DataFrame([mins], columns=names)
-        elif reducer_type == "max":
-            img_stats = image.reduceRegions(
-                collection=features,
-                reducer=ee.Reducer.max(),
-                scale=scale,
-                tileScale=tileScale,
-            )
-            max_values = img_stats.getInfo()
-            maxs = []
-            names = []
-            for feature in max_values["features"]:
-                names.append(feature["properties"]["name"])
-                maxs.append(feature["properties"]["max"])
-            organized_values = pd.DataFrame([maxs], columns=names)
-        else:
-            raise ValueError(
-                "reducer_type must be one of 'mean', 'median', 'min', or 'max'."
-            )
-        return organized_values
+
+        try:
+            reducer = getattr(ee.Reducer, reducer_type)()
+        except AttributeError:
+            raise ValueError(f"Unknown reducer_type: '{reducer_type}'.")
+
+        stats_fc = image.reduceRegions(
+            collection=features,
+            reducer=reducer,
+            scale=scale,
+            tileScale=tileScale,
+        )
+
+        df = Sentinel2Collection.ee_to_df(stats_fc, remove_geom=True)
+
+        if df.empty:
+            print("Warning: No results returned. The points may not intersect the image.")
+            empty_df = pd.DataFrame(columns=coordinate_names)
+            empty_df.index.name = 'Date'
+            return empty_df
+
+        if reducer_type not in df.columns:
+            print(f"Warning: Reducer type '{reducer_type}' not found in results. Returning raw data.")
+            return df
+            
+        pivot_df = df.pivot(columns='location_name', values=reducer_type)
+        pivot_df['Date'] = image_date.getInfo() # .getInfo() is needed here as it's a server object
+        pivot_df = pivot_df.set_index('Date')
+        return pivot_df
 
     def iterate_zonal_stats(
         self,
-        coordinates,
-        buffer_size=1,
+        geometries,
         reducer_type="mean",
         scale=10,
+        geometry_names=None,
+        buffer_size=1,
         tileScale=1,
-        coordinate_names=None,
-        file_path=None,
         dates=None,
+        file_path=None
     ):
         """
-        Function to iterate over a collection of images and extract spatial statistics for a list of coordinates (defaults to mean). Individual statistics are provided for each location.
-        A radial buffer is applied around each coordinate to extract the statistics, which defaults to 1 meter.
+        Iterates over a collection of images and extracts spatial statistics (defaults to mean) for a given list of geometries or coordinates. Individual statistics are calculated for each geometry or coordinate provided.
+        When coordinates are provided, a radial buffer is applied around each coordinate to extract the statistics, where the size of the buffer is determined by the buffer_size argument (defaults to 1 meter).
         The function returns a pandas DataFrame with the statistics for each coordinate and date, or optionally exports the data to a table in .csv format.
 
-        NOTE: The input RadGEEToolbox object must be a collection of singleband images, otherwise the resulting values will all be zero!
-
         Args:
-            coordinates (list): Single tuple or a list of tuples with the coordinates as decimal degrees in the format of (longitude, latitude) for which to extract the statistics. NOTE the format needs to be [(x1, y1), (x2, y2), ...].
-            buffer_size (int, optional): The radial buffer size in meters around the coordinates. Defaults to 1.
-            reducer_type (str, optional): The reducer type to use. Defaults to 'mean'. Options are 'mean', 'median', 'min', and 'max'.
-            scale (int, optional): The scale (pixel size) to use in meters. Defaults to 10.
-            tileScale (int, optional): The tile scale to use. Defaults to 1.
-            coordinate_names (list, optional): A list of strings with the names of the coordinates. Defaults to None.
-            file_path (str, optional): The file path to export the data to. Defaults to None. Ensure ".csv" is NOT included in the file name path.
-            dates (list, optional): A list of dates for which to extract the statistics. Defaults to None.
+            geometries (ee.Geometry, ee.Feature, ee.FeatureCollection, list, or tuple): Input geometries for which to extract statistics. Can be a single ee.Geometry, an ee.Feature, an ee.FeatureCollection, a list of (lon, lat) tuples, or a list of ee.Geometry objects. Be careful to NOT provide coordinates as (lat, lon)!
+            reducer_type (str, optional): The ee.Reducer to use, e.g., 'mean', 'median', 'max', 'sum'. Defaults to 'mean'. Any ee.Reducer method can be used.
+            scale (int, optional): Pixel scale in meters for the reduction. Defaults to 10.
+            geometry_names (list, optional): A list of string names for the geometries. If provided, must match the number of geometries. Defaults to None.
+            buffer_size (int, optional): Radial buffer in meters around coordinates. Defaults to 1.
+            tileScale (int, optional): A scaling factor to reduce aggregation tile size. Defaults to 1.
+            dates (list, optional): A list of date strings ('YYYY-MM-DD') for filtering the collection, such that only images from these dates are included for zonal statistic retrieval. Defaults to None, which uses all dates in the collection.
+            file_path (str, optional): File path to save the output CSV.
 
         Returns:
-            pd.DataFrame: A pandas DataFrame with the statistics for each coordinate and date, each row corresponds to a date and each column to a coordinate.
-            .csv file: Optionally exports the data to a table in .csv format. If file_path is None, the function returns the DataFrame - otherwise the function will only export the csv file.
+            pd.DataFrame or None: A pandas DataFrame with dates as the index and coordinate names
+                                  as columns. Returns None if using 'iterative' mode with file_path.
+        
+        Raises:
+            ValueError: If input parameters are invalid.
+            TypeError: If geometries input type is unsupported.
         """
-        img_collection = self
-        # Create empty DataFrame to accumulate results
-        accumulated_df = pd.DataFrame()
-        # Check if dates is None, if not use the dates provided
-        if dates is None:
-            dates = img_collection.dates
-        else:
-            dates = dates
-        # Iterate over the dates and extract the zonal statistics for each date
-        for date in dates:
-            image = img_collection.collection.filter(
-                ee.Filter.eq("Date_Filter", date)
-            ).first()
-            single_df = Sentinel2Collection.extract_zonal_stats_from_buffer(
-                image,
-                coordinates,
-                buffer_size=buffer_size,
-                reducer_type=reducer_type,
-                scale=scale,
-                tileScale=tileScale,
-                coordinate_names=coordinate_names,
+        img_collection_obj = self
+        # Filter collection by dates if provided
+        if dates:
+            img_collection_obj = Sentinel2Collection(
+                collection=self.collection.filter(ee.Filter.inList('Date_Filter', dates))
             )
-            single_df["Date"] = date
-            single_df.set_index("Date", inplace=True)
-            accumulated_df = pd.concat([accumulated_df, single_df])
-        # Return the DataFrame or export the data to a .csv file
-        if file_path is None:
-            return accumulated_df
+
+        # Initialize variables
+        features = None
+        validated_coordinates = [] 
+        
+        # Function to standardize feature names if no names are provided
+        def set_standard_name(feature):
+            has_geo_name = feature.get('geo_name')
+            has_name = feature.get('name')
+            has_index = feature.get('system:index')
+            new_name = ee.Algorithms.If(
+                has_geo_name, has_geo_name,
+                ee.Algorithms.If(has_name, has_name,
+                ee.Algorithms.If(has_index, has_index, 'unnamed_geometry')))
+            return feature.set({'geo_name': new_name})
+
+        if isinstance(geometries, (ee.FeatureCollection, ee.Feature)):
+            features = ee.FeatureCollection(geometries)
+            if geometry_names:
+                 print("Warning: 'geometry_names' are ignored when the input is an ee.Feature or ee.FeatureCollection.")
+
+        elif isinstance(geometries, ee.Geometry):
+             name = geometry_names[0] if (geometry_names and geometry_names[0]) else 'unnamed_geometry'
+             features = ee.FeatureCollection([ee.Feature(geometries).set('geo_name', name)])
+
+        elif isinstance(geometries, list):
+            if not geometries: # Handle empty list case
+                raise ValueError("'geometries' list cannot be empty.")
+            
+            # Case: List of coordinates
+            if all(isinstance(i, tuple) for i in geometries):
+                validated_coordinates = geometries
+                if geometry_names is None:
+                    geometry_names = [f"Location_{i+1}" for i in range(len(validated_coordinates))]
+                elif len(geometry_names) != len(validated_coordinates):
+                     raise ValueError("geometry_names must have the same length as the coordinates list.")
+                points = [
+                    ee.Feature(ee.Geometry.Point(coord).buffer(buffer_size), {'geo_name': str(name)})
+                    for coord, name in zip(validated_coordinates, geometry_names)
+                ]
+                features = ee.FeatureCollection(points)
+            
+            # Case: List of Geometries
+            elif all(isinstance(i, ee.Geometry) for i in geometries):
+                if geometry_names is None:
+                    geometry_names = [f"Geometry_{i+1}" for i in range(len(geometries))]
+                elif len(geometry_names) != len(geometries):
+                     raise ValueError("geometry_names must have the same length as the geometries list.")
+                geom_features = [
+                    ee.Feature(geom).set({'geo_name': str(name)})
+                    for geom, name in zip(geometries, geometry_names)
+                ]
+                features = ee.FeatureCollection(geom_features)
+            
+            else:
+                raise TypeError("Input list must be a list of (lon, lat) tuples OR a list of ee.Geometry objects.")
+
+        elif isinstance(geometries, tuple) and len(geometries) == 2:
+            name = geometry_names[0] if geometry_names else 'Location_1'
+            features = ee.FeatureCollection([
+                ee.Feature(ee.Geometry.Point(geometries).buffer(buffer_size), {'geo_name': name})
+            ])
         else:
-            return accumulated_df.to_csv(f"{file_path}.csv")
+            raise TypeError("Unsupported type for 'geometries'.")
+        
+        features = features.map(set_standard_name)
+
+        try:
+            reducer = getattr(ee.Reducer, reducer_type)()
+        except AttributeError:
+            raise ValueError(f"Unknown reducer_type: '{reducer_type}'.")
+
+        def calculate_stats_for_image(image):
+            image_date = image.get('Date_Filter')
+            stats_fc = image.reduceRegions(
+                collection=features, reducer=reducer, scale=scale, tileScale=tileScale
+            )
+            return stats_fc.map(lambda f: f.set('image_date', image_date))
+
+        results_fc = ee.FeatureCollection(img_collection_obj.collection.map(calculate_stats_for_image)).flatten()
+        df = Sentinel2Collection.ee_to_df(results_fc, remove_geom=True)
+
+        # Checking for issues
+        if df.empty: 
+            print("No results found for the given parameters. Check if the geometries intersect with the images, if the dates filter is too restrictive, or if the provided bands are empty.")
+            return df
+        if reducer_type not in df.columns:
+            print(f"Warning: Reducer '{reducer_type}' not found in results.")
+            return df
+
+        # Reshape DataFrame to have dates as index and geometry names as columns
+        pivot_df = df.pivot(index='image_date', columns='geo_name', values=reducer_type)
+        pivot_df.index.name = 'Date'
+        if file_path:
+            # Check if file_path ends with .csv and remove it if so for consistency
+            if file_path.endswith('.csv'):
+                file_path = file_path[:-4]
+            pivot_df.to_csv(f"{file_path}.csv")
+            print(f"Zonal stats saved to {file_path}.csv")
+            return
+        return pivot_df

@@ -7,7 +7,7 @@ Although similar toolset packages exist, RadGEEToolbox offers differing function
 
 The most commonly used remote sensing data management and image processing workflows are built-in to RadGEEToolbox, so you can more easily get to your goal: an informative dataset, stored in a friendly format. 
 
-RadGEEToolbox is about **quality-of-life** for everday Google Earth Engine users. Every function is very useful for everday tasks not otherwise readily achievable using the GEE API alone. 
+RadGEEToolbox is about **quality-of-life** and **comprehensive features** for everyday Google Earth Engine users. Each function is very useful for common tasks not otherwise readily achievable using the GEE API alone. 
 
 
 **Table 1.** Comparison of functionality between RadGEEToolbox, eemont, and geetools packages.
@@ -30,6 +30,10 @@ RadGEEToolbox is about **quality-of-life** for everday Google Earth Engine users
 | **Reflectance Scaling**                            | **YES**           | **YES**    | **YES**      |
 +----------------------------------------------------+-------------------+------------+--------------+
 | **Land Surface Temperature Calculation (Landsat)** | **YES**           | NO         | NO           |
++----------------------------------------------------+-------------------+------------+--------------+
+| **Narrowband to Broadband Albedo Calculation**     | **YES**           | NO         | NO           |
++----------------------------------------------------+-------------------+------------+--------------+
+| **Built-in Spectral Index Calculations**           | **YES**           | NO         | NO           |
 +----------------------------------------------------+-------------------+------------+--------------+
 | **Image Selection by Date or Index**               | **YES**           | **YES**    | NO           |
 +----------------------------------------------------+-------------------+------------+--------------+
@@ -54,10 +58,13 @@ Data Management
 - Retrieve **dates** of images
 - Mask image collection inside a geometry/polygon
 - Mask image collection outside a geometry/polygon
+- Mask images based on pixel values
+- Convert singleband images to **binary masks** based on pixel values
 - **Mosaic image collections** that share dates of observation and copy all image properties from the collection of choice
 - **Mosaic images that share the same date** from a single image collection
 - **Select an image from an image collection** using a positional index or date string
 - Scale Landsat and Sentinel-2 DN pixel values to **reflectance** (surface reflectance)
+- Merge multiple singleband or multiband collections into a single collection
 - Access a variety of useful **color palettes** for image visualization
 - Define **visualization** parameter dictionaries easily
 
@@ -67,7 +74,24 @@ Multispectral Image Processing
 - **Mask clouds** in image collections
 - **Mask water** in image collections via two methods
 - Mask to water in image collections via two methods
-- Calculate a variety of **spectral index products**: NDWI, NDVI, LST (Celsius), NDTI (turbidity), relative chlorophyll-a concentrations, halite index (see Radwin & Bowen, 2021), and gypsum index (modified from Radwin & Bowen, 2021)
+- Calculate any of the following **spectral index products**: 
+
+    - Normalized Difference Water Index (NDWI)
+    - Modified Normalized Difference Water Index (MNDWI)
+    - Normalized Difference Vegetation Index (NDVI)
+    - Enhanced Vegetation Index (EVI)
+    - Soil Adjusted Vegetation Index (SAVI)
+    - Modified Soil Adjusted Vegetation Index (MSAVI)
+    - Normalized Difference Moisture Index (NDMI)
+    - Normalized Difference Turbidity Index (NDTI)
+    - Chlorophyll-a Index (different for Landsat vs Sentinel-2)
+    - Normalized Burn Ratio (NBR)
+    - Normalized Difference Snow Index (NDSI)
+    - Land Surface Temperature (LST) in Celsius (Landsat only)
+    - Halite Index (Radwin & Bowen, 2021)
+    - Gypsum Index (modified from Radwin & Bowen, 2021)
+    - Broadband Albedo
+
 - Binary mask images based on a **threshold** of a spectral index, providing methods for retaining pixel values of classified pixels or setting them to a pixel value of 1.
 
 SAR Image Processing
@@ -85,6 +109,7 @@ Spatial / Zonal Statistic Extraction (Time Series Analysis)
 - Calculate geodesically corrected surface area from NDWI (water) pixels using **dynamic thresholding** (Otsu method)
 - **Extract singleband pixel values along a transect** (or multiple transects) for every image in a collection, with options to save to CSV (data organized by image date)
 - **Extract regionally reduced statistics** (mean, median, etc.) within a circular buffer for one or more coordinates for every image in a collection, with options to change buffer size, save as CSV, and more (data organized by image date)
+- Easily export spatiotemporal statistics to pandas DataFrame or CSV
 
 Temporal Reductions
 -------------------

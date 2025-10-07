@@ -76,7 +76,7 @@ To see the code used to display this image, please view `this Example Notebook <
     )
 
     print('List of square meters of water in images:',
-          calculate_water_area.aggregate_array('ndwi').getInfo())
+          calculate_water_area.ExportProperties('ndwi'))
 
 .. image:: _static/LakePowellPlot.png
    :alt: Water area plotted results
