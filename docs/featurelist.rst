@@ -33,7 +33,7 @@ RadGEEToolbox is about **quality-of-life** and **comprehensive features** for ev
 +----------------------------------------------------+-------------------+------------+--------------+
 | **Narrowband to Broadband Albedo Calculation**     | **YES**           | NO         | NO           |
 +----------------------------------------------------+-------------------+------------+--------------+
-| **Built-in Spectral Index Calculations**           | **YES**           | NO         | NO           |
+| **Built-in Spectral Index Calculations**           | **YES**           | **YES**    | **YES**      |
 +----------------------------------------------------+-------------------+------------+--------------+
 | **Image Selection by Date or Index**               | **YES**           | **YES**    | NO           |
 +----------------------------------------------------+-------------------+------------+--------------+

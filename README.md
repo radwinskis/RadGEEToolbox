@@ -25,6 +25,8 @@ Although similar packages exist (eemont, geetools, etc.), `RadGEEToolbox` extend
 | **Transect Time-series Extraction** | **YES** | NO | NO |
 | **Comprehensive Preprocessing Operations** | **YES** | **YES** | **YES** |
 | **Reflectance Scaling (DN to ρ)** | **YES** | **YES** | **YES** |
+| **Narrowband to Broadband Albedo Calculation** | **YES** | NO | NO |
+| **Built-in Spectral Index Calculations** | **YES** | **YES** | **YES** |
 | **Land Surface Temperature Calculation (Landsat)** | **YES** | NO | NO |
 | **Image Selection by Date or Index** | **YES** | **YES** | NO |
 | **Visualization Presets/Tools** | **YES** | NO | NO |
@@ -98,11 +100,32 @@ _________
 
 - Modular tools for processing **Landsat, Sentinel-1 SAR, and Sentinel-2** imagery
 - Efficient filtering, masking, and mosaicking of Earth Engine image collections
-- Built-in support for computing **spectral indices** (NDWI, NDVI, LST, turbidity, chlorophyll, etc.)
+- Built-in support for computing **spectral indices** (see below for complete list)
 - SAR utilities for **multilooking**, **speckle filtering**, and **backscatter conversion**
-- Automated extraction of **transect and zonal statistics** across image collections
+- Automated and flexible extraction of **transect and zonal statistics** across image collections
 - Easy conversion between RadGEEToolbox and standard Earth Engine objects
-- Server-side–friendly workflows and caching for faster, scalable processing
+- Server-side–friendly workflows and caching for **faster, scalable** processing
+
+**List of all spectral index calculations available for 
+Landsat (TM & OLI) and Sentinel-2 (MSI) imagery:**
+
+- Normalized Difference Water Index (NDWI)
+- Modified Normalized Difference Water Index (MNDWI)
+- Normalized Difference Vegetation Index (NDVI)
+- Enhanced Vegetation Index (EVI)
+- Soil Adjusted Vegetation Index (SAVI)
+- Modified Soil Adjusted Vegetation Index (MSAVI)
+- Normalized Difference Moisture Index (NDMI)
+- Normalized Difference Turbidity Index (NDTI)
+- Chlorophyll-a Index (different for Landsat vs Sentinel-2)
+- Normalized Burn Ratio (NBR)
+- Normalized Difference Snow Index (NDSI)
+- Land Surface Temperature (LST) in Celsius (Landsat only)
+- Halite Index (Radwin & Bowen, 2021)
+- Gypsum Index (modified from Radwin & Bowen, 2021)
+- Broadband Albedo 
+
+
 
 Features of `RadGEEToolbox` will be expanded in the future - if there is something you would like to see implemented in `RadGEEToolbox`, please open an issue or discussion on GitHub.
 
@@ -249,7 +272,7 @@ calculate_water_area = cloud_masked_NDWI_collection.PixelAreaSumCollection(
       threshold=0, #binary classification threshold for unclassified rasters,
       scale=90 #pixel size for zonal statistics
       )
-water_area_time_series = calculate_water_area.aggregate_array('ndwi').getInfo()
+water_area_time_series = calculate_water_area.ExtractProperties('ndwi')
 print('List of square meters of water in images:', water_area_time_series)
 ```
 
