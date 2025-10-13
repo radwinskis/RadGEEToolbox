@@ -4,7 +4,7 @@ import numpy as np
 
 
 # ---- Reflectance scaling for Sentinel-2 L2A (HARMONIZED) ----
-_S2_SR_BANDS = ["B1","B2","B3","B4","B5","B6","B7","B8","B8A","B9","B10","B11","B12"]
+_S2_SR_BANDS = ["B1","B2","B3","B4","B5","B6","B7","B8","B8A","B9","B11","B12"]
 _S2_SCALE = 0.0001  # offset 0.0
 
 def _scale_s2_sr(img):
@@ -2497,18 +2497,33 @@ class Sentinel2Collection:
             stats_fc = image.reduceRegions(
                 collection=features, reducer=reducer, scale=scale, tileScale=tileScale
             )
-            return stats_fc.map(lambda f: f.set('image_date', image_date))
+
+            def guarantee_reducer_property(f):
+                has_property = f.propertyNames().contains(reducer_type)
+                return ee.Algorithms.If(has_property, f, f.set(reducer_type, -9999))
+            fixed_stats_fc = stats_fc.map(guarantee_reducer_property)
+
+            return fixed_stats_fc.map(lambda f: f.set('image_date', image_date))
 
         results_fc = ee.FeatureCollection(img_collection_obj.collection.map(calculate_stats_for_image)).flatten()
         df = Sentinel2Collection.ee_to_df(results_fc, remove_geom=True)
 
         # Checking for issues
         if df.empty: 
-            print("No results found for the given parameters. Check if the geometries intersect with the images, if the dates filter is too restrictive, or if the provided bands are empty.")
-            return df
+            # print("No results found for the given parameters. Check if the geometries intersect with the images, if the dates filter is too restrictive, or if the provided bands are empty.")
+            # return df
+            raise ValueError("No results found for the given parameters. Check if the geometries intersect with the images, if the dates filter is too restrictive, or if the provided bands are empty.")
         if reducer_type not in df.columns:
             print(f"Warning: Reducer '{reducer_type}' not found in results.")
-            return df
+            # return df
+
+        # Get the number of rows before dropping nulls for a helpful message
+        initial_rows = len(df)
+        df.dropna(subset=[reducer_type], inplace=True)
+        df = df[df[reducer_type] != -9999]
+        dropped_rows = initial_rows - len(df)
+        if dropped_rows > 0:
+            print(f"Warning: Discarded {dropped_rows} results due to failed reductions (e.g., no valid pixels in geometry).")
 
         # Reshape DataFrame to have dates as index and geometry names as columns
         pivot_df = df.pivot(index='image_date', columns='geo_name', values=reducer_type)

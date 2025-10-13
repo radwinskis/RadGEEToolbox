@@ -2879,6 +2879,7 @@ class LandsatCollection:
     def iterate_zonal_stats(
         self,
         geometries,
+        band=None,
         reducer_type="mean",
         scale=30,
         geometry_names=None,
@@ -2894,6 +2895,7 @@ class LandsatCollection:
 
         Args:
             geometries (ee.Geometry, ee.Feature, ee.FeatureCollection, list, or tuple): Input geometries for which to extract statistics. Can be a single ee.Geometry, an ee.Feature, an ee.FeatureCollection, a list of (lon, lat) tuples, or a list of ee.Geometry objects. Be careful to NOT provide coordinates as (lat, lon)!
+            band (str, optional): The name of the band to use for statistics. If None, the first band is used. Defaults to None.
             reducer_type (str, optional): The ee.Reducer to use, e.g., 'mean', 'median', 'max', 'sum'. Defaults to 'mean'. Any ee.Reducer method can be used.
             scale (int, optional): Pixel scale in meters for the reduction. Defaults to 30.
             geometry_names (list, optional): A list of string names for the geometries. If provided, must match the number of geometries. Defaults to None.
@@ -2911,6 +2913,12 @@ class LandsatCollection:
             TypeError: If geometries input type is unsupported.
         """
         img_collection_obj = self
+        if band:
+            img_collection_obj = LandsatCollection(collection=img_collection_obj.collection.select(band))
+        else: 
+            first_image = img_collection_obj.image_grab(0)
+            first_band = first_image.bandNames().get(0)
+            img_collection_obj = LandsatCollection(collection=img_collection_obj.collection.select([first_band]))
         # Filter collection by dates if provided
         if dates:
             img_collection_obj = LandsatCollection(
@@ -2993,18 +3001,33 @@ class LandsatCollection:
             stats_fc = image.reduceRegions(
                 collection=features, reducer=reducer, scale=scale, tileScale=tileScale
             )
-            return stats_fc.map(lambda f: f.set('image_date', image_date))
+
+            def guarantee_reducer_property(f):
+                has_property = f.propertyNames().contains(reducer_type)
+                return ee.Algorithms.If(has_property, f, f.set(reducer_type, -9999))
+            fixed_stats_fc = stats_fc.map(guarantee_reducer_property)
+
+            return fixed_stats_fc.map(lambda f: f.set('image_date', image_date))
 
         results_fc = ee.FeatureCollection(img_collection_obj.collection.map(calculate_stats_for_image)).flatten()
         df = LandsatCollection.ee_to_df(results_fc, remove_geom=True)
 
         # Checking for issues
         if df.empty: 
-            print("No results found for the given parameters. Check if the geometries intersect with the images, if the dates filter is too restrictive, or if the provided bands are empty.")
-            return df
+            # print("No results found for the given parameters. Check if the geometries intersect with the images, if the dates filter is too restrictive, or if the provided bands are empty.")
+            # return df
+            raise ValueError("No results found for the given parameters. Check if the geometries intersect with the images, if the dates filter is too restrictive, or if the provided bands are empty.")
         if reducer_type not in df.columns:
             print(f"Warning: Reducer '{reducer_type}' not found in results.")
-            return df
+            # return df
+
+        # Get the number of rows before dropping nulls for a helpful message
+        initial_rows = len(df)
+        df.dropna(subset=[reducer_type], inplace=True)
+        df = df[df[reducer_type] != -9999]
+        dropped_rows = initial_rows - len(df)
+        if dropped_rows > 0:
+            print(f"Warning: Discarded {dropped_rows} results due to failed reductions (e.g., no valid pixels in geometry).")
 
         # Reshape DataFrame to have dates as index and geometry names as columns
         pivot_df = df.pivot(index='image_date', columns='geo_name', values=reducer_type)
