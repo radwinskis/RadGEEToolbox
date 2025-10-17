@@ -161,9 +161,11 @@ class Sentinel2Collection:
         self._geometry_masked_collection = None
         self._geometry_masked_out_collection = None
         self._masked_clouds_collection = None
+        self._masked_shadows_collection = None
         self._masked_to_water_collection = None
         self._masked_water_collection = None
         self._median = None
+        self._monthly_median = None
         self._mean = None
         self._max = None
         self._min = None
@@ -478,11 +480,64 @@ class Sentinel2Collection:
         nbr_calc = image.expression(nbr_expression)
         nbr = nbr_calc.updateMask(nbr_calc.gte(threshold)).rename("nbr").copyProperties(image).set("threshold", threshold)
         return nbr
+    
+    @staticmethod
+    def anomaly_fn(image, geometry, band_name=None, anomaly_band_name=None, replace=True):
+        """
+        Calculates the anomaly of a singleband image compared to the mean of the singleband image.
+
+        This function computes the anomaly for each band in the input image by
+        subtracting the mean value of that band from a provided image.
+        The anomaly is a measure of how much the pixel values deviate from the
+        average conditions represented by the mean of the image.
+
+        Args:
+            image (ee.Image): An ee.Image for which the anomaly is to be calculated.
+                It is assumed that this image is a singleband image.
+            geometry (ee.Geometry): The geometry for image reduction to define the mean value to be used for anomaly calculation.
+            band_name (str, optional): A string representing the band name to be used for the output anomaly image. If not provided, the band name of the first band of the input image will be used.
+            anomaly_band_name (str, optional): A string representing the band name to be used for the output anomaly image. If not provided, the band name of the first band of the input image will be used.
+            replace (bool, optional): A boolean indicating whether to replace the original band with the anomaly band in the output image. If True, the output image will contain only the anomaly band. If False, the output image will contain both the original band and the anomaly band. Default is True.
+
+        Returns:
+            ee.Image: An ee.Image where each band represents the anomaly (deviation from
+                        the mean) for that band. The output image retains the same band name.
+        """
+        if band_name:
+            band_name = band_name
+        else:
+            band_name = ee.String(image.bandNames().get(0))
+
+        image_to_process = image.select([band_name])
+
+        # Calculate the mean image of the provided collection.
+        mean_image = image_to_process.reduceRegion(
+            reducer=ee.Reducer.mean(),
+            geometry=geometry,
+            scale=10,
+            maxPixels=1e13
+        ).toImage()
+
+        # Compute the anomaly by subtracting the mean image from the input image.
+        anomaly_image = image_to_process.subtract(mean_image)
+        if anomaly_band_name is None:
+            if band_name:
+                anomaly_image = anomaly_image.rename(band_name) 
+            else:
+                # Preserve original properties from the input image.
+                anomaly_image = anomaly_image.rename(ee.String(image.bandNames().get(0))) 
+        else:
+            anomaly_image = anomaly_image.rename(anomaly_band_name) 
+        # return anomaly_image
+        if replace:
+            return anomaly_image.copyProperties(image)
+        else:
+            return image.addBands(anomaly_image, overwrite=True)
 
     @staticmethod
     def MaskCloudsS2(image):
         """
-        Function to map clouds using SCL band data.
+        Function to mask clouds using SCL band data.
 
         Args:
             image (ee.Image): input image
@@ -493,6 +548,21 @@ class Sentinel2Collection:
         SCL = image.select("SCL")
         CloudMask = SCL.neq(9)
         return image.updateMask(CloudMask).copyProperties(image)
+    
+    @staticmethod
+    def MaskShadowsS2(image):
+        """
+        Function to mask cloud shadows using SCL band data.
+
+        Args:
+            image (ee.Image): input image
+
+        Returns:
+            ee.Image: output ee.Image with cloud shadows masked
+        """
+        SCL = image.select("SCL")
+        ShadowMask = SCL.neq(3)
+        return image.updateMask(ShadowMask).copyProperties(image)
 
     @staticmethod
     def MaskWaterS2(image):
@@ -582,6 +652,70 @@ class Sentinel2Collection:
             .copyProperties(image)
         )
         return mask
+    
+    @staticmethod
+    def mask_via_band_fn(image, band_to_mask, band_for_mask, threshold, mask_above=False, add_band_to_original_image=False):
+        """
+        Masks pixels of interest from a specified band of a target image, based on a specified reference band and threshold.
+        Designed for single image input which contains both the target and reference band.
+        Example use case is masking vegetation from image when targeting land pixels. Can specify whether to mask pixels above or below the threshold.
+
+        Args:
+            image (ee.Image): input ee.Image
+            band_to_mask (str): name of the band which will be masked (target image)
+            band_for_mask (str): name of the band to use for the mask (band you want to remove/mask from target image)
+            threshold (float): value where pixels less or more than threshold (depending on `mask_above` argument) will be masked
+            mask_above (bool): if True, masks pixels above the threshold; if False, masks pixels below the threshold
+
+        Returns:
+            ee.Image: masked ee.Image
+        """
+    
+        band_to_mask_image = image.select(band_to_mask)
+        band_for_mask_image = image.select(band_for_mask)
+ 
+        mask = band_for_mask_image.lte(threshold) if mask_above else band_for_mask_image.gte(threshold)
+
+        if add_band_to_original_image:
+            return image.addBands(band_to_mask_image.updateMask(mask).rename(band_to_mask), overwrite=True)
+        else:
+            return ee.Image(band_to_mask_image.updateMask(mask).rename(band_to_mask).copyProperties(image))
+    
+    @staticmethod
+    def mask_via_singleband_image_fn(image_to_mask, image_for_mask, threshold, band_name_to_mask=None, band_name_for_mask=None, mask_above=True):
+        """
+        Masks pixels of interest from a specified band of a target image, based on a specified reference band and threshold.
+        Designed for the case where the target and reference bands are in separate images.
+        Example use case is masking vegetation from image when targeting land pixels. Can specify whether to mask pixels above or below the threshold.
+
+        Args:
+            image_to_mask (ee.Image): image which will be masked (target image). If multiband, only the first band will be masked.
+            image_for_mask (ee.Image): image to use for the mask (image you want to remove/mask from target image). If multiband, only the first band will be used for the masked.
+            threshold (float): value where pixels less or more than threshold (depending on `mask_above` argument) will be masked
+            band_name_to_mask (str, optional): name of the band in image_to_mask to be masked. If None, the first band will be used.
+            band_name_for_mask (str, optional): name of the band in image_for_mask to be used for masking. If None, the first band will be used.
+            mask_above (bool): if True, masks pixels above the threshold; if False, masks pixels below the threshold.
+
+        Returns:
+            ee.Image: masked ee.Image
+        """
+        if band_name_to_mask is None:
+            band_to_mask = ee.String(image_to_mask.bandNames().get(0))
+        else:
+            band_to_mask = ee.String(band_name_to_mask)
+
+        if band_name_for_mask is None:
+            band_for_mask = ee.String(image_for_mask.bandNames().get(0))
+        else:
+            band_for_mask = ee.String(band_name_for_mask)
+
+        band_to_mask_image = image_to_mask.select(band_to_mask)
+        band_for_mask_image = image_for_mask.select(band_for_mask)
+        if mask_above:
+            mask = band_for_mask_image.gt(threshold)
+        else:
+            mask = band_for_mask_image.lt(threshold)
+        return band_to_mask_image.updateMask(mask).rename(band_to_mask).copyProperties(image_to_mask)
 
     @staticmethod
     def MaskToWaterS2ByNDWI(image, threshold):
@@ -713,12 +847,12 @@ class Sentinel2Collection:
         else:
             raise ValueError("output_type must be 'ImageCollection' or 'Sentinel2Collection'")
 
-    def merge(self, other):
+    def combine(self, other):
         """
-        Merges the current Sentinel2Collection with another Sentinel2Collection, where images/bands with the same date are combined to a single multiband image.
+        Combines the current Sentinel2Collection with another Sentinel2Collection, using the `combine` method.
 
         Args:
-            other (Sentinel2Collection): Another Sentinel2Collection to merge with current collection.
+            other (Sentinel2Collection): Another Sentinel2Collection to combine with current collection.
 
         Returns:
             Sentinel2Collection: A new Sentinel2Collection containing images from both collections.
@@ -726,10 +860,76 @@ class Sentinel2Collection:
         # Checking if 'other' is an instance of Sentinel2Collection
         if not isinstance(other, Sentinel2Collection):
             raise ValueError("The 'other' parameter must be an instance of Sentinel2Collection.")
-        
+
         # Merging the collections using the .combine() method
         merged_collection = self.collection.combine(other.collection)
         return Sentinel2Collection(collection=merged_collection)
+
+    def merge(self, collections=None, multiband_collection=None, date_key='Date_Filter'):
+        """
+        Merge many singleband Sentinel2Collection products into the parent collection, 
+        or merge a single multiband collection with parent collection,
+        pairing images by exact Date_Filter and returning one multiband image per date.
+
+        NOTE: if you want to merge two multiband collections, use the `combine` method instead.
+
+        Args:
+            collections (list): List of singleband collections to merge with parent collection, effectively adds one band per collection to each image in parent
+            multiband_collection (Sentinel2Collection, optional): A multiband collection to merge with parent. Specifying a collection here will override `collections`.
+            date_key (str): image property key for exact pairing (default 'Date_Filter')
+
+        Returns:
+            Sentinel2Collection: parent with extra single bands attached (one image per date)
+        """
+
+        if collections is None and multiband_collection is not None:
+            # Exact-date inner-join merge of two collections (adds ALL bands from 'other').
+            join = ee.Join.inner()
+            flt  = ee.Filter.equals(leftField=date_key, rightField=date_key)
+            paired = join.apply(self.collection, multiband_collection.collection, flt)
+
+            def _pair_two(f):
+                f = ee.Feature(f)
+                a = ee.Image(f.get('primary'))
+                b = ee.Image(f.get('secondary'))
+                # Overwrite on name collision
+                merged = a.addBands(b, None, True)
+                # Keep parent props + date key
+                merged = merged.copyProperties(a, a.propertyNames())
+                merged = merged.set(date_key, a.get(date_key))
+                return ee.Image(merged)
+
+            return Sentinel2Collection(collection=ee.ImageCollection(paired.map(_pair_two)))
+
+        # Preferred path: merge many singleband products into the parent
+        if not isinstance(collections, list) or len(collections) == 0:
+            raise ValueError("Provide a non-empty list of Sentinel2Collection objects in `collections`.")
+
+        result = self.collection
+        for extra in collections:
+            if not isinstance(extra, Sentinel2Collection):
+                raise ValueError("All items in `collections` must be Sentinel2Collection objects.")
+
+            join = ee.Join.inner()
+            flt  = ee.Filter.equals(leftField=date_key, rightField=date_key)
+            paired = join.apply(result, extra.collection, flt)
+
+            def _attach_one(f):
+                f = ee.Feature(f)
+                parent = ee.Image(f.get('primary'))
+                sb     = ee.Image(f.get('secondary'))
+                # Assume singleband product; grab its first band name server-side
+                bname  = ee.String(sb.bandNames().get(0))
+                # Add the single band; overwrite if the name already exists in parent
+                merged = parent.addBands(sb.select([bname]).rename([bname]), None, True)
+                # Preserve parent props + date key
+                merged = merged.copyProperties(parent, parent.propertyNames())
+                merged = merged.set(date_key, parent.get(date_key))
+                return ee.Image(merged)
+
+            result = ee.ImageCollection(paired.map(_attach_one))
+
+        return Sentinel2Collection(collection=result)
 
     @property
     def dates_list(self):
@@ -935,6 +1135,82 @@ class Sentinel2Collection:
         return self._median
 
     @property
+    def monthly_median_collection(self):
+        """Creates a monthly median composite from a Sentinel2Collection image collection.
+
+        This function computes the median for each
+        month within the collection's date range, for each band in the collection. It automatically handles the full
+        temporal extent of the input collection.
+
+        The resulting images have a 'system:time_start' property set to the
+        first day of each month and an 'image_count' property indicating how
+        many images were used in the composite. Months with no images are
+        automatically excluded from the final collection.
+
+        Returns:
+            Sentinel2Collection: A new Sentinel2Collection object with monthly median composites.
+        """
+        if self._monthly_median is None:
+            collection = self.collection
+            # Get the start and end dates of the entire collection.
+            date_range = collection.reduceColumns(ee.Reducer.minMax(), ["system:time_start"])
+            start_date = ee.Date(date_range.get('min'))
+            end_date = ee.Date(date_range.get('max'))
+
+            # Calculate the total number of months in the date range.
+            # The .round() is important for ensuring we get an integer.
+            num_months = end_date.difference(start_date, 'month').round()
+
+            # Generate a list of starting dates for each month.
+            # This uses a sequence and advances the start date by 'i' months.
+            def get_month_start(i):
+                return start_date.advance(i, 'month')
+            
+            month_starts = ee.List.sequence(0, num_months).map(get_month_start)
+
+            # Define a function to map over the list of month start dates.
+            def create_monthly_composite(date):
+                # Cast the input to an ee.Date object.
+                start_of_month = ee.Date(date)
+                # The end date is exclusive, so we advance by 1 month.
+                end_of_month = start_of_month.advance(1, 'month')
+
+                # Filter the original collection to get images for the current month.
+                monthly_subset = collection.filterDate(start_of_month, end_of_month)
+
+                # Count the number of images in the monthly subset.
+                image_count = monthly_subset.size()
+
+                # Compute the median. This is robust to outliers like clouds.
+                monthly_median = monthly_subset.median()
+
+                # Set essential properties on the resulting composite image.
+                # The timestamp is crucial for time-series analysis and charting.
+                # The image_count is useful metadata for quality assessment.
+                return monthly_median.set({
+                    'system:time_start': start_of_month.millis(),
+                    'month': start_of_month.get('month'),
+                    'year': start_of_month.get('year'),
+                    'Date_Filter': start_of_month.format('YYYY-MM-dd'),
+                    'image_count': image_count
+                })
+
+            # Map the composite function over the list of month start dates.
+            monthly_composites_list = month_starts.map(create_monthly_composite)
+
+            # Convert the list of images into an ee.ImageCollection.
+            monthly_collection = ee.ImageCollection.fromImages(monthly_composites_list)
+
+            # Filter out any composites that were created from zero images.
+            # This prevents empty/masked images from being in the final collection.
+            final_collection = Sentinel2Collection(collection=monthly_collection.filter(ee.Filter.gt('image_count', 0)))
+            self._monthly_median = final_collection
+        else:
+            pass
+
+        return self._monthly_median
+
+    @property
     def mean(self):
         """
         Calculates mean image from image collection. Results are calculated once per class object then cached for future use.
@@ -973,6 +1249,84 @@ class Sentinel2Collection:
             col = self.collection.min()
             self._min = col
         return self._min
+    
+    @property
+    def monthly_median_collection(self):
+        """Creates a monthly median composite from a Sentinel2Collection image collection.
+
+        This function computes the median for each
+        month within the collection's date range, for each band in the collection. It automatically handles the full
+        temporal extent of the input collection.
+
+        The resulting images have a 'system:time_start' property set to the
+        first day of each month and an 'image_count' property indicating how
+        many images were used in the composite. Months with no images are
+        automatically excluded from the final collection.
+
+        NOTE: the day of month for the 'system:time_start' property is set to the earliest date of the first month observed and may not be the first day of the month.
+
+        Returns:
+            Sentinel2Collection: A new Sentinel2Collection object with monthly median composites.
+        """
+        if self._monthly_median is None:
+            collection = self.collection
+            # Get the start and end dates of the entire collection.
+            date_range = collection.reduceColumns(ee.Reducer.minMax(), ["system:time_start"])
+            start_date = ee.Date(date_range.get('min'))
+            end_date = ee.Date(date_range.get('max'))
+
+            # Calculate the total number of months in the date range.
+            # The .round() is important for ensuring we get an integer.
+            num_months = end_date.difference(start_date, 'month').round()
+
+            # Generate a list of starting dates for each month.
+            # This uses a sequence and advances the start date by 'i' months.
+            def get_month_start(i):
+                return start_date.advance(i, 'month')
+            
+            month_starts = ee.List.sequence(0, num_months).map(get_month_start)
+
+            # Define a function to map over the list of month start dates.
+            def create_monthly_composite(date):
+                # Cast the input to an ee.Date object.
+                start_of_month = ee.Date(date)
+                # The end date is exclusive, so we advance by 1 month.
+                end_of_month = start_of_month.advance(1, 'month')
+
+                # Filter the original collection to get images for the current month.
+                monthly_subset = collection.filterDate(start_of_month, end_of_month)
+
+                # Count the number of images in the monthly subset.
+                image_count = monthly_subset.size()
+
+                # Compute the median. This is robust to outliers like clouds.
+                monthly_median = monthly_subset.median()
+
+                # Set essential properties on the resulting composite image.
+                # The timestamp is crucial for time-series analysis and charting.
+                # The image_count is useful metadata for quality assessment.
+                return monthly_median.set({
+                    'system:time_start': start_of_month.millis(),
+                    'month': start_of_month.get('month'),
+                    'year': start_of_month.get('year'),
+                    'Date_Filter': start_of_month.format('YYYY-MM-dd'),
+                    'image_count': image_count
+                })
+
+            # Map the composite function over the list of month start dates.
+            monthly_composites_list = month_starts.map(create_monthly_composite)
+
+            # Convert the list of images into an ee.ImageCollection.
+            monthly_collection = ee.ImageCollection.fromImages(monthly_composites_list)
+
+            # Filter out any composites that were created from zero images.
+            # This prevents empty/masked images from being in the final collection.
+            final_collection = Sentinel2Collection(collection=monthly_collection.filter(ee.Filter.gt('image_count', 0)))
+            self._monthly_median = final_collection
+        else:
+            pass
+
+        return self._monthly_median
 
     @property
     def ndwi(self):
@@ -1327,7 +1681,7 @@ class Sentinel2Collection:
         The calculation is performed only once when the property is first accessed, and the cached result is returned on subsequent accesses.
 
         Returns:
-            LandsatCollection: A LandsatCollection image collection
+            Sentinel2Collection: A Sentinel2Collection image collection
         """
         if self._albedo is None:
             self._albedo = self.albedo_collection(snow_free=True)
@@ -1344,7 +1698,7 @@ class Sentinel2Collection:
             snow_free (bool): If True, applies a snow mask to the albedo calculation. Defaults to True.
 
         Returns:
-            LandsatCollection: A LandsatCollection image collection
+            Sentinel2Collection: A Sentinel2Collection image collection
         """
         first_image = self.collection.first()
         available_bands = first_image.bandNames()
@@ -1581,6 +1935,19 @@ class Sentinel2Collection:
             self._masked_clouds_collection = Sentinel2Collection(collection=col)
         return self._masked_clouds_collection
 
+    @property
+    def masked_shadows_collection(self):
+        """
+        Property attribute to mask shadows and return collection as class object.
+
+        Returns:
+            Sentinel2Collection: Sentinel2Collection image collection
+        """
+        if self._masked_shadows_collection is None:
+            col = self.collection.map(Sentinel2Collection.MaskShadowsS2)
+            self._masked_shadows_collection = Sentinel2Collection(collection=col)
+        return self._masked_shadows_collection
+
     def mask_to_polygon(self, polygon):
         """
         Function to mask Sentinel2Collection image collection by a polygon (ee.Geometry), where pixels outside the polygon are masked out.
@@ -1671,14 +2038,17 @@ class Sentinel2Collection:
         )
         return Sentinel2Collection(collection=col)
     
-    def binary_mask(self, threshold=None, band_name=None):
+    def binary_mask(self, threshold=None, band_name=None, classify_above_threshold=True, mask_zeros=False):
         """
-        Creates a binary mask (value of 1 for pixels above set threshold and value of 0 for all other pixels) of the Sentinel2Collection image collection based on a specified band.
+        Function to create a binary mask (value of 1 for pixels above set threshold and value of 0 for all other pixels) of the Sentinel2Collection image collection based on a specified band.
         If a singleband image is provided, the band name is automatically determined.
         If multiple bands are available, the user must specify the band name to use for masking.
 
         Args:
+            threshold (float, optional): The threshold value for creating the binary mask. Defaults to None.
             band_name (str, optional): The name of the band to use for masking. Defaults to None.
+            classifiy_above_threshold (bool, optional): If True, pixels above the threshold are classified as 1. If False, pixels below the threshold are classified as 1. Defaults to True.
+            mask_zeros (bool, optional): If True, pixels with a value of 0 after the binary mask are masked out in the output binary mask. Useful for classifications. Defaults to False.
 
         Returns:
             Sentinel2Collection: Sentinel2Collection singleband image collection with binary masks applied.
@@ -1697,9 +2067,148 @@ class Sentinel2Collection:
         if threshold is None:
             raise ValueError("Threshold must be specified for binary masking.")
 
+        if classify_above_threshold:
+            if mask_zeros:
+                col = self.collection.map(
+                    lambda image: image.select(band_name).gte(threshold).rename(band_name).updateMask(image.select(band_name).gt(0)).copyProperties(image)
+                )
+            else:
+                col = self.collection.map(
+                    lambda image: image.select(band_name).gte(threshold).rename(band_name).copyProperties(image)
+                )
+        else:
+            if mask_zeros:
+                col = self.collection.map(
+                    lambda image: image.select(band_name).lte(threshold).rename(band_name).updateMask(image.select(band_name).gt(0)).copyProperties(image)
+                )
+            else:
+                col = self.collection.map(
+                    lambda image: image.select(band_name).lte(threshold).rename(band_name).copyProperties(image)
+                )
+        return Sentinel2Collection(collection=col)
+    
+    def anomaly(self, geometry, band_name=None, anomaly_band_name=None, replace=True):
+        """
+        Calculates the anomaly of each image in a collection compared to the mean of each image.
+
+        This function computes the anomaly for each band in the input image by
+        subtracting the mean value of that band from a provided ImageCollection.
+        The anomaly is a measure of how much the pixel values deviate from the
+        average conditions represented by the collection.
+
+        Args:
+            geometry (ee.Geometry): The geometry for image reduction to define the mean value to be used for anomaly calculation.
+            band_name (str, optional): A string representing the band name to be used for the output anomaly image. If not provided, the band name of the first band of the input image will be used.
+            anomaly_band_name (str, optional): A string representing the band name to be used for the output anomaly image. If not provided, the band name of the first band of the input image will be used.
+            replace (bool, optional): A boolean indicating whether to replace the original band with the anomaly band. If True, the output image will only contain the anomaly band. If False, the output image will retain all original bands and add the anomaly band. Default is True.
+
+        Returns:
+            Sentinel2Collection: A Sentinel2Collection where each image represents the anomaly (deviation from
+                        the mean) for the chosen band. The output images retain the same band name.
+        """
+        if self.collection.size().eq(0).getInfo():
+            raise ValueError("The collection is empty.")
+        if band_name is None:
+            first_image = self.collection.first()
+            band_names = first_image.bandNames()
+            if band_names.size().getInfo() == 0:
+                raise ValueError("No bands available in the collection.")
+            elif band_names.size().getInfo() > 1:
+                band_name = band_names.get(0).getInfo()
+                print("Multiple bands available, will be using the first band in the collection for anomaly calculation. Please specify a band name if you wish to use a different band.")
+            else:
+                band_name = band_names.get(0).getInfo()
+
+        col = self.collection.map(lambda image: Sentinel2Collection.anomaly_fn(image, geometry=geometry, band_name=band_name, anomaly_band_name=anomaly_band_name, replace=replace))
+        return Sentinel2Collection(collection=col)
+    
+    def mask_via_band(self, band_to_mask, band_for_mask, threshold=-1, mask_above=True, add_band_to_original_image=False):
+        """
+        Masks select pixels of a selected band from an image based on another specified band and threshold (optional). 
+        Example use case is masking vegetation from image when targeting land pixels. Can specify whether to mask pixels above or below the threshold.
+
+        Args:
+            band_to_mask (str): name of the band which will be masked (target image)
+            band_for_mask (str): name of the band to use for the mask (band you want to remove/mask from target image)
+            threshold (float): value between -1 and 1 where pixels less than threshold will be masked; defaults to -1 assuming input band is already classified (masked to pixels of interest).
+            mask_above (bool): if True, masks pixels above the threshold; if False, masks pixels below the threshold
+
+        Returns:
+            Sentinel2Collection: A new Sentinel2Collection with the specified band masked to pixels excluding from `band_for_mask`.
+        """
+        if self.collection.size().eq(0).getInfo():
+            raise ValueError("The collection is empty.")
+
         col = self.collection.map(
-            lambda image: image.select(band_name).gte(threshold).rename(band_name)
+            lambda image: Sentinel2Collection.mask_via_band_fn(
+                image,
+                band_to_mask=band_to_mask,
+                band_for_mask=band_for_mask,
+                threshold=threshold,
+                mask_above=mask_above,
+                add_band_to_original_image=add_band_to_original_image
+            )
         )
+        return Sentinel2Collection(collection=col)
+
+    def mask_via_singleband_image(self, image_collection_for_mask, band_name_to_mask, band_name_for_mask, threshold=-1, mask_above=False, add_band_to_original_image=False):
+        """
+        Masks select pixels of a selected band from an image collection based on another specified singleband image collection and threshold (optional).
+        Example use case is masking vegetation from image when targeting land pixels. Can specify whether to mask pixels above or below the threshold.
+        This function pairs images from the two collections based on an exact match of the 'Date_Filter' property.
+        
+        Args:
+            image_collection_for_mask (Sentinel2Collection): Sentinel2Collection image collection to use for masking (source of pixels that will be used to mask the parent image collection)
+            band_name_to_mask (str): name of the band which will be masked (target image)
+            band_name_for_mask (str): name of the band to use for the mask (band which contains pixels the user wants to remove/mask from target image)
+            threshold (float): threshold value where pixels less (or more, depending on `mask_above`) than threshold will be masked; defaults to -1.
+            mask_above (bool): if True, masks pixels above the threshold; if False, masks pixels below the threshold
+            add_band_to_original_image (bool): if True, adds the band used for masking to the original image as an additional band; if False, only the masked band is retained in the output image.
+
+        Returns:
+            Sentinel2Collection: A new Sentinel2Collection with the specified band masked to pixels excluding from `band_for_mask`.
+        """
+        
+        if self.collection.size().eq(0).getInfo():
+            raise ValueError("The collection is empty.")
+        if not isinstance(image_collection_for_mask, Sentinel2Collection):
+            raise ValueError("image_collection_for_mask must be a Sentinel2Collection object.")
+        size1 = self.collection.size().getInfo()
+        size2 = image_collection_for_mask.collection.size().getInfo()
+        if size1 != size2:
+            raise ValueError(f"Warning: Collections have different sizes ({size1} vs {size2}). Please ensure both collections have the same number of images and matching dates.")
+        if size1 == 0 or size2 == 0:
+            raise ValueError("Warning: One of the input collections is empty.")
+
+        # Pair by exact Date_Filter property
+        primary   = self.collection.select([band_name_to_mask])
+        secondary = image_collection_for_mask.collection.select([band_name_for_mask])
+        join = ee.Join.inner()
+        flt  = ee.Filter.equals(leftField='Date_Filter', rightField='Date_Filter')
+        paired = join.apply(primary, secondary, flt)
+
+        def _map_pair(f):
+            f = ee.Feature(f)                     # <-- treat as Feature
+            prim = ee.Image(f.get('primary'))     # <-- get the primary Image
+            sec  = ee.Image(f.get('secondary'))   # <-- get the secondary Image
+
+            merged = prim.addBands(sec.select([band_name_for_mask]))
+
+            out = Sentinel2Collection.mask_via_band_fn(
+                merged,
+                band_to_mask=band_name_to_mask,
+                band_for_mask=band_name_for_mask,
+                threshold=threshold,
+                mask_above=mask_above,
+                add_band_to_original_image=add_band_to_original_image
+            )
+
+            # guarantee single band + keep properties
+            out = ee.Image(out).select([band_name_to_mask]).copyProperties(prim, prim.propertyNames())
+            out = out.set('Date_Filter', prim.get('Date_Filter'))
+            return ee.Image(out)                  # <-- return as Image
+
+        col = ee.ImageCollection(paired.map(_map_pair))
         return Sentinel2Collection(collection=col)
 
     def image_grab(self, img_selector):
@@ -2536,3 +3045,59 @@ class Sentinel2Collection:
             print(f"Zonal stats saved to {file_path}.csv")
             return
         return pivot_df
+
+    def export_to_asset_collection(
+        self,
+        asset_collection_path,
+        region,
+        scale,
+        dates=None,
+        filename_prefix="",
+        crs=None,
+        max_pixels=int(1e13),
+        description_prefix="export"
+    ):
+        """
+        Exports an image collection to a Google Earth Engine asset collection. The asset collection will be created if it does not already exist, 
+        and each image exported will be named according to the provided filename prefix and date.
+
+        Args:
+            asset_collection_path (str): The path to the asset collection.
+            region (ee.Geometry): The region to export.
+            scale (int): The scale of the export.
+            dates (list, optional): The dates to export. Defaults to None.
+            filename_prefix (str, optional): The filename prefix. Defaults to "", i.e. blank.
+            crs (str, optional): The coordinate reference system. Defaults to None, which will use the image's CRS.
+            max_pixels (int, optional): The maximum number of pixels. Defaults to int(1e13).
+            description_prefix (str, optional): The description prefix. Defaults to "export".
+
+        Returns:
+            None: (queues export tasks)
+        """
+        ic = self.collection
+        if dates is None:
+            dates = self.dates
+        try:
+            ee.data.createAsset({'type': 'ImageCollection'}, asset_collection_path)
+        except Exception:
+            pass
+
+        for date_str in dates:
+            img = ee.Image(ic.filter(ee.Filter.eq('Date_Filter', date_str)).first())
+            asset_id = asset_collection_path + "/" + filename_prefix + date_str
+            desc = description_prefix + "_" + filename_prefix + date_str
+
+            params = {
+                'image': img,
+                'description': desc,
+                'assetId': asset_id,
+                'region': region,
+                'scale': scale,
+                'maxPixels': max_pixels
+            }
+            if crs:
+                params['crs'] = crs
+
+            ee.batch.Export.image.toAsset(**params).start()
+
+        print("Queued", len(dates), "export tasks to", asset_collection_path)

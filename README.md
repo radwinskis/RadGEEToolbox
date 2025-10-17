@@ -8,7 +8,7 @@
 
 ### [See documentation here](https://radgeetoolbox.readthedocs.io/en/latest/)
 
-**RadGEEToolbox** is an open-source Python package that simplifies the processing and analysis of satellite imagery using the Google Earth Engine Python API. It provides ready-to-use tools for filtering, masking, mosaicking, spectral index calculations, and extracting statistics from multispectral (Landsat, Sentinel-2) and SAR (Sentinel-1) datasets.
+**RadGEEToolbox** is an open-source Python package that **simplifies the processing and analysis of satellite imagery using the Google Earth Engine Python API**. It provides **ready-to-use tools for filtering, masking, mosaicking, image/band management, spectral index calculations, and extracting statistics** from multispectral (Landsat, Sentinel-2) and SAR (Sentinel-1) datasets.
 
 Designed for both new and advanced users of Google Earth Engine, RadGEEToolbox minimizes repetitive scripting, accelerates common remote sensing workflows, and aims to maximize efficiency within the constraints of the Google Earth Engine API. Whether you’re building a time series of vegetation indices or extracting surface properties along transects, this package helps get results faster.
 
@@ -24,13 +24,16 @@ Although similar packages exist (eemont, geetools, etc.), `RadGEEToolbox` extend
 | **Area Time-series Extraction** | **YES** | NO | NO |
 | **Transect Time-series Extraction** | **YES** | NO | NO |
 | **Comprehensive Preprocessing Operations** | **YES** | **YES** | **YES** |
-| **Reflectance Scaling (DN to ρ)** | **YES** | **YES** | **YES** |
+| **Reflectance Scaling** | **YES** | **YES** | **YES** |
+| **Land Surface Temperature Calculation (Landsat)** | **YES** | NO | NO |
 | **Narrowband to Broadband Albedo Calculation** | **YES** | NO | NO |
 | **Built-in Spectral Index Calculations** | **YES** | **YES** | **YES** |
-| **Land Surface Temperature Calculation (Landsat)** | **YES** | NO | NO |
+| **Anomaly (Deviation from Mean) Calculations** | **YES** | NO | NO |
+| **Image Masking for Classified Images** | **YES** | NO | NO |
+| **Merging of Multiple Collections** | **YES** | NO | NO |
 | **Image Selection by Date or Index** | **YES** | **YES** | NO |
 | **Visualization Presets/Tools** | **YES** | NO | NO |
-
+| **Batch Export to GEE Asset** | **YES** | **YES** | **YES** |
 _________
 ## Getting Started with Google Earth Engine
 
@@ -99,12 +102,16 @@ _________
 ## Key Features
 
 - Modular tools for processing **Landsat, Sentinel-1 SAR, and Sentinel-2** imagery
-- Efficient filtering, masking, and mosaicking of Earth Engine image collections
+- Efficient filtering, **cloud/shadow/water masking, threshold masking, spectral classification, and mosaicking** of Earth Engine image collections
+- Collection management such as **collection merging and band renaming**
 - Built-in support for computing **spectral indices** (see below for complete list)
+- **Temporal reductions** (mean, median, min, etc.) and **monthly median** functionality
+- Image anomaly calculation
 - SAR utilities for **multilooking**, **speckle filtering**, and **backscatter conversion**
-- Automated and flexible extraction of **transect and zonal statistics** across image collections
+- Automated and flexible extraction of **transect and zonal statistics (supporting multiple coordinates or geometries)** across image collections
 - Easy conversion between RadGEEToolbox and standard Earth Engine objects
 - Server-side–friendly workflows and caching for **faster, scalable** processing
+- Automatically **batch export image collections to GEE assets**
 
 **List of all spectral index calculations available for 
 Landsat (TM & OLI) and Sentinel-2 (MSI) imagery:**
@@ -129,7 +136,7 @@ Landsat (TM & OLI) and Sentinel-2 (MSI) imagery:**
 
 Features of `RadGEEToolbox` will be expanded in the future - if there is something you would like to see implemented in `RadGEEToolbox`, please open an issue or discussion on GitHub.
 
-🔍 For a full breakdown of available tools, see the [RadGEEToolbox documentation »](https://radgeetoolbox.readthedocs.io/en/latest/)
+🔍 For a full breakdown of available features and tools, see the [RadGEEToolbox documentation »](https://radgeetoolbox.readthedocs.io/en/latest/)
 
 _____________
 
@@ -259,6 +266,7 @@ water_classification_maps = cloud_masked_collection.ndwi_collection(
       threshold=0
       )
 ```
+Then, explore images from `water_classification_maps` as shown below either by exporting to a GEE asset for download, or by using `geemap` 👇
 
 ![Visualization of true color and classified water (in blue) from one of the dates in the collection](LakePowellNDWI.png)
 
@@ -273,8 +281,9 @@ calculate_water_area = cloud_masked_NDWI_collection.PixelAreaSumCollection(
       scale=90 #pixel size for zonal statistics
       )
 water_area_time_series = calculate_water_area.ExtractProperties('ndwi')
-print('List of square meters of water in images:', water_area_time_series)
 ```
+Then, directly plot `water_area_time_series` using Matplotlib as shown below 👇
+
 
 ![Plotted Results from Above Example - All Processed in Less Than 5 Seconds!](LakePowellPlot.png)
 

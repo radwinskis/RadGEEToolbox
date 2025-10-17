@@ -346,12 +346,12 @@ class Sentinel1Collection:
         else:
             raise ValueError("output_type must be 'ImageCollection' or 'Sentinel1Collection'")
 
-    def merge(self, other):
+    def combine(self, other):
         """
-        Merges the current Sentinel1Collection with another Sentinel1Collection, where images/bands with the same date are combined to a single multiband image.
+        Combines the current Sentinel1Collection with another Sentinel1Collection, using the `combine` method.
 
         Args:
-            other (Sentinel1Collection): Another Sentinel1Collection to merge with current collection.
+            other (Sentinel1Collection): Another Sentinel1Collection to combine with current collection.
 
         Returns:
             Sentinel1Collection: A new Sentinel1Collection containing images from both collections.
@@ -363,6 +363,73 @@ class Sentinel1Collection:
         # Merging the collections using the .combine() method
         merged_collection = self.collection.combine(other.collection)
         return Sentinel1Collection(collection=merged_collection)
+
+    def merge(self, collections=None, multiband_collection=None, date_key='Date_Filter'):
+        """
+        Merge many singleband Sentinel1Collection products into the parent collection, 
+        or merge a single multiband collection with parent collection,
+        pairing images by exact Date_Filter and returning one multiband image per date.
+
+        NOTE: if you want to merge two multiband collections, use the `combine` method instead.
+
+        Args:
+            collections (list): List of singleband collections to merge with parent collection, effectively adds one band per collection to each image in parent
+            multiband_collection (Sentinel1Collection, optional): A multiband collection to merge with parent. Specifying a collection here will override `collections`.
+            date_key (str): image property key for exact pairing (default 'Date_Filter')
+
+        Returns:
+            Sentinel1Collection: parent with extra single bands attached (one image per date)
+        """
+
+        if collections is None and multiband_collection is not None:
+            # Exact-date inner-join merge of two collections (adds ALL bands from 'other').
+            join = ee.Join.inner()
+            flt  = ee.Filter.equals(leftField=date_key, rightField=date_key)
+            paired = join.apply(self.collection, multiband_collection.collection, flt)
+
+            def _pair_two(f):
+                f = ee.Feature(f)
+                a = ee.Image(f.get('primary'))
+                b = ee.Image(f.get('secondary'))
+                # Overwrite on name collision
+                merged = a.addBands(b, None, True)
+                # Keep parent props + date key
+                merged = merged.copyProperties(a, a.propertyNames())
+                merged = merged.set(date_key, a.get(date_key))
+                return ee.Image(merged)
+
+            return Sentinel1Collection(collection=ee.ImageCollection(paired.map(_pair_two)))
+
+        # Preferred path: merge many singleband products into the parent
+        if not isinstance(collections, list) or len(collections) == 0:
+            raise ValueError("Provide a non-empty list of Sentinel1Collection objects in `collections`.")
+
+        result = self.collection
+        for extra in collections:
+            if not isinstance(extra, Sentinel1Collection):
+                raise ValueError("All items in `collections` must be Sentinel1Collection objects.")
+
+            join = ee.Join.inner()
+            flt  = ee.Filter.equals(leftField=date_key, rightField=date_key)
+            paired = join.apply(result, extra.collection, flt)
+
+            def _attach_one(f):
+                f = ee.Feature(f)
+                parent = ee.Image(f.get('primary'))
+                sb     = ee.Image(f.get('secondary'))
+                # Assume singleband product; grab its first band name server-side
+                bname  = ee.String(sb.bandNames().get(0))
+                # Add the single band; overwrite if the name already exists in parent
+                merged = parent.addBands(sb.select([bname]).rename([bname]), None, True)
+                # Preserve parent props + date key
+                merged = merged.copyProperties(parent, parent.propertyNames())
+                merged = merged.set(date_key, parent.get(date_key))
+                return ee.Image(merged)
+
+            result = ee.ImageCollection(paired.map(_attach_one))
+
+        return Sentinel1Collection(collection=result)
+
 
     @staticmethod
     def multilook_fn(image, looks):
@@ -1795,3 +1862,59 @@ class Sentinel1Collection:
             print(f"Zonal stats saved to {file_path}.csv")
             return
         return pivot_df
+
+    def export_to_asset_collection(
+        self,
+        asset_collection_path,
+        region,
+        scale,
+        dates=None,
+        filename_prefix="",
+        crs=None,
+        max_pixels=int(1e13),
+        description_prefix="export"
+    ):
+        """
+        Exports an image collection to a Google Earth Engine asset collection. The asset collection will be created if it does not already exist, 
+        and each image exported will be named according to the provided filename prefix and date.
+
+        Args:
+            asset_collection_path (str): The path to the asset collection.
+            region (ee.Geometry): The region to export.
+            scale (int): The scale of the export.
+            dates (list, optional): The dates to export. Defaults to None.
+            filename_prefix (str, optional): The filename prefix. Defaults to "", i.e. blank.
+            crs (str, optional): The coordinate reference system. Defaults to None, which will use the image's CRS.
+            max_pixels (int, optional): The maximum number of pixels. Defaults to int(1e13).
+            description_prefix (str, optional): The description prefix. Defaults to "export".
+
+        Returns:
+            None: (queues export tasks)
+        """
+        ic = self.collection
+        if dates is None:
+            dates = self.dates
+        try:
+            ee.data.createAsset({'type': 'ImageCollection'}, asset_collection_path)
+        except Exception:
+            pass
+
+        for date_str in dates:
+            img = ee.Image(ic.filter(ee.Filter.eq('Date_Filter', date_str)).first())
+            asset_id = asset_collection_path + "/" + filename_prefix + date_str
+            desc = description_prefix + "_" + filename_prefix + date_str
+
+            params = {
+                'image': img,
+                'description': desc,
+                'assetId': asset_id,
+                'region': region,
+                'scale': scale,
+                'maxPixels': max_pixels
+            }
+            if crs:
+                params['crs'] = crs
+
+            ee.batch.Export.image.toAsset(**params).start()
+
+        print("Queued", len(dates), "export tasks to", asset_collection_path)

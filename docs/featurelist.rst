@@ -35,9 +35,17 @@ RadGEEToolbox is about **quality-of-life** and **comprehensive features** for ev
 +----------------------------------------------------+-------------------+------------+--------------+
 | **Built-in Spectral Index Calculations**           | **YES**           | **YES**    | **YES**      |
 +----------------------------------------------------+-------------------+------------+--------------+
+| **Anomaly (Deviation from Mean) Calculations**     | **YES**           | NO         | NO           |
++----------------------------------------------------+-------------------+------------+--------------+
+| **Image Masking for Classified Images**            | **YES**           | NO         | NO           |
++----------------------------------------------------+-------------------+------------+--------------+
+| **Merging of Multiple Collections**                | **YES**           | NO         | NO           |
++----------------------------------------------------+-------------------+------------+--------------+
 | **Image Selection by Date or Index**               | **YES**           | **YES**    | NO           |
 +----------------------------------------------------+-------------------+------------+--------------+
 | **Visualization Presets/Tools**                    | **YES**           | NO         | NO           |
++----------------------------------------------------+-------------------+------------+--------------+
+| **Batch Export to GEE Asset**                      | **YES**           | **YES**    | **YES**      |
 +----------------------------------------------------+-------------------+------------+--------------+
 
 Statement of Need
@@ -59,7 +67,8 @@ Data Management
 - Mask image collection inside a geometry/polygon
 - Mask image collection outside a geometry/polygon
 - Mask images based on pixel values
-- Convert singleband images to **binary masks** based on pixel values
+- Convert singleband images to **binary masks** (classified images) based on pixel values
+- Rename bands in singleband or multiband image collections
 - **Mosaic image collections** that share dates of observation and copy all image properties from the collection of choice
 - **Mosaic images that share the same date** from a single image collection
 - **Select an image from an image collection** using a positional index or date string
@@ -67,13 +76,15 @@ Data Management
 - Merge multiple singleband or multiband collections into a single collection
 - Access a variety of useful **color palettes** for image visualization
 - Define **visualization** parameter dictionaries easily
+- Automatically **batch export image collections to GEE assets**
 
 Multispectral Image Processing
 ------------------------------
 
-- **Mask clouds** in image collections
+- **Mask clouds and/or cloud shadows** in image collections
 - **Mask water** in image collections via two methods
-- Mask to water in image collections via two methods
+- **Mask to water** in image collections via two methods
+- **Calculate the anomalies** (deviation from mean) for each image in an image collection
 - Calculate any of the following **spectral index products**: 
 
     - Normalized Difference Water Index (NDWI)
@@ -109,9 +120,11 @@ Spatial / Zonal Statistic Extraction (Time Series Analysis)
 - Calculate geodesically corrected surface area from NDWI (water) pixels using **dynamic thresholding** (Otsu method)
 - **Extract singleband pixel values along a transect** (or multiple transects) for every image in a collection, with options to save to CSV (data organized by image date)
 - **Extract regionally reduced statistics** (mean, median, etc.) within a circular buffer for one or more coordinates for every image in a collection, with options to change buffer size, save as CSV, and more (data organized by image date)
-- Easily export spatiotemporal statistics to pandas DataFrame or CSV
+- **Extract regionally reduced statistics** (mean, median, etc.) with one or more geometries for every image in a collection, with options to save as CSV or as DataFrame 
+- Easily export aggregated image properties or spatiotemporal statistics to pandas DataFrame or CSV
 
 Temporal Reductions
 -------------------
 
 - **Temporally reduce** image collections using minimum, maximum, median, or mean operations
+- Create **monthly median composites** from an image collection, with image count metadata
