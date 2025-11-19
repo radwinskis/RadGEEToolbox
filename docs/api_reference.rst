@@ -9,6 +9,7 @@ This section contains the documentation for the classes available in RadGEEToolb
    LandsatCollection
    Sentinel1Collection
    Sentinel2Collection
+   GenericCollection
    CollectionStitch
    GetPalette
    VisParams

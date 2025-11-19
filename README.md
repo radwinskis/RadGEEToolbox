@@ -14,6 +14,8 @@ Designed for both new and advanced users of Google Earth Engine, RadGEEToolbox m
 
 Although similar packages exist (eemont, geetools, etc.), `RadGEEToolbox` extends functionality and provides cohesive, chainable methods for research oriented projects working with Landsat TM & OLI, Sentinel-1 SAR, and/or Sentinel-2 MSI datasets (Table 1). The ultimate goal of `RadGEEToolbox` is to make satellite image processing easier and faster for real world applications relying on the most commonly utilized remote sensing platforms.
 
+As of version `1.7.0`, `RadGEEToolbox` supports any generic image collection via the `GenericCollection` module which allows for utilization of the same data management, temporal reduction, zonal statistics, and data export tools available for the `LandsatCollection`, `Sentinel1Collection`, and `Sentinel2Collection` modules. This allows users to provide their own image collection of choice, such as PRISM or MODIS data, to benefit from the tools available with `RadGEEToolbox`.
+
 ***Table 1.*** *Comparison of functionality between RadGEEToolbox, eemont, and geetools.*
 
 | Capability | **RadGEEToolbox** | **eemont** | **geetools** |
@@ -105,7 +107,7 @@ _________
 - Efficient filtering, **cloud/shadow/water masking, threshold masking, spectral classification, and mosaicking** of Earth Engine image collections
 - Collection management such as **collection merging and band renaming**
 - Built-in support for computing **spectral indices** (see below for complete list)
-- **Temporal reductions** (mean, median, min, etc.) and **monthly median** functionality
+- **Temporal reductions** (mean, median, min, etc.) and **monthly median/mean/min/max** functionality
 - Image anomaly calculation
 - SAR utilities for **multilooking**, **speckle filtering**, and **backscatter conversion**
 - Automated and flexible extraction of **transect and zonal statistics (supporting multiple coordinates or geometries)** across image collections
@@ -150,15 +152,15 @@ _____________
 
 ### Installing via pip
 
-To install `RadGEEToolbox` version 1.6.10 using pip (NOTE: it is recommended to create a new virtual environment):
+To install `RadGEEToolbox` version 1.7.0 using pip (NOTE: it is recommended to create a new virtual environment):
 
 ```bash
-pip install RadGEEToolbox==1.6.10
+pip install RadGEEToolbox==1.7.0
 ```
 
 ### Installing via Conda
 
-To install `RadGEEToolbox` version 1.6.10 using conda-forge (NOTE: it is recommended to create a new virtual environment):
+To install `RadGEEToolbox` version 1.7.0 using conda-forge (NOTE: it is recommended to create a new virtual environment):
 
 ```bash
 conda install conda-forge::radgeetoolbox
@@ -189,7 +191,7 @@ To verify that `RadGEEToolbox` was installed correctly:
 python -c "import RadGEEToolbox; print(RadGEEToolbox.__version__)"
 ```
 
-You should see `1.6.10` printed as the version number.
+You should see `1.7.0` printed as the version number.
 
 ### Want to Visualize Data? Install These Too
 
@@ -229,7 +231,7 @@ from RadGEEToolbox import LandsatCollection
 
 # 2. Authenticate & Initialize GEE API
 ee.Authenticate()
-ee.Initialize(project='my-cloud-project-ID) #replace with your Google Cloud project ID
+ee.Initialize(project='my-cloud-project-ID') #replace with your Google Cloud project ID
 
 # 3. Define study area boundary - in this case Lake Powell, Utah
 study_area = ee.Geometry.Polygon(

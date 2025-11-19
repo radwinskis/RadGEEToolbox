@@ -1640,8 +1640,12 @@ class LandsatCollection:
             collection = self.collection
             # Get the start and end dates of the entire collection.
             date_range = collection.reduceColumns(ee.Reducer.minMax(), ["system:time_start"])
-            start_date = ee.Date(date_range.get('min'))
+            original_start_date = ee.Date(date_range.get('min'))
             end_date = ee.Date(date_range.get('max'))
+
+            start_year = original_start_date.get('year')
+            start_month = original_start_date.get('month')
+            start_date = ee.Date.fromYMD(start_year, start_month, 1)
 
             # Calculate the total number of months in the date range.
             # The .round() is important for ensuring we get an integer.
@@ -3421,6 +3425,8 @@ class LandsatCollection:
         Iterates over a collection of images and extracts spatial statistics (defaults to mean) for a given list of geometries or coordinates. Individual statistics are calculated for each geometry or coordinate provided.
         When coordinates are provided, a radial buffer is applied around each coordinate to extract the statistics, where the size of the buffer is determined by the buffer_size argument (defaults to 1 meter).
         The function returns a pandas DataFrame with the statistics for each coordinate and date, or optionally exports the data to a table in .csv format.
+
+        NOTE: The expected input is a singleband image. If a multiband image is provided, the first band will be used for zonal statistic extraction, unless `band` is specified.
 
         Args:
             geometries (ee.Geometry, ee.Feature, ee.FeatureCollection, list, or tuple): Input geometries for which to extract statistics. Can be a single ee.Geometry, an ee.Feature, an ee.FeatureCollection, a list of (lon, lat) tuples, or a list of ee.Geometry objects. Be careful to NOT provide coordinates as (lat, lon)!
