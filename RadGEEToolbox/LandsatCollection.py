@@ -155,6 +155,10 @@ class LandsatCollection:
         self._geometry_masked_out_collection = None
         self._median = None
         self._monthly_median = None
+        self._monthly_mean = None
+        self._monthly_max = None
+        self._monthly_min = None
+        self._monthly_sum = None
         self._mean = None
         self._max = None
         self._min = None
@@ -705,7 +709,7 @@ class LandsatCollection:
         return nbr
     
     @staticmethod
-    def anomaly_fn(image, geometry, band_name=None, anomaly_band_name=None, replace=True):
+    def anomaly_fn(image, geometry, band_name=None, anomaly_band_name=None, replace=True, scale=30):
         """
         Calculates the anomaly of a singleband image compared to the mean of the singleband image.
 
@@ -721,6 +725,7 @@ class LandsatCollection:
             band_name (str, optional): A string representing the band name to be used for the output anomaly image. If not provided, the band name of the first band of the input image will be used.
             anomaly_band_name (str, optional): A string representing the band name to be used for the output anomaly image. If not provided, the band name of the first band of the input image will be used.
             replace (bool, optional): A boolean indicating whether to replace the original band with the anomaly band in the output image. If True, the output image will contain only the anomaly band. If False, the output image will contain both the original band and the anomaly band. Default is True.
+            scale (int, optional): The scale in meters to use for the reduction operation. Default is 30 meters.
 
         Returns:
             ee.Image: An ee.Image where each band represents the anomaly (deviation from
@@ -737,12 +742,16 @@ class LandsatCollection:
         mean_image = image_to_process.reduceRegion(
             reducer=ee.Reducer.mean(),
             geometry=geometry,
-            scale=30,
+            scale=scale,
             maxPixels=1e13
         ).toImage()
 
         # Compute the anomaly by subtracting the mean image from the input image.
-        anomaly_image = image_to_process.subtract(mean_image)
+        if scale == 30:
+            anomaly_image = image_to_process.subtract(mean_image)
+        else:
+            anomaly_image = image_to_process.reproject(crs=image_to_process.projection(), scale=scale).subtract(mean_image)
+
         if anomaly_band_name is None:
             if band_name:
                 anomaly_image = anomaly_image.rename(band_name) 
@@ -753,9 +762,9 @@ class LandsatCollection:
             anomaly_image = anomaly_image.rename(anomaly_band_name) 
         # return anomaly_image
         if replace:
-            return anomaly_image.copyProperties(image)
+            return anomaly_image.copyProperties(image).set('system:time_start', image.get('system:time_start'))
         else:
-            return image.addBands(anomaly_image, overwrite=True)
+            return image.addBands(anomaly_image, overwrite=True).copyProperties(image)
 
     @staticmethod
     def MaskWaterLandsat(image):
@@ -1092,7 +1101,7 @@ class LandsatCollection:
                 "downwelling": image.select("downwelling"),
             },
         ).rename("LST")
-        return image.addBands(LST).copyProperties(image)  # Outputs temperature in C
+        return image.addBands(LST).copyProperties(image).set('system:time_start', image.get('system:time_start'))  # Outputs temperature in C
     
     @staticmethod
     def C_to_F_fn(LST_image):
@@ -1114,7 +1123,7 @@ class LandsatCollection:
 
         # Preserve original properties from the input image.
         # return fahrenheit_image.rename('LST_F').copyProperties(LST_image)
-        return LST_image.addBands(fahrenheit_image.rename('LST_F'), overwrite=True).copyProperties(LST_image)
+        return LST_image.addBands(fahrenheit_image.rename('LST_F'), overwrite=True).copyProperties(LST_image).set('system:time_start', LST_image.get('system:time_start'))
     
     @staticmethod
     def band_rename_fn(image, current_band_name, new_band_name):
@@ -1214,8 +1223,7 @@ class LandsatCollection:
         return final_image
 
     def PixelAreaSumCollection(
-        self, band_name, geometry, threshold=-1, scale=30, maxPixels=1e12, output_type='ImageCollection', area_data_export_path=None
-    ):
+        self, band_name, geometry, threshold=-1, scale=30, maxPixels=1e12, output_type='ImageCollection', area_data_export_path=None):
         """
         Calculates the geodesic summation of area for pixels of interest (above a specific threshold)
         within a geometry and stores the value as an image property (matching name of chosen band) for an entire
@@ -1225,11 +1233,11 @@ class LandsatCollection:
 
         Args:
             band_name (string or list of strings): name of band(s) (string) for calculating area. If providing multiple band names, pass as a list of strings.
-            geometry (ee.Geometry): ee.Geometry object denoting area to clip to for area calculation
+            geometry (ee.Geometry): ee.Geometry object denoting area to clip to for area calculation.
             threshold (float): integer threshold to specify masking of pixels below threshold (defaults to -1). If providing multiple band names, the same threshold will be applied to all bands. Best practice in this case is to mask the bands prior to passing to this function and leave threshold at default of -1.
-            scale (int): integer scale of image resolution (meters) (defaults to 30)
-            maxPixels (int): integer denoting maximum number of pixels for calculations
-            output_type (str): 'ImageCollection' to return an ee.ImageCollection, 'LandsatCollection' to return a LandsatCollection object (defaults to 'ImageCollection')
+            scale (int): integer scale of image resolution (meters) (defaults to 30).
+            maxPixels (int): integer denoting maximum number of pixels for calculations.
+            output_type (str): 'ImageCollection' or 'ee.ImageCollection' to return an ee.ImageCollection, 'LandsatCollection' to return a LandsatCollection object, or 'DataFrame', 'Pandas', 'pd', 'dataframe', 'df' to return a pandas DataFrame (defaults to 'ImageCollection').
             area_data_export_path (str, optional): If provided, the function will save the resulting area data to a CSV file at the specified path.
 
         Returns:
@@ -1254,15 +1262,65 @@ class LandsatCollection:
 
         # If an export path is provided, the area data will be exported to a CSV file
         if area_data_export_path:
-            LandsatCollection(collection=self._PixelAreaSumCollection).ExportProperties(property_names=band_name, file_path=area_data_export_path+'.csv')
+            LandsatCollection(collection=self._PixelAreaSumCollection).ExportProperties(property_names=[band_name], file_path=area_data_export_path+'.csv')
 
         # Returning the result in the desired format based on output_type argument or raising an error for invalid input
-        if output_type == 'ImageCollection':
+        if output_type == 'ImageCollection' or output_type == 'ee.ImageCollection':
             return self._PixelAreaSumCollection
         elif output_type == 'LandsatCollection':
             return LandsatCollection(collection=self._PixelAreaSumCollection)
+        elif output_type == 'DataFrame' or output_type == 'Pandas' or output_type == 'pd' or output_type == 'dataframe' or output_type == 'df':
+            return LandsatCollection(collection=self._PixelAreaSumCollection).ExportProperties(property_names=[band_name])
         else:
-            raise ValueError("output_type must be 'ImageCollection' or 'LandsatCollection'")
+            raise ValueError("Incorrect `output_type`. The `output_type` argument must be one of the following: 'ImageCollection', 'ee.ImageCollection', 'LandsatCollection', 'DataFrame', 'Pandas', 'pd', 'dataframe', or 'df'.")
+
+    @staticmethod
+    def add_month_property_fn(image):
+        """
+        Adds a numeric 'month' property to the image based on its date.
+
+        Args:
+            image (ee.Image): Input image.
+
+        Returns:
+            ee.Image: Image with the 'month' property added.
+        """
+        return image.set('month', image.date().get('month'))
+
+    @property
+    def add_month_property(self):
+        """
+        Adds a numeric 'month' property to each image in the collection.
+
+        Returns:
+            LandsatCollection: A LandsatCollection image collection with the 'month' property added to each image.
+        """
+        col = self.collection.map(LandsatCollection.add_month_property_fn)
+        return LandsatCollection(collection=col)
+
+    def remove_duplicate_dates(self, sort_by='system:time_start', ascending=True):
+        """
+        Removes duplicate images that share the same date, keeping only the first one encountered.
+        Useful for handling duplicate acquisitions or overlapping path/rows.
+        
+        Args:
+            sort_by (str): Property to sort by before filtering distinct dates. Options: 'system:time_start' or 'CLOUD_COVER'.
+                           Defaults to 'system:time_start'.
+                           Recommended to use 'CLOUD_COVER' (ascending=True) to keep the clearest image.
+            ascending (bool): Sort order. Defaults to True.
+
+        Returns:
+            LandsatCollection: A new LandsatCollection object with distinct dates.
+        """
+        if sort_by not in ['system:time_start', 'CLOUD_COVER']:
+            raise ValueError(f"The provided `sort_by` argument is invalid: {sort_by}. The `sort_by` argument must be either 'system:time_start' or 'CLOUD_COVER'.")
+        # Sort the collection to ensure the "best" image comes first (e.g. least cloudy)
+        sorted_col = self.collection.sort(sort_by, ascending)
+        
+        # distinct() retains the first image for each unique value of the specified property
+        distinct_col = sorted_col.distinct('Date_Filter')
+        
+        return LandsatCollection(collection=distinct_col)
 
     def combine(self, other):
         """
@@ -1699,6 +1757,338 @@ class LandsatCollection:
             pass
 
         return self._monthly_median
+    
+    @property
+    def monthly_mean_collection(self):
+        """Creates a monthly mean composite from a LandsatCollection image collection.
+
+        This function computes the mean for each
+        month within the collection's date range, for each band in the collection. It automatically handles the full
+        temporal extent of the input collection.
+
+        The resulting images have a 'system:time_start' property set to the
+        first day of each month and an 'image_count' property indicating how
+        many images were used in the composite. Months with no images are
+        automatically excluded from the final collection.
+
+        NOTE: the day of month for the 'system:time_start' property is set to the earliest date of the first month observed and may not be the first day of the month.
+
+        Returns:
+            LandsatCollection: A new LandsatCollection object with monthly mean composites.
+        """
+        if self._monthly_mean is None:
+            collection = self.collection
+            target_proj = collection.first().projection()
+            # Get the start and end dates of the entire collection.
+            date_range = collection.reduceColumns(ee.Reducer.minMax(), ["system:time_start"])
+            original_start_date = ee.Date(date_range.get('min'))
+            end_date = ee.Date(date_range.get('max'))
+
+            start_year = original_start_date.get('year')
+            start_month = original_start_date.get('month')
+            start_date = ee.Date.fromYMD(start_year, start_month, 1)
+
+            # Calculate the total number of months in the date range.
+            # The .round() is important for ensuring we get an integer.
+            num_months = end_date.difference(start_date, 'month').round()
+
+            # Generate a list of starting dates for each month.
+            # This uses a sequence and advances the start date by 'i' months.
+            def get_month_start(i):
+                return start_date.advance(i, 'month')
+            
+            month_starts = ee.List.sequence(0, num_months).map(get_month_start)
+
+            # Define a function to map over the list of month start dates.
+            def create_monthly_composite(date):
+                # Cast the input to an ee.Date object.
+                start_of_month = ee.Date(date)
+                # The end date is exclusive, so we advance by 1 month.
+                end_of_month = start_of_month.advance(1, 'month')
+
+                # Filter the original collection to get images for the current month.
+                monthly_subset = collection.filterDate(start_of_month, end_of_month)
+
+                # Count the number of images in the monthly subset.
+                image_count = monthly_subset.size()
+
+                # Compute the mean. This is robust to outliers like clouds.
+                monthly_mean = monthly_subset.mean()
+
+                # Set essential properties on the resulting composite image.
+                # The timestamp is crucial for time-series analysis and charting.
+                # The image_count is useful metadata for quality assessment.
+                return monthly_mean.set({
+                    'system:time_start': start_of_month.millis(),
+                    'month': start_of_month.get('month'),
+                    'year': start_of_month.get('year'),
+                    'Date_Filter': start_of_month.format('YYYY-MM-dd'),
+                    'image_count': image_count
+                }).reproject(target_proj)
+
+            # Map the composite function over the list of month start dates.
+            monthly_composites_list = month_starts.map(create_monthly_composite)
+
+            # Convert the list of images into an ee.ImageCollection.
+            monthly_collection = ee.ImageCollection.fromImages(monthly_composites_list)
+
+            # Filter out any composites that were created from zero images.
+            # This prevents empty/masked images from being in the final collection.
+            final_collection = LandsatCollection(collection=monthly_collection.filter(ee.Filter.gt('image_count', 0)))
+            self._monthly_mean = final_collection
+        else:
+            pass
+
+        return self._monthly_mean
+    
+    @property
+    def monthly_sum_collection(self):
+        """Creates a monthly sum composite from a LandsatCollection image collection.
+
+        This function computes the sum for each
+        month within the collection's date range, for each band in the collection. It automatically handles the full
+        temporal extent of the input collection.
+
+        The resulting images have a 'system:time_start' property set to the
+        first day of each month and an 'image_count' property indicating how
+        many images were used in the composite. Months with no images are
+        automatically excluded from the final collection.
+
+        NOTE: the day of month for the 'system:time_start' property is set to the earliest date of the first month observed and may not be the first day of the month.
+
+        Returns:
+            LandsatCollection: A new LandsatCollection object with monthly sum composites.
+        """
+        if self._monthly_sum is None:
+            collection = self.collection
+            target_proj = collection.first().projection()
+            # Get the start and end dates of the entire collection.
+            date_range = collection.reduceColumns(ee.Reducer.minMax(), ["system:time_start"])
+            original_start_date = ee.Date(date_range.get('min'))
+            end_date = ee.Date(date_range.get('max'))
+
+            start_year = original_start_date.get('year')
+            start_month = original_start_date.get('month')
+            start_date = ee.Date.fromYMD(start_year, start_month, 1)
+
+            # Calculate the total number of months in the date range.
+            # The .round() is important for ensuring we get an integer.
+            num_months = end_date.difference(start_date, 'month').round()
+
+            # Generate a list of starting dates for each month.
+            # This uses a sequence and advances the start date by 'i' months.
+            def get_month_start(i):
+                return start_date.advance(i, 'month')
+            
+            month_starts = ee.List.sequence(0, num_months).map(get_month_start)
+
+            # Define a function to map over the list of month start dates.
+            def create_monthly_composite(date):
+                # Cast the input to an ee.Date object.
+                start_of_month = ee.Date(date)
+                # The end date is exclusive, so we advance by 1 month.
+                end_of_month = start_of_month.advance(1, 'month')
+
+                # Filter the original collection to get images for the current month.
+                monthly_subset = collection.filterDate(start_of_month, end_of_month)
+
+                # Count the number of images in the monthly subset.
+                image_count = monthly_subset.size()
+
+                # Compute the sum. This is robust to outliers like clouds.
+                monthly_sum = monthly_subset.sum()
+
+                # Set essential properties on the resulting composite image.
+                # The timestamp is crucial for time-series analysis and charting.
+                # The image_count is useful metadata for quality assessment.
+                return monthly_sum.set({
+                    'system:time_start': start_of_month.millis(),
+                    'month': start_of_month.get('month'),
+                    'year': start_of_month.get('year'),
+                    'Date_Filter': start_of_month.format('YYYY-MM-dd'),
+                    'image_count': image_count
+                }).reproject(target_proj)
+
+            # Map the composite function over the list of month start dates.
+            monthly_composites_list = month_starts.map(create_monthly_composite)
+
+            # Convert the list of images into an ee.ImageCollection.
+            monthly_collection = ee.ImageCollection.fromImages(monthly_composites_list)
+
+            # Filter out any composites that were created from zero images.
+            # This prevents empty/masked images from being in the final collection.
+            final_collection = LandsatCollection(collection=monthly_collection.filter(ee.Filter.gt('image_count', 0)))
+            self._monthly_sum = final_collection
+        else:
+            pass
+
+        return self._monthly_sum
+    
+    @property
+    def monthly_max_collection(self):
+        """Creates a monthly max composite from a LandsatCollection image collection.
+
+        This function computes the max for each
+        month within the collection's date range, for each band in the collection. It automatically handles the full
+        temporal extent of the input collection.
+
+        The resulting images have a 'system:time_start' property set to the
+        first day of each month and an 'image_count' property indicating how
+        many images were used in the composite. Months with no images are
+        automatically excluded from the final collection.
+
+        NOTE: the day of month for the 'system:time_start' property is set to the earliest date of the first month observed and may not be the first day of the month.
+
+        Returns:
+            LandsatCollection: A new LandsatCollection object with monthly max composites.
+        """
+        if self._monthly_max is None:
+            collection = self.collection
+            target_proj = collection.first().projection()
+            # Get the start and end dates of the entire collection.
+            date_range = collection.reduceColumns(ee.Reducer.minMax(), ["system:time_start"])
+            original_start_date = ee.Date(date_range.get('min'))
+            end_date = ee.Date(date_range.get('max'))
+
+            start_year = original_start_date.get('year')
+            start_month = original_start_date.get('month')
+            start_date = ee.Date.fromYMD(start_year, start_month, 1)
+
+            # Calculate the total number of months in the date range.
+            # The .round() is important for ensuring we get an integer.
+            num_months = end_date.difference(start_date, 'month').round()
+
+            # Generate a list of starting dates for each month.
+            # This uses a sequence and advances the start date by 'i' months.
+            def get_month_start(i):
+                return start_date.advance(i, 'month')
+            
+            month_starts = ee.List.sequence(0, num_months).map(get_month_start)
+
+            # Define a function to map over the list of month start dates.
+            def create_monthly_composite(date):
+                # Cast the input to an ee.Date object.
+                start_of_month = ee.Date(date)
+                # The end date is exclusive, so we advance by 1 month.
+                end_of_month = start_of_month.advance(1, 'month')
+
+                # Filter the original collection to get images for the current month.
+                monthly_subset = collection.filterDate(start_of_month, end_of_month)
+
+                # Count the number of images in the monthly subset.
+                image_count = monthly_subset.size()
+
+                # Compute the max. This is robust to outliers like clouds.
+                monthly_max = monthly_subset.max()
+
+                # Set essential properties on the resulting composite image.
+                # The timestamp is crucial for time-series analysis and charting.
+                # The image_count is useful metadata for quality assessment.
+                return monthly_max.set({
+                    'system:time_start': start_of_month.millis(),
+                    'month': start_of_month.get('month'),
+                    'year': start_of_month.get('year'),
+                    'Date_Filter': start_of_month.format('YYYY-MM-dd'),
+                    'image_count': image_count
+                }).reproject(target_proj)
+
+            # Map the composite function over the list of month start dates.
+            monthly_composites_list = month_starts.map(create_monthly_composite)
+
+            # Convert the list of images into an ee.ImageCollection.
+            monthly_collection = ee.ImageCollection.fromImages(monthly_composites_list)
+
+            # Filter out any composites that were created from zero images.
+            # This prevents empty/masked images from being in the final collection.
+            final_collection = LandsatCollection(collection=monthly_collection.filter(ee.Filter.gt('image_count', 0)))
+            self._monthly_max = final_collection
+        else:
+            pass
+
+        return self._monthly_max
+    
+    @property
+    def monthly_min_collection(self):
+        """Creates a monthly min composite from a LandsatCollection image collection.
+
+        This function computes the min for each
+        month within the collection's date range, for each band in the collection. It automatically handles the full
+        temporal extent of the input collection.
+
+        The resulting images have a 'system:time_start' property set to the
+        first day of each month and an 'image_count' property indicating how
+        many images were used in the composite. Months with no images are
+        automatically excluded from the final collection.
+
+        NOTE: the day of month for the 'system:time_start' property is set to the earliest date of the first month observed and may not be the first day of the month.
+
+        Returns:
+            LandsatCollection: A new LandsatCollection object with monthly min composites.
+        """
+        if self._monthly_min is None:
+            collection = self.collection
+            target_proj = collection.first().projection()
+            # Get the start and end dates of the entire collection.
+            date_range = collection.reduceColumns(ee.Reducer.minMax(), ["system:time_start"])
+            original_start_date = ee.Date(date_range.get('min'))
+            end_date = ee.Date(date_range.get('max'))
+
+            start_year = original_start_date.get('year')
+            start_month = original_start_date.get('month')
+            start_date = ee.Date.fromYMD(start_year, start_month, 1)
+
+            # Calculate the total number of months in the date range.
+            # The .round() is important for ensuring we get an integer.
+            num_months = end_date.difference(start_date, 'month').round()
+
+            # Generate a list of starting dates for each month.
+            # This uses a sequence and advances the start date by 'i' months.
+            def get_month_start(i):
+                return start_date.advance(i, 'month')
+            
+            month_starts = ee.List.sequence(0, num_months).map(get_month_start)
+
+            # Define a function to map over the list of month start dates.
+            def create_monthly_composite(date):
+                # Cast the input to an ee.Date object.
+                start_of_month = ee.Date(date)
+                # The end date is exclusive, so we advance by 1 month.
+                end_of_month = start_of_month.advance(1, 'month')
+
+                # Filter the original collection to get images for the current month.
+                monthly_subset = collection.filterDate(start_of_month, end_of_month)
+
+                # Count the number of images in the monthly subset.
+                image_count = monthly_subset.size()
+
+                # Compute the min. This is robust to outliers like clouds.
+                monthly_min = monthly_subset.min()
+
+                # Set essential properties on the resulting composite image.
+                # The timestamp is crucial for time-series analysis and charting.
+                # The image_count is useful metadata for quality assessment.
+                return monthly_min.set({
+                    'system:time_start': start_of_month.millis(),
+                    'month': start_of_month.get('month'),
+                    'year': start_of_month.get('year'),
+                    'Date_Filter': start_of_month.format('YYYY-MM-dd'),
+                    'image_count': image_count
+                }).reproject(target_proj)
+
+            # Map the composite function over the list of month start dates.
+            monthly_composites_list = month_starts.map(create_monthly_composite)
+
+            # Convert the list of images into an ee.ImageCollection.
+            monthly_collection = ee.ImageCollection.fromImages(monthly_composites_list)
+
+            # Filter out any composites that were created from zero images.
+            # This prevents empty/masked images from being in the final collection.
+            final_collection = LandsatCollection(collection=monthly_collection.filter(ee.Filter.gt('image_count', 0)))
+            self._monthly_min = final_collection
+        else:
+            pass
+
+        return self._monthly_min
 
     @property
     def ndwi(self):
@@ -2417,6 +2807,7 @@ class LandsatCollection:
         )
         return LandsatCollection(collection=col)
     
+    @property
     def C_to_F(self):
         """
         Function to convert an LST collection from Celcius to Fahrenheit, adding a new band 'LST_F' to each image in the collection.
@@ -2424,9 +2815,10 @@ class LandsatCollection:
         Returns:
             LandsatCollection: A LandsatCollection image collection with LST in Fahrenheit as band titled 'LST_F'.
         """
-        if self._LST is None:
-            raise ValueError("LST has not been calculated yet. Access the LST property first.")
-        col = self._LST.collection.map(LandsatCollection.C_to_F_fn)
+        # if self._LST is None:
+        #     raise ValueError("LST has not been calculated yet. Access the LST property first.")
+        # col = self._LST.collection.map(LandsatCollection.C_to_F_fn)
+        col = self.collection.map(LandsatCollection.C_to_F_fn)
         return LandsatCollection(collection=col)
 
     def mask_to_polygon(self, polygon):
@@ -2564,27 +2956,29 @@ class LandsatCollection:
         if threshold is None:
             raise ValueError("Threshold must be specified for binary masking.")
 
+
         if classify_above_threshold:
-            if mask_zeros:
+            if mask_zeros is True:
                 col = self.collection.map(
-                    lambda image: image.select(band_name).gte(threshold).rename(band_name).updateMask(image.select(band_name).gt(0)).copyProperties(image)
+                    lambda image: image.select(band_name).gte(threshold).rename(band_name).selfMask().copyProperties(image)
                 )
             else:
                 col = self.collection.map(
                     lambda image: image.select(band_name).gte(threshold).rename(band_name).copyProperties(image)
                 )
         else:
-            if mask_zeros:
+            if mask_zeros is True:
                 col = self.collection.map(
-                    lambda image: image.select(band_name).lte(threshold).rename(band_name).updateMask(image.select(band_name).gt(0)).copyProperties(image)
+                    lambda image: image.select(band_name).lte(threshold).rename(band_name).selfMask().copyProperties(image)
                 )
             else:
                 col = self.collection.map(
                     lambda image: image.select(band_name).lte(threshold).rename(band_name).copyProperties(image)
                 )
+
         return LandsatCollection(collection=col)
     
-    def anomaly(self, geometry, band_name=None, anomaly_band_name=None, replace=True):
+    def anomaly(self, geometry, band_name=None, anomaly_band_name=None, replace=True, scale=30):
         """
         Calculates the anomaly of each image in a collection compared to the mean of each image.
 
@@ -2598,6 +2992,7 @@ class LandsatCollection:
             band_name (str, optional): A string representing the band name to be used for the output anomaly image. If not provided, the band name of the first band of the input image will be used.
             anomaly_band_name (str, optional): A string representing the band name to be used for the output anomaly image. If not provided, the band name of the first band of the input image will be used.
             replace (bool, optional): A boolean indicating whether to replace the original band with the anomaly band. If True, the output image will only contain the anomaly band. If False, the output image will retain all original bands and add the anomaly band. Default is True.
+            scale (int, optional): The scale (in meters) to be used for image reduction. Default is 30 meters.
 
         Returns:
             LandsatCollection: A LandsatCollection where each image represents the anomaly (deviation from
@@ -2616,7 +3011,7 @@ class LandsatCollection:
             else:
                 band_name = band_names.get(0).getInfo()
 
-        col = self.collection.map(lambda image: LandsatCollection.anomaly_fn(image, geometry=geometry, band_name=band_name, anomaly_band_name=anomaly_band_name, replace=replace))
+        col = self.collection.map(lambda image: LandsatCollection.anomaly_fn(image, geometry=geometry, band_name=band_name, anomaly_band_name=anomaly_band_name, replace=replace, scale=scale))
         return LandsatCollection(collection=col)
     
     def mask_via_band(self, band_to_mask, band_for_mask, threshold=-1, mask_above=True, add_band_to_original_image=False):
@@ -3447,24 +3842,30 @@ class LandsatCollection:
             ValueError: If input parameters are invalid.
             TypeError: If geometries input type is unsupported.
         """
+        # Create a local reference to the collection object to allow for modifications (like band selection) without altering the original instance
         img_collection_obj = self
+
+        # If a specific band is requested, select only that band
         if band:
             img_collection_obj = LandsatCollection(collection=img_collection_obj.collection.select(band))
         else: 
+            # If no band is specified, default to using the first band of the first image in the collection
             first_image = img_collection_obj.image_grab(0)
             first_band = first_image.bandNames().get(0)
             img_collection_obj = LandsatCollection(collection=img_collection_obj.collection.select([first_band]))
-        # Filter collection by dates if provided
+        
+        # If a list of dates is provided, filter the collection to include only images matching those dates
         if dates:
             img_collection_obj = LandsatCollection(
                 collection=self.collection.filter(ee.Filter.inList('Date_Filter', dates))
             )
 
-        # Initialize variables
+        # Initialize variables to hold the standardized feature collection and coordinates
         features = None
         validated_coordinates = [] 
         
-        # Function to standardize feature names if no names are provided
+        # Define a helper function to ensure every feature has a standardized 'geo_name' property
+        # This handles features that might have different existing name properties or none at all
         def set_standard_name(feature):
             has_geo_name = feature.get('geo_name')
             has_name = feature.get('name')
@@ -3475,33 +3876,38 @@ class LandsatCollection:
                 ee.Algorithms.If(has_index, has_index, 'unnamed_geometry')))
             return feature.set({'geo_name': new_name})
 
+        # Handle input: FeatureCollection or single Feature
         if isinstance(geometries, (ee.FeatureCollection, ee.Feature)):
             features = ee.FeatureCollection(geometries)
             if geometry_names:
                  print("Warning: 'geometry_names' are ignored when the input is an ee.Feature or ee.FeatureCollection.")
 
+        # Handle input: Single ee.Geometry
         elif isinstance(geometries, ee.Geometry):
              name = geometry_names[0] if (geometry_names and geometry_names[0]) else 'unnamed_geometry'
              features = ee.FeatureCollection([ee.Feature(geometries).set('geo_name', name)])
 
+        # Handle input: List (could be coordinates or ee.Geometry objects)
         elif isinstance(geometries, list):
             if not geometries: # Handle empty list case
                 raise ValueError("'geometries' list cannot be empty.")
             
-            # Case: List of coordinates
+            # Case: List of tuples (coordinates)
             if all(isinstance(i, tuple) for i in geometries):
                 validated_coordinates = geometries
+                # Generate default names if none provided
                 if geometry_names is None:
                     geometry_names = [f"Location_{i+1}" for i in range(len(validated_coordinates))]
                 elif len(geometry_names) != len(validated_coordinates):
                      raise ValueError("geometry_names must have the same length as the coordinates list.")
+                # Create features with buffers around the coordinates
                 points = [
                     ee.Feature(ee.Geometry.Point(coord).buffer(buffer_size), {'geo_name': str(name)})
                     for coord, name in zip(validated_coordinates, geometry_names)
                 ]
                 features = ee.FeatureCollection(points)
             
-            # Case: List of Geometries
+            # Case: List of ee.Geometry objects
             elif all(isinstance(i, ee.Geometry) for i in geometries):
                 if geometry_names is None:
                     geometry_names = [f"Geometry_{i+1}" for i in range(len(geometries))]
@@ -3516,6 +3922,7 @@ class LandsatCollection:
             else:
                 raise TypeError("Input list must be a list of (lon, lat) tuples OR a list of ee.Geometry objects.")
 
+        # Handle input: Single tuple (coordinate)
         elif isinstance(geometries, tuple) and len(geometries) == 2:
             name = geometry_names[0] if geometry_names else 'Location_1'
             features = ee.FeatureCollection([
@@ -3524,39 +3931,48 @@ class LandsatCollection:
         else:
             raise TypeError("Unsupported type for 'geometries'.")
         
+        # Apply the naming standardization to the created FeatureCollection
         features = features.map(set_standard_name)
 
+        # Dynamically retrieve the Earth Engine reducer based on the string name provided
         try:
             reducer = getattr(ee.Reducer, reducer_type)()
         except AttributeError:
             raise ValueError(f"Unknown reducer_type: '{reducer_type}'.")
 
+        # Define the function to map over the image collection
         def calculate_stats_for_image(image):
             image_date = image.get('Date_Filter')
+            # Calculate statistics for all geometries in 'features' for this specific image
             stats_fc = image.reduceRegions(
                 collection=features, reducer=reducer, scale=scale, tileScale=tileScale
             )
 
+            # Helper to ensure the result has the reducer property, even if masked
+            # If the property is missing (e.g., all pixels masked), set it to a sentinel value (-9999)
             def guarantee_reducer_property(f):
                 has_property = f.propertyNames().contains(reducer_type)
                 return ee.Algorithms.If(has_property, f, f.set(reducer_type, -9999))
+            
+            # Apply the guarantee check
             fixed_stats_fc = stats_fc.map(guarantee_reducer_property)
 
+            # Attach the image date to every feature in the result so we know which image it came from
             return fixed_stats_fc.map(lambda f: f.set('image_date', image_date))
 
+        # Map the calculation over the image collection and flatten the resulting FeatureCollections into one
         results_fc = ee.FeatureCollection(img_collection_obj.collection.map(calculate_stats_for_image)).flatten()
+        
+        # Convert the Earth Engine FeatureCollection to a pandas DataFrame (client-side operation)
         df = LandsatCollection.ee_to_df(results_fc, remove_geom=True)
 
-        # Checking for issues
+        # Check for empty results or missing columns
         if df.empty: 
-            # print("No results found for the given parameters. Check if the geometries intersect with the images, if the dates filter is too restrictive, or if the provided bands are empty.")
-            # return df
             raise ValueError("No results found for the given parameters. Check if the geometries intersect with the images, if the dates filter is too restrictive, or if the provided bands are empty.")
         if reducer_type not in df.columns:
             print(f"Warning: Reducer '{reducer_type}' not found in results.")
-            # return df
 
-        # Get the number of rows before dropping nulls for a helpful message
+        # Filter out the sentinel values (-9999) which indicate failed reductions/masked pixels
         initial_rows = len(df)
         df.dropna(subset=[reducer_type], inplace=True)
         df = df[df[reducer_type] != -9999]
@@ -3564,9 +3980,18 @@ class LandsatCollection:
         if dropped_rows > 0:
             print(f"Warning: Discarded {dropped_rows} results due to failed reductions (e.g., no valid pixels in geometry).")
 
-        # Reshape DataFrame to have dates as index and geometry names as columns
+        # Pivot the DataFrame so that each row represents a date and each column represents a geometry location
         pivot_df = df.pivot(index='image_date', columns='geo_name', values=reducer_type)
+        # Rename the column headers (geometry names) to include the reducer type 
+        pivot_df.columns = [f"{col}_{reducer_type}" for col in pivot_df.columns]
+        # Rename the index axis to 'Date' so it is correctly labeled when moved to a column later
         pivot_df.index.name = 'Date'
+        # Remove the name of the columns axis (which defaults to 'geo_name') so it doesn't appear as a confusing label in the final output
+        pivot_df.columns.name = None
+        # Reset the index to move the 'Date' index into a regular column and create a standard numerical index (0, 1, 2...)
+        pivot_df = pivot_df.reset_index(drop=False)
+
+        # If a file path is provided, save the resulting DataFrame to CSV
         if file_path:
             # Check if file_path ends with .csv and remove it if so for consistency
             if file_path.endswith('.csv'):

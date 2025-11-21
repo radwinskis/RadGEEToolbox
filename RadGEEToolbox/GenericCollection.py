@@ -104,7 +104,7 @@ class GenericCollection:
 
     
     @staticmethod
-    def anomaly_fn(image, geometry, band_name=None, anomaly_band_name=None, replace=True):
+    def anomaly_fn(image, geometry, band_name=None, anomaly_band_name=None, replace=True, scale=None):
         """
         Calculates the anomaly of a singleband image compared to the mean of the singleband image.
 
@@ -132,16 +132,25 @@ class GenericCollection:
 
         image_to_process = image.select([band_name])
 
-        # Calculate the mean image of the provided collection.
+        image_scale = image_to_process.projection().nominalScale()
+
+        # If the user supplies a numeric scale (int/float), keep it; otherwise default to image projection scale.
+        scale_value = scale if scale is not None else image_scale  # Can be Python number or ee.Number
+
+        # Compute mean over geometry at chosen scale (scale_value may be ee.Number).
         mean_image = image_to_process.reduceRegion(
             reducer=ee.Reducer.mean(),
             geometry=geometry,
-            scale=30,
+            scale=scale_value,
             maxPixels=1e13
         ).toImage()
 
         # Compute the anomaly by subtracting the mean image from the input image.
-        anomaly_image = image_to_process.subtract(mean_image)
+        if scale is None:
+            anomaly_image = image_to_process.subtract(mean_image)
+        else:
+            anomaly_image = image_to_process.reproject(crs=image_to_process.projection(), scale=scale_value).subtract(mean_image)
+
         if anomaly_band_name is None:
             if band_name:
                 anomaly_image = anomaly_image.rename(band_name) 
@@ -152,9 +161,9 @@ class GenericCollection:
             anomaly_image = anomaly_image.rename(anomaly_band_name) 
         # return anomaly_image
         if replace:
-            return anomaly_image.copyProperties(image)
+            return anomaly_image.copyProperties(image).set('system:time_start', image.get('system:time_start'))
         else:
-            return image.addBands(anomaly_image, overwrite=True)
+            return image.addBands(anomaly_image, overwrite=True).copyProperties(image)
 
     @staticmethod
     def mask_via_band_fn(image, band_to_mask, band_for_mask, threshold, mask_above=False, add_band_to_original_image=False):
@@ -315,7 +324,7 @@ class GenericCollection:
 
         # Call to iterate the calculate_and_set_area function over the list of bands, starting with the original image
         final_image = ee.Image(bands.iterate(calculate_and_set_area, image))
-        return final_image
+        return final_image #.set('system:time_start', image.get('system:time_start'))
 
     def PixelAreaSumCollection(
         self, band_name, geometry, threshold=-1, scale=30, maxPixels=1e12, output_type='ImageCollection', area_data_export_path=None
@@ -329,11 +338,11 @@ class GenericCollection:
 
         Args:
             band_name (string or list of strings): name of band(s) (string) for calculating area. If providing multiple band names, pass as a list of strings.
-            geometry (ee.Geometry): ee.Geometry object denoting area to clip to for area calculation
+            geometry (ee.Geometry): ee.Geometry object denoting area to clip to for area calculation.
             threshold (float): integer threshold to specify masking of pixels below threshold (defaults to -1). If providing multiple band names, the same threshold will be applied to all bands. Best practice in this case is to mask the bands prior to passing to this function and leave threshold at default of -1.
-            scale (int): integer scale of image resolution (meters) (defaults to 30)
-            maxPixels (int): integer denoting maximum number of pixels for calculations
-            output_type (str): 'ImageCollection' to return an ee.ImageCollection, 'GenericCollection' to return a GenericCollection object (defaults to 'ImageCollection')
+            scale (int): integer scale of image resolution (meters) (defaults to 30).
+            maxPixels (int): integer denoting maximum number of pixels for calculations.
+            output_type (str): 'ImageCollection' or 'ee.ImageCollection' to return an ee.ImageCollection, 'GenericCollection' to return a GenericCollection object, or 'DataFrame', 'Pandas', 'pd', 'dataframe', 'df' to return a pandas DataFrame (defaults to 'ImageCollection').
             area_data_export_path (str, optional): If provided, the function will save the resulting area data to a CSV file at the specified path.
 
         Returns:
@@ -358,15 +367,41 @@ class GenericCollection:
 
         # If an export path is provided, the area data will be exported to a CSV file
         if area_data_export_path:
-            GenericCollection(collection=self._PixelAreaSumCollection).ExportProperties(property_names=band_name, file_path=area_data_export_path+'.csv')
+            GenericCollection(collection=self._PixelAreaSumCollection).ExportProperties(property_names=[band_name], file_path=area_data_export_path+'.csv')
 
         # Returning the result in the desired format based on output_type argument or raising an error for invalid input
-        if output_type == 'ImageCollection':
+        if output_type == 'ImageCollection' or output_type == 'ee.ImageCollection':
             return self._PixelAreaSumCollection
         elif output_type == 'GenericCollection':
             return GenericCollection(collection=self._PixelAreaSumCollection)
+        elif output_type == 'DataFrame' or output_type == 'Pandas' or output_type == 'pd' or output_type == 'dataframe' or output_type == 'df':
+            return GenericCollection(collection=self._PixelAreaSumCollection).ExportProperties(property_names=[band_name])
         else:
-            raise ValueError("output_type must be 'ImageCollection' or 'GenericCollection'")
+            raise ValueError("Incorrect `output_type`. The `output_type` argument must be one of the following: 'ImageCollection', 'ee.ImageCollection', 'GenericCollection', 'DataFrame', 'Pandas', 'pd', 'dataframe', or 'df'.")
+
+    @staticmethod
+    def add_month_property_fn(image):
+        """
+        Adds a numeric 'month' property to the image based on its date.
+
+        Args:
+            image (ee.Image): Input image.
+
+        Returns:
+            ee.Image: Image with the 'month' property added.
+        """
+        return image.set('month', image.date().get('month'))
+
+    @property
+    def add_month_property(self):
+        """
+        Adds a numeric 'month' property to each image in the collection.
+
+        Returns:
+            GenericCollection: A GenericCollection image collection with the 'month' property added to each image.
+        """
+        col = self.collection.map(GenericCollection.add_month_property_fn)
+        return GenericCollection(collection=col)
 
     def combine(self, other):
         """
@@ -480,6 +515,28 @@ class GenericCollection:
             dates = self._dates_list.getInfo()
             self._dates = dates
         return self._dates
+    
+    def remove_duplicate_dates(self, sort_by='system:time_start', ascending=True):
+        """
+        Removes duplicate images that share the same date, keeping only the first one encountered.
+        Useful for handling duplicate acquisitions or overlapping path/rows.
+        
+        Args:
+            sort_by (str): Property to sort by before filtering distinct dates. Defaults to 'system:time_start' which is a global property. 
+                    Take care to provide a property that exists in all images if using a custom property.
+            ascending (bool): Sort order. Defaults to True.
+
+        Returns:
+            GenericCollection: A new GenericCollection object with distinct dates.
+        """
+
+        # Sort the collection to ensure the "best" image comes first (e.g. least cloudy)
+        sorted_col = self.collection.sort(sort_by, ascending)
+        
+        # distinct() retains the first image for each unique value of the specified property
+        distinct_col = sorted_col.distinct('Date_Filter')
+        
+        return GenericCollection(collection=distinct_col)
 
     def ExportProperties(self, property_names, file_path=None):
         """
@@ -1565,24 +1622,24 @@ class GenericCollection:
         if classify_above_threshold:
             if mask_zeros:
                 col = self.collection.map(
-                    lambda image: image.select(band_name).gte(threshold).rename(band_name).updateMask(image.select(band_name).gt(0)).copyProperties(image)
+                    lambda image: image.select(band_name).gte(threshold).rename(band_name).updateMask(image.select(band_name).gt(0)).copyProperties(image).set('system:time_start', image.get('system:time_start'))
                 )
             else:
                 col = self.collection.map(
-                    lambda image: image.select(band_name).gte(threshold).rename(band_name).copyProperties(image)
+                    lambda image: image.select(band_name).gte(threshold).rename(band_name).copyProperties(image).set('system:time_start', image.get('system:time_start'))
                 )
         else:
             if mask_zeros:
                 col = self.collection.map(
-                    lambda image: image.select(band_name).lte(threshold).rename(band_name).updateMask(image.select(band_name).gt(0)).copyProperties(image)
+                    lambda image: image.select(band_name).lte(threshold).rename(band_name).updateMask(image.select(band_name).gt(0)).copyProperties(image).set('system:time_start', image.get('system:time_start'))
                 )
             else:
                 col = self.collection.map(
-                    lambda image: image.select(band_name).lte(threshold).rename(band_name).copyProperties(image)
+                    lambda image: image.select(band_name).lte(threshold).rename(band_name).copyProperties(image).set('system:time_start', image.get('system:time_start'))
                 )
         return GenericCollection(collection=col)
     
-    def anomaly(self, geometry, band_name=None, anomaly_band_name=None, replace=True):
+    def anomaly(self, geometry, band_name=None, anomaly_band_name=None, replace=True, scale=None):
         """
         Calculates the anomaly of each image in a collection compared to the mean of each image.
 
@@ -1596,6 +1653,7 @@ class GenericCollection:
             band_name (str, optional): A string representing the band name to be used for the output anomaly image. If not provided, the band name of the first band of the input image will be used.
             anomaly_band_name (str, optional): A string representing the band name to be used for the output anomaly image. If not provided, the band name of the first band of the input image will be used.
             replace (bool, optional): A boolean indicating whether to replace the original band with the anomaly band. If True, the output image will only contain the anomaly band. If False, the output image will retain all original bands and add the anomaly band. Default is True.
+            scale (int, optional): The scale (in meters) to use for the image reduction. If not provided, the nominal scale of the image will be used.
 
         Returns:
             GenericCollection: A GenericCollection where each image represents the anomaly (deviation from
@@ -1614,7 +1672,7 @@ class GenericCollection:
             else:
                 band_name = band_names.get(0).getInfo()
 
-        col = self.collection.map(lambda image: GenericCollection.anomaly_fn(image, geometry=geometry, band_name=band_name, anomaly_band_name=anomaly_band_name, replace=replace))
+        col = self.collection.map(lambda image: GenericCollection.anomaly_fn(image, geometry=geometry, band_name=band_name, anomaly_band_name=anomaly_band_name, replace=replace, scale=scale))
         return GenericCollection(collection=col)
     
     def mask_via_band(self, band_to_mask, band_for_mask, threshold=-1, mask_above=True, add_band_to_original_image=False):
@@ -2434,24 +2492,30 @@ class GenericCollection:
             ValueError: If input parameters are invalid.
             TypeError: If geometries input type is unsupported.
         """
+        # Create a local reference to the collection object to allow for modifications (like band selection) without altering the original instance
         img_collection_obj = self
+
+        # If a specific band is requested, select only that band
         if band:
             img_collection_obj = GenericCollection(collection=img_collection_obj.collection.select(band))
         else: 
+            # If no band is specified, default to using the first band of the first image in the collection
             first_image = img_collection_obj.image_grab(0)
             first_band = first_image.bandNames().get(0)
             img_collection_obj = GenericCollection(collection=img_collection_obj.collection.select([first_band]))
-        # Filter collection by dates if provided
+        
+        # If a list of dates is provided, filter the collection to include only images matching those dates
         if dates:
             img_collection_obj = GenericCollection(
                 collection=self.collection.filter(ee.Filter.inList('Date_Filter', dates))
             )
 
-        # Initialize variables
+        # Initialize variables to hold the standardized feature collection and coordinates
         features = None
         validated_coordinates = [] 
         
-        # Function to standardize feature names if no names are provided
+        # Define a helper function to ensure every feature has a standardized 'geo_name' property
+        # This handles features that might have different existing name properties or none at all
         def set_standard_name(feature):
             has_geo_name = feature.get('geo_name')
             has_name = feature.get('name')
@@ -2462,33 +2526,38 @@ class GenericCollection:
                 ee.Algorithms.If(has_index, has_index, 'unnamed_geometry')))
             return feature.set({'geo_name': new_name})
 
+        # Handle input: FeatureCollection or single Feature
         if isinstance(geometries, (ee.FeatureCollection, ee.Feature)):
             features = ee.FeatureCollection(geometries)
             if geometry_names:
                  print("Warning: 'geometry_names' are ignored when the input is an ee.Feature or ee.FeatureCollection.")
 
+        # Handle input: Single ee.Geometry
         elif isinstance(geometries, ee.Geometry):
              name = geometry_names[0] if (geometry_names and geometry_names[0]) else 'unnamed_geometry'
              features = ee.FeatureCollection([ee.Feature(geometries).set('geo_name', name)])
 
+        # Handle input: List (could be coordinates or ee.Geometry objects)
         elif isinstance(geometries, list):
             if not geometries: # Handle empty list case
                 raise ValueError("'geometries' list cannot be empty.")
             
-            # Case: List of coordinates
+            # Case: List of tuples (coordinates)
             if all(isinstance(i, tuple) for i in geometries):
                 validated_coordinates = geometries
+                # Generate default names if none provided
                 if geometry_names is None:
                     geometry_names = [f"Location_{i+1}" for i in range(len(validated_coordinates))]
                 elif len(geometry_names) != len(validated_coordinates):
                      raise ValueError("geometry_names must have the same length as the coordinates list.")
+                # Create features with buffers around the coordinates
                 points = [
                     ee.Feature(ee.Geometry.Point(coord).buffer(buffer_size), {'geo_name': str(name)})
                     for coord, name in zip(validated_coordinates, geometry_names)
                 ]
                 features = ee.FeatureCollection(points)
             
-            # Case: List of Geometries
+            # Case: List of ee.Geometry objects
             elif all(isinstance(i, ee.Geometry) for i in geometries):
                 if geometry_names is None:
                     geometry_names = [f"Geometry_{i+1}" for i in range(len(geometries))]
@@ -2503,6 +2572,7 @@ class GenericCollection:
             else:
                 raise TypeError("Input list must be a list of (lon, lat) tuples OR a list of ee.Geometry objects.")
 
+        # Handle input: Single tuple (coordinate)
         elif isinstance(geometries, tuple) and len(geometries) == 2:
             name = geometry_names[0] if geometry_names else 'Location_1'
             features = ee.FeatureCollection([
@@ -2511,39 +2581,48 @@ class GenericCollection:
         else:
             raise TypeError("Unsupported type for 'geometries'.")
         
+        # Apply the naming standardization to the created FeatureCollection
         features = features.map(set_standard_name)
 
+        # Dynamically retrieve the Earth Engine reducer based on the string name provided
         try:
             reducer = getattr(ee.Reducer, reducer_type)()
         except AttributeError:
             raise ValueError(f"Unknown reducer_type: '{reducer_type}'.")
 
+        # Define the function to map over the image collection
         def calculate_stats_for_image(image):
             image_date = image.get('Date_Filter')
+            # Calculate statistics for all geometries in 'features' for this specific image
             stats_fc = image.reduceRegions(
                 collection=features, reducer=reducer, scale=scale, tileScale=tileScale
             )
 
+            # Helper to ensure the result has the reducer property, even if masked
+            # If the property is missing (e.g., all pixels masked), set it to a sentinel value (-9999)
             def guarantee_reducer_property(f):
                 has_property = f.propertyNames().contains(reducer_type)
                 return ee.Algorithms.If(has_property, f, f.set(reducer_type, -9999))
+            
+            # Apply the guarantee check
             fixed_stats_fc = stats_fc.map(guarantee_reducer_property)
 
+            # Attach the image date to every feature in the result so we know which image it came from
             return fixed_stats_fc.map(lambda f: f.set('image_date', image_date))
 
+        # Map the calculation over the image collection and flatten the resulting FeatureCollections into one
         results_fc = ee.FeatureCollection(img_collection_obj.collection.map(calculate_stats_for_image)).flatten()
+        
+        # Convert the Earth Engine FeatureCollection to a pandas DataFrame (client-side operation)
         df = GenericCollection.ee_to_df(results_fc, remove_geom=True)
 
-        # Checking for issues
+        # Check for empty results or missing columns
         if df.empty: 
-            # print("No results found for the given parameters. Check if the geometries intersect with the images, if the dates filter is too restrictive, or if the provided bands are empty.")
-            # return df
             raise ValueError("No results found for the given parameters. Check if the geometries intersect with the images, if the dates filter is too restrictive, or if the provided bands are empty.")
         if reducer_type not in df.columns:
             print(f"Warning: Reducer '{reducer_type}' not found in results.")
-            # return df
 
-        # Get the number of rows before dropping nulls for a helpful message
+        # Filter out the sentinel values (-9999) which indicate failed reductions/masked pixels
         initial_rows = len(df)
         df.dropna(subset=[reducer_type], inplace=True)
         df = df[df[reducer_type] != -9999]
@@ -2551,9 +2630,18 @@ class GenericCollection:
         if dropped_rows > 0:
             print(f"Warning: Discarded {dropped_rows} results due to failed reductions (e.g., no valid pixels in geometry).")
 
-        # Reshape DataFrame to have dates as index and geometry names as columns
+        # Pivot the DataFrame so that each row represents a date and each column represents a geometry location
         pivot_df = df.pivot(index='image_date', columns='geo_name', values=reducer_type)
+        # Rename the column headers (geometry names) to include the reducer type 
+        pivot_df.columns = [f"{col}_{reducer_type}" for col in pivot_df.columns]
+        # Rename the index axis to 'Date' so it is correctly labeled when moved to a column later
         pivot_df.index.name = 'Date'
+        # Remove the name of the columns axis (which defaults to 'geo_name') so it doesn't appear as a confusing label in the final output
+        pivot_df.columns.name = None
+        # Reset the index to move the 'Date' index into a regular column and create a standard numerical index (0, 1, 2...)
+        pivot_df = pivot_df.reset_index(drop=False)
+
+        # If a file path is provided, save the resulting DataFrame to CSV
         if file_path:
             # Check if file_path ends with .csv and remove it if so for consistency
             if file_path.endswith('.csv'):

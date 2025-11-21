@@ -1,4 +1,4 @@
-GenericCollection__version__ = "1.7.0"
+GenericCollection__version__ = "1.7.1"
 
 from .CollectionStitch import CollectionStitch, MosaicByDate
 from .GetPalette import get_palette

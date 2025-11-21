@@ -26,7 +26,7 @@ The package is divided into six modules:
 
 The main processing modules are ``LandsatCollection.py``, ``Sentinel1Collection.py``, ``Sentinel2Collection.py``, and ``GenericCollection``. These handle the majority of remote sensing workflows.
 
-The supplemental modules—``CollectionStitch.py``, ``GetPalette.py``, and ``VisParams.py``—support advanced processing and image display customization.
+The supplemental modules — ``CollectionStitch.py``, ``GetPalette.py``, and ``VisParams.py`` — support advanced processing and image display customization.
 
 Most functionality is server-side friendly, and many results are cached to improve performance and reduce recomputation time.
 

@@ -87,3 +87,9 @@ To see the code used to display this plot, please view `this Example Notebook <h
 You can also explore the
 `Example Notebooks <https://github.com/radwinskis/RadGEEToolbox/tree/main/Example%20Notebooks>`_
 for more usage examples.
+
+NOTE for those newer to Python: when you see `property` next to the function name in the RadGEEToolbox documentation, 
+you do not need to add parentheses at the end of the function when calling the function. 
+For example: ```my_image_collection.add_date_property``` calls the `add_date_property` property function upon the `my_image_collection` image collection - 
+no parentheses needed. All other non-property functions require one or more arguments to be specified by the user, and will require the use of parentheses 
+to define the function arguments.
