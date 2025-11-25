@@ -9,7 +9,7 @@ The most commonly used remote sensing data management and image processing workf
 
 RadGEEToolbox is about **quality-of-life** and **comprehensive features** for everyday Google Earth Engine users. Each function is very useful for common tasks not otherwise readily achievable using the GEE API alone. 
 
-As of version `1.7.1`, `RadGEEToolbox` supports any generic image collection via the `GenericCollection` module which allows for utilization of the same data management, temporal reduction, zonal statistics, and data export tools available for the `LandsatCollection`, `Sentinel1Collection`, and `Sentinel2Collection` modules. This allows users to provide their own image collection of choice, such as PRISM or MODIS data, to benefit from the tools available with `RadGEEToolbox`.
+As of version `1.7.2`, `RadGEEToolbox` supports any generic image collection via the `GenericCollection` module which allows for utilization of the same data management, temporal reduction, zonal statistics, and data export tools available for the `LandsatCollection`, `Sentinel1Collection`, and `Sentinel2Collection` modules. This allows users to provide their own image collection of choice, such as PRISM or MODIS data, to benefit from the tools available with `RadGEEToolbox`.
 
 
 **Table 1.** Comparison of functionality between RadGEEToolbox, eemont, and geetools packages.

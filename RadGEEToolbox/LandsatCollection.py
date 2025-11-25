@@ -1260,17 +1260,18 @@ class LandsatCollection:
             # Storing the result in the instance variable to avoid redundant calculations
             self._PixelAreaSumCollection = AreaCollection
 
+        prop_names = band_name if isinstance(band_name, list) else [band_name]
+
         # If an export path is provided, the area data will be exported to a CSV file
         if area_data_export_path:
-            LandsatCollection(collection=self._PixelAreaSumCollection).ExportProperties(property_names=[band_name], file_path=area_data_export_path+'.csv')
-
+            LandsatCollection(collection=self._PixelAreaSumCollection).ExportProperties(property_names=prop_names, file_path=area_data_export_path+'.csv')
         # Returning the result in the desired format based on output_type argument or raising an error for invalid input
         if output_type == 'ImageCollection' or output_type == 'ee.ImageCollection':
             return self._PixelAreaSumCollection
         elif output_type == 'LandsatCollection':
             return LandsatCollection(collection=self._PixelAreaSumCollection)
         elif output_type == 'DataFrame' or output_type == 'Pandas' or output_type == 'pd' or output_type == 'dataframe' or output_type == 'df':
-            return LandsatCollection(collection=self._PixelAreaSumCollection).ExportProperties(property_names=[band_name])
+            return LandsatCollection(collection=self._PixelAreaSumCollection).ExportProperties(property_names=prop_names)
         else:
             raise ValueError("Incorrect `output_type`. The `output_type` argument must be one of the following: 'ImageCollection', 'ee.ImageCollection', 'LandsatCollection', 'DataFrame', 'Pandas', 'pd', 'dataframe', or 'df'.")
 
@@ -1518,6 +1519,8 @@ class LandsatCollection:
         # Ensure property_names is a list for consistent processing
         if isinstance(property_names, str):
             property_names = [property_names]
+        elif isinstance(property_names, list):
+            property_names = property_names
 
         # Ensure properties are included without duplication, including 'Date_Filter'
         all_properties_to_fetch = list(set(['Date_Filter'] + property_names))
