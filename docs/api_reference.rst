@@ -13,3 +13,4 @@ This section contains the documentation for the classes available in RadGEEToolb
    CollectionStitch
    GetPalette
    VisParams
+   Export

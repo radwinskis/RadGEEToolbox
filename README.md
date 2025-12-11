@@ -14,7 +14,7 @@ Designed for both new and advanced users of Google Earth Engine, RadGEEToolbox m
 
 Although similar packages exist (eemont, geetools, etc.), `RadGEEToolbox` extends functionality and provides cohesive, chainable methods for research oriented projects working with Landsat TM & OLI, Sentinel-1 SAR, and/or Sentinel-2 MSI datasets (Table 1). The ultimate goal of `RadGEEToolbox` is to make satellite image processing easier and faster for real world applications relying on the most commonly utilized remote sensing platforms.
 
-As of version `1.7.2`, `RadGEEToolbox` supports any generic image collection via the `GenericCollection` module which allows for utilization of the same data management, temporal reduction, zonal statistics, and data export tools available for the `LandsatCollection`, `Sentinel1Collection`, and `Sentinel2Collection` modules. This allows users to provide their own image collection of choice, such as PRISM or MODIS data, to benefit from the tools available with `RadGEEToolbox`.
+As of version `1.7.3`, `RadGEEToolbox` supports any generic image collection via the `GenericCollection` module which allows for utilization of the same data management, temporal reduction, zonal statistics, and data export tools available for the `LandsatCollection`, `Sentinel1Collection`, and `Sentinel2Collection` modules. This allows users to provide their own image collection of choice, such as PRISM or MODIS data, to benefit from the tools available with `RadGEEToolbox`.
 
 ***Table 1.*** *Comparison of functionality between RadGEEToolbox, eemont, and geetools.*
 
@@ -25,6 +25,7 @@ As of version `1.7.2`, `RadGEEToolbox` supports any generic image collection via
 | **Zonal Time-series Extraction** | **YES** | **YES** | **YES** |
 | **Area Time-series Extraction** | **YES** | NO | NO |
 | **Transect Time-series Extraction** | **YES** | NO | NO |
+| **Mann-Kendall & Sen's Slope Trend Analysis** | **YES** | NO | NO |
 | **Comprehensive Preprocessing Operations** | **YES** | **YES** | **YES** |
 | **Reflectance Scaling** | **YES** | **YES** | **YES** |
 | **Land Surface Temperature Calculation (Landsat)** | **YES** | NO | NO |
@@ -36,6 +37,8 @@ As of version `1.7.2`, `RadGEEToolbox` supports any generic image collection via
 | **Image Selection by Date or Index** | **YES** | **YES** | NO |
 | **Visualization Presets/Tools** | **YES** | NO | NO |
 | **Batch Export to GEE Asset** | **YES** | **YES** | **YES** |
+| **Batch Export to Google Drive** | **YES** | **YES** | **YES** |
+
 _________
 ## Getting Started with Google Earth Engine
 
@@ -111,9 +114,10 @@ _________
 - Image anomaly calculation
 - SAR utilities for **multilooking**, **speckle filtering**, and **backscatter conversion**
 - Automated and flexible extraction of **transect and zonal statistics (supporting multiple coordinates or geometries)** across image collections
+- Calculation of Mann-Kendall and Sen's Slope timeseries trend analysis
 - Easy conversion between RadGEEToolbox and standard Earth Engine objects
 - Server-side–friendly workflows and caching for **faster, scalable** processing
-- Automatically **batch export image collections to GEE assets**
+- Automatically **batch export image collections to GEE assets or to Google Drive**
 
 **List of all spectral index calculations available for 
 Landsat (TM & OLI) and Sentinel-2 (MSI) imagery:**
@@ -152,15 +156,15 @@ _____________
 
 ### Installing via pip
 
-To install `RadGEEToolbox` version 1.7.2 using pip (NOTE: it is recommended to create a new virtual environment):
+To install `RadGEEToolbox` version 1.7.3 using pip (NOTE: it is recommended to create a new virtual environment):
 
 ```bash
-pip install RadGEEToolbox==1.7.2
+pip install RadGEEToolbox==1.7.3
 ```
 
 ### Installing via Conda
 
-To install `RadGEEToolbox` version 1.7.2 using conda-forge (NOTE: it is recommended to create a new virtual environment):
+To install `RadGEEToolbox` version 1.7.3 using conda-forge (NOTE: it is recommended to create a new virtual environment):
 
 ```bash
 conda install conda-forge::radgeetoolbox
@@ -191,7 +195,7 @@ To verify that `RadGEEToolbox` was installed correctly:
 python -c "import RadGEEToolbox; print(RadGEEToolbox.__version__)"
 ```
 
-You should see `1.7.2` printed as the version number.
+You should see `1.7.3` printed as the version number.
 
 ### Want to Visualize Data? Install These Too
 

@@ -27,6 +27,8 @@ As of version `1.7.2`, `RadGEEToolbox` supports any generic image collection via
 +----------------------------------------------------+-------------------+------------+--------------+
 | **Transect Time-series Extraction**                | **YES**           | NO         | NO           |
 +----------------------------------------------------+-------------------+------------+--------------+
+| **Mann-Kendall and Sen's Slope Trend Analysis**    | **YES**           | NO         | NO           |
++----------------------------------------------------+-------------------+------------+--------------+
 | **Comprehensive Preprocessing Operations**         | **YES**           | **YES**    | **YES**      |
 +----------------------------------------------------+-------------------+------------+--------------+
 | **Reflectance Scaling**                            | **YES**           | **YES**    | **YES**      |
@@ -48,6 +50,8 @@ As of version `1.7.2`, `RadGEEToolbox` supports any generic image collection via
 | **Visualization Presets/Tools**                    | **YES**           | NO         | NO           |
 +----------------------------------------------------+-------------------+------------+--------------+
 | **Batch Export to GEE Asset**                      | **YES**           | **YES**    | **YES**      |
++----------------------------------------------------+-------------------+------------+--------------+
+| **Batch Export to Google Drive**                   | **YES**           | **YES**    | **YES**      |
 +----------------------------------------------------+-------------------+------------+--------------+
 
 Statement of Need
@@ -123,6 +127,7 @@ Spatial / Zonal Statistic Extraction (Time Series Analysis)
 - **Extract singleband pixel values along a transect** (or multiple transects) for every image in a collection, with options to save to CSV (data organized by image date)
 - **Extract regionally reduced statistics** (mean, median, etc.) within a circular buffer for one or more coordinates for every image in a collection, with options to change buffer size, save as CSV, and more (data organized by image date)
 - **Extract regionally reduced statistics** (mean, median, etc.) with one or more geometries for every image in a collection, with options to save as CSV or as DataFrame 
+- Calculate **Mann-Kendall trend analysis and Sen's slope** for time series data
 - Easily export aggregated image properties or spatiotemporal statistics to pandas DataFrame or CSV
 
 Temporal Reductions

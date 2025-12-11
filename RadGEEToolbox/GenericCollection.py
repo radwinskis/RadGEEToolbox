@@ -81,6 +81,11 @@ class GenericCollection:
         self._monthly_sum = None
         self._monthly_max = None
         self._monthly_min = None
+        self._yearly_median = None
+        self._yearly_mean = None
+        self._yearly_max = None
+        self._yearly_min = None
+        self._yearly_sum = None
         self._mean = None
         self._max = None
         self._min = None
@@ -163,7 +168,7 @@ class GenericCollection:
         if replace:
             return anomaly_image.copyProperties(image).set('system:time_start', image.get('system:time_start'))
         else:
-            return image.addBands(anomaly_image, overwrite=True).copyProperties(image)
+            return image.addBands(anomaly_image, overwrite=True).copyProperties(image).set('system:time_start', image.get('system:time_start'))
 
     @staticmethod
     def mask_via_band_fn(image, band_to_mask, band_for_mask, threshold, mask_above=False, add_band_to_original_image=False):
@@ -191,7 +196,7 @@ class GenericCollection:
         if add_band_to_original_image:
             return image.addBands(band_to_mask_image.updateMask(mask).rename(band_to_mask), overwrite=True)
         else:
-            return ee.Image(band_to_mask_image.updateMask(mask).rename(band_to_mask).copyProperties(image))
+            return ee.Image(band_to_mask_image.updateMask(mask).rename(band_to_mask).copyProperties(image).set('system:time_start', image.get('system:time_start')))
     
     @staticmethod
     def mask_via_singleband_image_fn(image_to_mask, image_for_mask, threshold, band_name_to_mask=None, band_name_for_mask=None, mask_above=True):
@@ -227,7 +232,7 @@ class GenericCollection:
             mask = band_for_mask_image.gt(threshold)
         else:
             mask = band_for_mask_image.lt(threshold)
-        return band_to_mask_image.updateMask(mask).rename(band_to_mask).copyProperties(image_to_mask)
+        return band_to_mask_image.updateMask(mask).rename(band_to_mask).copyProperties(image_to_mask).set('system:time_start', image_to_mask.get('system:time_start'))
     
     @staticmethod
     def band_rename_fn(image, current_band_name, new_band_name):
@@ -263,7 +268,7 @@ class GenericCollection:
             return img.rename(ee.List(new_names))
 
         out = ee.Image(ee.Algorithms.If(has_band, _rename(), img))
-        return out.copyProperties(img)
+        return out.copyProperties(img).set('system:time_start', img.get('system:time_start'))
 
     @staticmethod
     def PixelAreaSum(
@@ -959,6 +964,391 @@ class GenericCollection:
 
         return self._monthly_sum
     
+    def yearly_mean_collection(self, start_month=1, end_month=12):
+        """
+        Creates a yearly mean composite from the collection, with optional monthly filtering.
+
+        This function computes the mean for each year within the collection's date range.
+        You can specify a range of months (e.g., start_month=6, end_month=10 for June-October)
+        to calculate the mean only using imagery from that specific season for each year.
+
+        The resulting images have 'system:time_start', 'year', 'image_count', 'season_start',
+        'season_end', and 'Date_Filter' properties. Years with no images (after filtering) are excluded.
+
+        Args:
+            start_month (int): The starting month (1-12) for the filter. Defaults to 1 (January).
+            end_month (int): The ending month (1-12) for the filter. Defaults to 12 (December).
+
+        Returns:
+            Object: A new instance of the same class (e.g., GenericCollection) containing the yearly mean composites.
+        """
+        if self._yearly_mean is None:
+
+            date_range = self.collection.reduceColumns(ee.Reducer.minMax(), ["system:time_start"])
+            start_date_full = ee.Date(date_range.get('min'))
+            end_date_full = ee.Date(date_range.get('max'))
+            
+            start_year = start_date_full.get('year')
+            end_year = end_date_full.get('year')
+
+            if start_month != 1 or end_month != 12:
+                processing_collection = self.collection.filter(ee.Filter.calendarRange(start_month, end_month, 'month'))
+            else:
+                processing_collection = self.collection
+
+            # Capture projection from the first image to restore it after reduction
+            target_proj = self.collection.first().projection()
+
+            years = ee.List.sequence(start_year, end_year)
+
+            def create_yearly_composite(year):
+                year = ee.Number(year)
+                # Define the full calendar year range
+                start_of_year = ee.Date.fromYMD(year, 1, 1)
+                end_of_year = start_of_year.advance(1, 'year')
+
+                yearly_subset = processing_collection.filterDate(start_of_year, end_of_year)
+
+                # Calculate stats
+                image_count = yearly_subset.size()
+                yearly_reduction = yearly_subset.mean()
+
+                # Define the timestamp for the composite.
+                # We use the start_month of that year to accurately reflect the data start time.
+                composite_date = ee.Date.fromYMD(year, start_month, 1)
+
+                return yearly_reduction.set({
+                    'system:time_start': composite_date.millis(),
+                    'year': year,
+                    'month': start_month,  
+                    'Date_Filter': composite_date.format('YYYY-MM-dd'), 
+                    'image_count': image_count,
+                    'season_start': start_month,
+                    'season_end': end_month
+                }).reproject(target_proj)
+
+            # Map the function over the years list
+            yearly_composites_list = years.map(create_yearly_composite)
+            
+            # Convert to Collection
+            yearly_collection = ee.ImageCollection.fromImages(yearly_composites_list)
+
+            # Filter out any composites that were created from zero images.
+            final_collection = yearly_collection.filter(ee.Filter.gt('image_count', 0))
+
+            self._yearly_mean = GenericCollection(collection=final_collection)
+        else: 
+            pass
+        return self._yearly_mean
+
+    def yearly_median_collection(self, start_month=1, end_month=12):
+        """
+        Creates a yearly median composite from the collection, with optional monthly filtering.
+
+        This function computes the median for each year within the collection's date range.
+        You can specify a range of months (e.g., start_month=6, end_month=10 for June-October)
+        to calculate the median only using imagery from that specific season for each year.
+        The resulting images have 'system:time_start', 'year', 'image_count', 'season_start',
+        'season_end', and 'Date_Filter' properties. Years with no images (after filtering) are excluded.
+
+        Args:
+            start_month (int): The starting month (1-12) for the filter. Defaults to 1 (January).
+            end_month (int): The ending month (1-12) for the filter. Defaults to 12 (December).
+
+        Returns:
+            Object: A new instance of the same class (e.g., GenericCollection) containing the yearly median composites.
+        """
+        if self._yearly_median is None:
+
+            date_range = self.collection.reduceColumns(ee.Reducer.minMax(), ["system:time_start"])
+            start_date_full = ee.Date(date_range.get('min'))
+            end_date_full = ee.Date(date_range.get('max'))
+            
+            start_year = start_date_full.get('year')
+            end_year = end_date_full.get('year')
+
+            if start_month != 1 or end_month != 12:
+                processing_collection = self.collection.filter(ee.Filter.calendarRange(start_month, end_month, 'month'))
+            else:
+                processing_collection = self.collection
+
+            # Capture projection from the first image to restore it after reduction
+            target_proj = self.collection.first().projection()
+
+            years = ee.List.sequence(start_year, end_year)
+
+            def create_yearly_composite(year):
+                year = ee.Number(year)
+                # Define the full calendar year range
+                start_of_year = ee.Date.fromYMD(year, 1, 1)
+                end_of_year = start_of_year.advance(1, 'year')
+
+                # Filter to the specific year using the PRE-FILTERED seasonal collection
+                yearly_subset = processing_collection.filterDate(start_of_year, end_of_year)
+
+                # Calculate stats
+                image_count = yearly_subset.size()
+                yearly_reduction = yearly_subset.median()
+
+                # Define the timestamp for the composite.
+                # We use the start_month of that year to accurately reflect the data start time.
+                composite_date = ee.Date.fromYMD(year, start_month, 1)
+
+                return yearly_reduction.set({
+                    'system:time_start': composite_date.millis(),
+                    'year': year,
+                    'month': start_month,  
+                    'Date_Filter': composite_date.format('YYYY-MM-dd'), 
+                    'image_count': image_count,
+                    'season_start': start_month,
+                    'season_end': end_month
+                }).reproject(target_proj)
+
+            # Map the function over the years list
+            yearly_composites_list = years.map(create_yearly_composite)
+            
+            # Convert to Collection
+            yearly_collection = ee.ImageCollection.fromImages(yearly_composites_list)
+
+            # Filter out any composites that were created from zero images.
+            final_collection = yearly_collection.filter(ee.Filter.gt('image_count', 0))
+
+            self._yearly_median = GenericCollection(collection=final_collection)
+        else: 
+            pass
+        return self._yearly_median
+
+    def yearly_max_collection(self, start_month=1, end_month=12):
+        """
+        Creates a yearly max composite from the collection, with optional monthly filtering.
+
+        This function computes the max for each year within the collection's date range.
+        You can specify a range of months (e.g., start_month=6, end_month=10 for June-October)
+        to calculate the max only using imagery from that specific season for each year.
+        The resulting images have 'system:time_start', 'year', 'image_count', 'season_start',
+        'season_end', and 'Date_Filter' properties. Years with no images (after filtering) are excluded.
+
+        Args:
+            start_month (int): The starting month (1-12) for the filter. Defaults to 1 (January).
+            end_month (int): The ending month (1-12) for the filter. Defaults to 12 (December).
+
+        Returns:
+            Object: A new instance of the same class (e.g., GenericCollection) containing the yearly max composites.
+        """
+        if self._yearly_max is None:
+
+            date_range = self.collection.reduceColumns(ee.Reducer.minMax(), ["system:time_start"])
+            start_date_full = ee.Date(date_range.get('min'))
+            end_date_full = ee.Date(date_range.get('max'))
+            
+            start_year = start_date_full.get('year')
+            end_year = end_date_full.get('year')
+
+            if start_month != 1 or end_month != 12:
+                processing_collection = self.collection.filter(ee.Filter.calendarRange(start_month, end_month, 'month'))
+            else:
+                processing_collection = self.collection
+
+            # Capture projection from the first image to restore it after reduction
+            target_proj = self.collection.first().projection()
+
+            years = ee.List.sequence(start_year, end_year)
+
+            def create_yearly_composite(year):
+                year = ee.Number(year)
+                # Define the full calendar year range
+                start_of_year = ee.Date.fromYMD(year, 1, 1)
+                end_of_year = start_of_year.advance(1, 'year')
+
+                # Filter to the specific year using the PRE-FILTERED seasonal collection
+                yearly_subset = processing_collection.filterDate(start_of_year, end_of_year)
+
+                # Calculate stats
+                image_count = yearly_subset.size()
+                yearly_reduction = yearly_subset.max()
+
+                # Define the timestamp for the composite.
+                # We use the start_month of that year to accurately reflect the data start time.
+                composite_date = ee.Date.fromYMD(year, start_month, 1)
+
+                return yearly_reduction.set({
+                    'system:time_start': composite_date.millis(),
+                    'year': year,
+                    'month': start_month,  
+                    'Date_Filter': composite_date.format('YYYY-MM-dd'), 
+                    'image_count': image_count,
+                    'season_start': start_month,
+                    'season_end': end_month
+                }).reproject(target_proj)
+
+            # Map the function over the years list
+            yearly_composites_list = years.map(create_yearly_composite)
+            
+            # Convert to Collection
+            yearly_collection = ee.ImageCollection.fromImages(yearly_composites_list)
+
+            # Filter out any composites that were created from zero images.
+            final_collection = yearly_collection.filter(ee.Filter.gt('image_count', 0))
+
+            self._yearly_max = GenericCollection(collection=final_collection)
+        else: 
+            pass
+        return self._yearly_max
+    
+    def yearly_min_collection(self, start_month=1, end_month=12):
+        """
+        Creates a yearly min composite from the collection, with optional monthly filtering.
+
+        This function computes the min for each year within the collection's date range.
+        You can specify a range of months (e.g., start_month=6, end_month=10 for June-October)
+        to calculate the min only using imagery from that specific season for each year.
+        The resulting images have 'system:time_start', 'year', 'image_count', 'season_start',
+        'season_end', and 'Date_Filter' properties. Years with no images (after filtering) are excluded.
+
+        Args:
+            start_month (int): The starting month (1-12) for the filter. Defaults to 1 (January).
+            end_month (int): The ending month (1-12) for the filter. Defaults to 12 (December).
+
+        Returns:
+            Object: A new instance of the same class (e.g., GenericCollection) containing the yearly min composites.
+        """
+        if self._yearly_min is None:
+
+            date_range = self.collection.reduceColumns(ee.Reducer.minMax(), ["system:time_start"])
+            start_date_full = ee.Date(date_range.get('min'))
+            end_date_full = ee.Date(date_range.get('max'))
+            
+            start_year = start_date_full.get('year')
+            end_year = end_date_full.get('year')
+
+            if start_month != 1 or end_month != 12:
+                processing_collection = self.collection.filter(ee.Filter.calendarRange(start_month, end_month, 'month'))
+            else:
+                processing_collection = self.collection
+
+            # Capture projection from the first image to restore it after reduction
+            target_proj = self.collection.first().projection()
+
+            years = ee.List.sequence(start_year, end_year)
+
+            def create_yearly_composite(year):
+                year = ee.Number(year)
+                # Define the full calendar year range
+                start_of_year = ee.Date.fromYMD(year, 1, 1)
+                end_of_year = start_of_year.advance(1, 'year')
+
+                # Filter to the specific year using the PRE-FILTERED seasonal collection
+                yearly_subset = processing_collection.filterDate(start_of_year, end_of_year)
+
+                # Calculate stats
+                image_count = yearly_subset.size()
+                yearly_reduction = yearly_subset.min()
+
+                # Define the timestamp for the composite.
+                # We use the start_month of that year to accurately reflect the data start time.
+                composite_date = ee.Date.fromYMD(year, start_month, 1)
+
+                return yearly_reduction.set({
+                    'system:time_start': composite_date.millis(),
+                    'year': year,
+                    'month': start_month,  
+                    'Date_Filter': composite_date.format('YYYY-MM-dd'), 
+                    'image_count': image_count,
+                    'season_start': start_month,
+                    'season_end': end_month
+                }).reproject(target_proj)
+
+            # Map the function over the years list
+            yearly_composites_list = years.map(create_yearly_composite)
+            
+            # Convert to Collection
+            yearly_collection = ee.ImageCollection.fromImages(yearly_composites_list)
+
+            # Filter out any composites that were created from zero images.
+            final_collection = yearly_collection.filter(ee.Filter.gt('image_count', 0))
+
+            self._yearly_min = GenericCollection(collection=final_collection)
+        else: 
+            pass
+        return self._yearly_min
+
+    def yearly_sum_collection(self, start_month=1, end_month=12):
+        """
+        Creates a yearly sum composite from the collection, with optional monthly filtering.
+
+        This function computes the sum for each year within the collection's date range.
+        You can specify a range of months (e.g., start_month=6, end_month=10 for June-October)
+        to calculate the sum only using imagery from that specific season for each year.
+        The resulting images have 'system:time_start', 'year', 'image_count', 'season_start',
+        'season_end', and 'Date_Filter' properties. Years with no images (after filtering) are excluded.
+
+        Args:
+            start_month (int): The starting month (1-12) for the filter. Defaults to 1 (January).
+            end_month (int): The ending month (1-12) for the filter. Defaults to 12 (December).
+
+        Returns:
+            Object: A new instance of the same class (e.g., GenericCollection) containing the yearly sum composites.
+        """
+        if self._yearly_sum is None:
+
+            date_range = self.collection.reduceColumns(ee.Reducer.minMax(), ["system:time_start"])
+            start_date_full = ee.Date(date_range.get('min'))
+            end_date_full = ee.Date(date_range.get('max'))
+            
+            start_year = start_date_full.get('year')
+            end_year = end_date_full.get('year')
+
+            if start_month != 1 or end_month != 12:
+                processing_collection = self.collection.filter(ee.Filter.calendarRange(start_month, end_month, 'month'))
+            else:
+                processing_collection = self.collection
+
+            # Capture projection from the first image to restore it after reduction
+            target_proj = self.collection.first().projection()
+
+            years = ee.List.sequence(start_year, end_year)
+
+            def create_yearly_composite(year):
+                year = ee.Number(year)
+                # Define the full calendar year range
+                start_of_year = ee.Date.fromYMD(year, 1, 1)
+                end_of_year = start_of_year.advance(1, 'year')
+
+                # Filter to the specific year using the PRE-FILTERED seasonal collection
+                yearly_subset = processing_collection.filterDate(start_of_year, end_of_year)
+
+                # Calculate stats
+                image_count = yearly_subset.size()
+                yearly_reduction = yearly_subset.sum()
+
+                # Define the timestamp for the composite.
+                # We use the start_month of that year to accurately reflect the data start time.
+                composite_date = ee.Date.fromYMD(year, start_month, 1)
+
+                return yearly_reduction.set({
+                    'system:time_start': composite_date.millis(),
+                    'year': year,
+                    'month': start_month,  
+                    'Date_Filter': composite_date.format('YYYY-MM-dd'), 
+                    'image_count': image_count,
+                    'season_start': start_month,
+                    'season_end': end_month
+                }).reproject(target_proj)
+
+            # Map the function over the years list
+            yearly_composites_list = years.map(create_yearly_composite)
+            
+            # Convert to Collection
+            yearly_collection = ee.ImageCollection.fromImages(yearly_composites_list)
+
+            # Filter out any composites that were created from zero images.
+            final_collection = yearly_collection.filter(ee.Filter.gt('image_count', 0))
+
+            self._yearly_sum = GenericCollection(collection=final_collection)
+        else: 
+            pass
+        return self._yearly_sum
+
     @property
     def monthly_max_collection(self):
         """Creates a monthly max composite from a GenericCollection image collection.
@@ -1523,7 +1913,7 @@ class GenericCollection:
             new_band_names = band_names.map(lambda b: ee.String(b).cat('_mm'))
             
             converted_image = image.multiply(10800).rename(new_band_names)
-            return converted_image.copyProperties(image, image.propertyNames())
+            return converted_image.copyProperties(image, image.propertyNames()).set('system:time_start', image.get('system:time_start'))
 
         # Map the function over the entire collection
         converted_collection = self.collection.map(convert_to_mm)
@@ -1536,6 +1926,234 @@ class GenericCollection:
             boundary=self.boundary,
             _dates_list=self._dates_list # Pass along the cached dates!
         )
+
+    def mann_kendall_trend(self, target_band=None, join_method='system:time_start', geometry=None):
+        """
+        Calculates the Mann-Kendall S-value, Variance, Z-Score, and Confidence Level for each pixel in the image collection, in addition to calculating
+        the Sen's slope for each pixel in the image collection. The output is an image with the following bands: 's_statistic', 'variance', 'z_score', 'confidence', and 'slope'.
+
+        This function can be used to identify trends in the image collection over time, such as increasing or decreasing values in the target band, and can be used to assess the significance of these trends.
+        Note that this function is computationally intensive and may take a long time to run for large image collections or high-resolution images.
+
+        The 's_statistic' band represents the Mann-Kendall S-value, which is a measure of the strength and direction of the trend.
+        The 'variance' band represents the variance of the S-value, which is a measure of the variability of the S-value.
+        The 'z_score' band represents the Z-Score, which is a measure of the significance of the trend.
+        The 'confidence' band represents the confidence level of the trend based on the z_score, which is a probabilistic measure of the confidence in the trend (percentage).
+        The 'slope' band represents the Sen's slope, which is a measure of the rate of change in the target band over time. This value can be small as multispectral indices commonly range from -1 to 1, so a slope may have values of <0.2 for most cases.
+
+        Be sure to select the correct band for the `target_band` parameter, as this will be used to calculate the trend statistics.
+        You may optionally provide an ee.Geometry object for the `geometry` parameter to limit the area over which the trend statistics are calculated.
+        The `geometry` parameter is optional and defaults to None, which means that the trend statistics will be calculated over the entire footprint of the image collection.
+
+        Args: 
+            image_collection (GenericCollection or ee.ImageCollection): The input image collection for which the Mann-Kendall and Sen's slope trend statistics will be calculated.
+            target_band (str): The band name to be used for the output anomaly image. e.g. 'ndvi'
+            join_method (str, optional): The method used to join images in the collection. Options are 'system:time_start' or 'Date_Filter'. Default is 'system:time_start'.
+            geometry (ee.Geometry, optional): An ee.Geometry object to limit the area over which the trend statistics are calculated and mask the output image. Default is None.
+
+        Returns:
+            ee.Image: An image with the following bands: 's_statistic', 'variance', 'z_score', 'confidence', and 'slope'.
+        """
+        ########## PART 1 - S-VALUE CALCULATION ##########
+        ##### https://vsp.pnnl.gov/help/vsample/design_trend_mann_kendall.htm #####
+        image_collection = self
+        if isinstance(image_collection, GenericCollection):
+            image_collection = image_collection.collection
+        elif isinstance(image_collection, ee.ImageCollection):
+            pass
+        else:
+            raise ValueError(f'The chosen `image_collection`: {image_collection} is not a valid GenericCollection or ee.ImageCollection object.')
+        
+        if target_band is None:
+            raise ValueError('The `target_band` parameter must be specified.')
+        if not isinstance(target_band, str):
+            raise ValueError(f'The chosen `target_band`: {target_band} is not a valid string.')
+
+        if geometry is not None and not isinstance(geometry, ee.Geometry):
+            raise ValueError(f'The chosen `geometry`: {geometry} is not a valid ee.Geometry object.')
+        # define the join, which will join all images newer than the current image
+        # use system:time_start if the image does not have a Date_Filter property
+        if join_method == 'system:time_start':
+            # get all images where the leftField value is less than (before) the rightField value
+            time_filter = ee.Filter.lessThan(leftField='system:time_start', 
+                                            rightField='system:time_start')
+        elif join_method == 'Date_Filter':
+            # get all images where the leftField value is less than (before) the rightField value
+            time_filter = ee.Filter.lessThan(leftField='Date_Filter', 
+                                            rightField='Date_Filter')
+        else:
+            raise ValueError(f'The chosen `join_method`: {join_method} does not match the options of "system:time_start" or "Date_Filter".')
+
+        # for any matches during a join, set image as a property key called 'future_image'
+        join = ee.Join.saveAll(matchesKey='future_image')
+
+        # apply the join on the input collection 
+        # joining all images newer than the current image with the current image
+        joined_collection = ee.ImageCollection(join.apply(primary=image_collection, 
+                                                secondary=image_collection, condition=time_filter))
+        
+        # defining a collection to calculate the partial S value for each match in the join
+        # e.g. t4-t1, t3-t1, t2-1 if there are 4 images
+        def calculate_partial_s(current_image):
+            # select the target band for arithmetic
+            current_val = current_image.select(target_band)
+            # get the joined images from the current image properties and cast the joined images as a list
+            future_image_list = ee.List(current_image.get('future_image'))
+            # convert the joined list to an image collection
+            future_image_collection = ee.ImageCollection(future_image_list)
+
+            # define a function that will calculate the difference between the joined images and the current image, 
+            # then calculate the partial S sign based on the value of the difference calculation
+            def get_sign(future_image):
+                # select the target band for arithmetic from the future image
+                future_val = future_image.select(target_band)
+                # calculate the difference, i.e. t2-t1
+                difference = future_val.subtract(current_val)
+                # determine the sign of the difference value (1 if diff > 0, 0 if 0, and -1 if diff < 0)
+                # use .unmask(0) to set any masked pixels as 0 to avoid 
+                
+                sign = difference.signum().unmask(0)
+                
+                return sign
+            
+            # map the get_sign() function along the future image col 
+            # then sum the values for each pixel to get the partial S value
+            return future_image_collection.map(get_sign).sum()
+
+        # calculate the partial s value for each image in the joined/input image collection
+        partial_s_col = joined_collection.map(calculate_partial_s)
+
+        # convert the image collection to an image of s_statistic values per pixel
+        # where the s_statistic is the sum of partial s values
+        # renaming the band as 's_statistic' for later usage
+        final_s_image = partial_s_col.sum().rename('s_statistic')
+
+
+        ########## PART 2 - VARIANCE and Z-SCORE ##########
+        # to calculate variance we need to know how many pixels were involved in the partial_s calculations per pixel
+        # we do this by using count() and turn the value to a float for later arithmetic
+        n = image_collection.select(target_band).count().toFloat()
+
+        ##### VARIANCE CALCULATION #####
+        # as we are using floating point values with high precision, it is HIGHLY 
+        # unlikely that there will be multiple pixel values with the same value.
+        # Thus, we opt to use the simplified variance calculation approach as the
+        # impacts to the output value are negligible and the processing benefits are HUGE
+        # variance = (n * (n - 1) * (2n + 5)) / 18
+        var_s = n.multiply(n.subtract(1))\
+                .multiply(n.multiply(2).add(5))\
+                .divide(18).rename('variance')
+        
+        z_score = ee.Image().expression(
+                    """
+                    (s > 0) ? (s - 1) / sqrt(var) :
+                    (s < 0) ? (s + 1) / sqrt(var) :
+                    0
+                    """,
+                    {'s': final_s_image, 'var': var_s}
+                ).rename('z_score')
+        
+        confidence = z_score.abs().divide(ee.Number(2).sqrt()).erf().rename('confidence')
+
+        stat_bands = ee.Image([var_s, z_score, confidence])
+
+        mk_stats_image = final_s_image.addBands(stat_bands)
+
+        ########## PART 3 - Sen's Slope ##########
+        def add_year_band(image):
+            if join_method == 'Date_Filter':
+                # Get the string 'YYYY-MM-DD'
+                date_string = image.get('Date_Filter')
+                # Parse it into an ee.Date object (handles the conversion to time math)
+                date = ee.Date.parse('YYYY-MM-dd', date_string)
+            else:
+                # Standard way: assumes system:time_start exists
+                date = image.date()
+            years = date.difference(ee.Date('1970-01-01'), 'year')
+            return image.addBands(ee.Image(years).float().rename('year'))
+        
+        slope_input = image_collection.map(add_year_band).select(['year', target_band])
+
+        sens_slope = slope_input.reduce(ee.Reducer.sensSlope())
+
+        slope_band = sens_slope.select('slope')
+
+        # add a mask to the final image to remove pixels with less than min_observations
+        # mainly an effort to mask pixels outside of the boundary of the input image collection
+        min_observations = 1
+        valid_mask = n.gte(min_observations)
+
+        final_image = mk_stats_image.addBands(slope_band).updateMask(valid_mask)
+
+        if geometry is not None:
+            mask = ee.Image(1).clip(geometry)
+            final_image = final_image.updateMask(mask)
+
+        return final_image
+
+    def sens_slope_trend(self, target_band=None, join_method='system:time_start', geometry=None):
+            """
+            Calculates Sen's Slope (trend magnitude) for the collection.
+            This is a lighter-weight alternative to the full `mann_kendall_trend` function if only
+            the direction and magnitude of the trend are needed.
+
+            Be sure to select the correct band for the `target_band` parameter, as this will be used to calculate the trend statistics.
+            You may optionally provide an ee.Geometry object for the `geometry` parameter to limit the area over which the trend statistics are calculated.
+            The `geometry` parameter is optional and defaults to None, which means that the trend statistics will be calculated over the entire footprint of the image collection.
+
+            Args:
+                target_band (str): The name of the band to analyze. Defaults to 'ndvi'.
+                join_method (str): Property to use for time sorting ('system:time_start' or 'Date_Filter').
+                geometry (ee.Geometry, optional): Geometry to mask the final output.
+
+            Returns:
+                ee.Image: An image containing the 'slope' band.
+            """
+            image_collection = self
+            if isinstance(image_collection, GenericCollection):
+                image_collection = image_collection.collection
+            elif isinstance(image_collection, ee.ImageCollection):
+                pass
+            else:
+                raise ValueError(f'The chosen `image_collection`: {image_collection} is not a valid GenericCollection or ee.ImageCollection object.')
+            
+            if target_band is None:
+                raise ValueError('The `target_band` parameter must be specified.')
+            if not isinstance(target_band, str):
+                raise ValueError(f'The chosen `target_band`: {target_band} is not a valid string.')
+
+            if geometry is not None and not isinstance(geometry, ee.Geometry):
+                raise ValueError(f'The chosen `geometry`: {geometry} is not a valid ee.Geometry object.')
+
+            # Add Year Band (Time X-Axis)
+            def add_year_band(image):
+                # Handle user-defined date strings vs system time
+                if join_method == 'Date_Filter':
+                    date_string = image.get('Date_Filter')
+                    date = ee.Date.parse('YYYY-MM-dd', date_string)
+                else:
+                    date = image.date()
+                    
+                # Convert to fractional years relative to epoch
+                years = date.difference(ee.Date('1970-01-01'), 'year')
+                return image.addBands(ee.Image(years).float().rename('year'))
+
+            # Prepare Collection: Select ONLY [Year, Target]
+            # sensSlope expects Band 0 = Independent (X), Band 1 = Dependent (Y)
+            slope_input = self.collection.map(add_year_band).select(['year', target_band])
+
+            # Run the Native Reducer
+            sens_result = slope_input.reduce(ee.Reducer.sensSlope())
+            
+            # Extract and Mask
+            slope_band = sens_result.select('slope')
+
+            if geometry is not None:
+                mask = ee.Image(1).clip(geometry)
+                slope_band = slope_band.updateMask(mask)
+
+            return slope_band
+    
 
     def mask_to_polygon(self, polygon):
         """
@@ -1553,7 +2171,7 @@ class GenericCollection:
             mask = ee.Image.constant(1).clip(polygon)
 
             # Update the mask of each image in the collection
-            masked_collection = self.collection.map(lambda img: img.updateMask(mask))
+            masked_collection = self.collection.map(lambda img: img.updateMask(mask).copyProperties(img).set('system:time_start', img.get('system:time_start')))
 
             # Update the internal collection state
             self._geometry_masked_collection = GenericCollection(
@@ -1582,7 +2200,7 @@ class GenericCollection:
             area = full_mask.paint(polygon, 0)
 
             # Update the mask of each image in the collection
-            masked_collection = self.collection.map(lambda img: img.updateMask(area))
+            masked_collection = self.collection.map(lambda img: img.updateMask(area).copyProperties(img).set('system:time_start', img.get('system:time_start')))
 
             # Update the internal collection state
             self._geometry_masked_out_collection = GenericCollection(
@@ -1625,20 +2243,26 @@ class GenericCollection:
         if classify_above_threshold:
             if mask_zeros:
                 col = self.collection.map(
-                    lambda image: image.select(band_name).gte(threshold).rename(band_name).updateMask(image.select(band_name).gt(0)).copyProperties(image).set('system:time_start', image.get('system:time_start'))
+                    lambda image: image.select(band_name).gte(threshold).rename(band_name)
+                    .updateMask(image.select(band_name).gt(0)).copyProperties(image)
+                    .set('system:time_start', image.get('system:time_start'))
                 )
             else:
                 col = self.collection.map(
-                    lambda image: image.select(band_name).gte(threshold).rename(band_name).copyProperties(image).set('system:time_start', image.get('system:time_start'))
+                    lambda image: image.select(band_name).gte(threshold).rename(band_name)
+                    .copyProperties(image).set('system:time_start', image.get('system:time_start'))
                 )
         else:
             if mask_zeros:
                 col = self.collection.map(
-                    lambda image: image.select(band_name).lte(threshold).rename(band_name).updateMask(image.select(band_name).gt(0)).copyProperties(image).set('system:time_start', image.get('system:time_start'))
+                    lambda image: image.select(band_name).lte(threshold).rename(band_name)
+                    .updateMask(image.select(band_name).gt(0)).copyProperties(image)
+                    .set('system:time_start', image.get('system:time_start'))
                 )
             else:
                 col = self.collection.map(
-                    lambda image: image.select(band_name).lte(threshold).rename(band_name).copyProperties(image).set('system:time_start', image.get('system:time_start'))
+                    lambda image: image.select(band_name).lte(threshold).rename(band_name)
+                    .copyProperties(image).set('system:time_start', image.get('system:time_start'))
                 )
         return GenericCollection(collection=col)
     
@@ -1760,7 +2384,8 @@ class GenericCollection:
             )
 
             # guarantee single band + keep properties
-            out = ee.Image(out).select([band_name_to_mask]).copyProperties(prim, prim.propertyNames())
+            out = ee.Image(out).select([band_name_to_mask]).copyProperties(prim, prim.propertyNames())\
+                                    .set('system:time_start', prim.get('system:time_start'))
             out = out.set('Date_Filter', prim.get('Date_Filter'))
             return ee.Image(out)                  # <-- return as Image
 
