@@ -1,6 +1,7 @@
 import ee
 import pandas as pd
 import numpy as np
+import warnings
 
 
 # ---- Reflectance scaling for Sentinel-2 L2A (HARMONIZED) ----
@@ -68,7 +69,7 @@ class Sentinel2Collection:
         ...     cloud_percentage_threshold=20,
         ...     nodata_threshold=10,
         ... )
-        >>> mosaic_collection = image_collection.MosaicByDate #mosaic images/tiles with same date
+        >>> mosaic_collection = image_collection.mosaicByDate #mosaic images/tiles with same date
         >>> cloud_masked = mosaic_collection.masked_clouds_collection #mask out clouds
         >>> latest_image = cloud_masked.image_grab(-1) #grab latest image for viewing
         >>> ndwi_collection = cloud_masked.ndwi #calculate ndwi for all images
@@ -195,6 +196,14 @@ class Sentinel2Collection:
         self._MosaicByDate = None
         self._PixelAreaSumCollection = None
         self._Reflectance = None
+
+    def __call__(self):
+        """
+        Allows the object to be called as a function, returning itself. 
+        This enables property-like methods to be accessed with or without parentheses 
+        (e.g., .mosaicByDate or .mosaicByDate()).
+        """
+        return self
 
     @staticmethod
     def image_dater(image):
@@ -564,7 +573,7 @@ class Sentinel2Collection:
             return image.addBands(anomaly_image, overwrite=True)
 
     @staticmethod
-    def MaskCloudsS2(image):
+    def maskClouds(image):
         """
         Function to mask clouds using SCL band data.
 
@@ -579,7 +588,14 @@ class Sentinel2Collection:
         return image.updateMask(CloudMask).copyProperties(image).set('system:time_start', image.get('system:time_start'))
     
     @staticmethod
-    def MaskShadowsS2(image):
+    def MaskCloudsS2(image):
+        warnings.warn("MaskCloudsS2 is deprecated. Please use maskClouds instead.", 
+                      DeprecationWarning,
+                        stacklevel=2)
+        return Sentinel2Collection.maskClouds(image)
+    
+    @staticmethod
+    def maskShadows(image):
         """
         Function to mask cloud shadows using SCL band data.
 
@@ -592,9 +608,16 @@ class Sentinel2Collection:
         SCL = image.select("SCL")
         ShadowMask = SCL.neq(3)
         return image.updateMask(ShadowMask).copyProperties(image).set('system:time_start', image.get('system:time_start'))
+    
+    @staticmethod
+    def MaskShadowsS2(image):
+        warnings.warn("MaskShadowsS2 is deprecated. Please use maskShadows instead.", 
+                      DeprecationWarning,
+                        stacklevel=2)
+        return Sentinel2Collection.maskShadows(image)
 
     @staticmethod
-    def MaskWaterS2(image):
+    def maskWater(image):
         """
         Function to mask water pixels using SCL band data.
 
@@ -607,9 +630,16 @@ class Sentinel2Collection:
         SCL = image.select("SCL")
         WaterMask = SCL.neq(6)
         return image.updateMask(WaterMask).copyProperties(image).set('system:time_start', image.get('system:time_start'))
+    
+    @staticmethod
+    def MaskWaterS2(image):
+        warnings.warn("MaskWaterS2 is deprecated. Please use maskWater instead.", 
+                      DeprecationWarning,
+                        stacklevel=2)
+        return Sentinel2Collection.maskWater(image)
 
     @staticmethod
-    def MaskWaterS2ByNDWI(image, threshold):
+    def maskWaterByNDWI(image, threshold):
         """
         Function to mask water pixels (mask land and cloud pixels) for all bands based on NDWI and a set threshold where
         all pixels less than NDWI threshold are masked out.
@@ -626,9 +656,16 @@ class Sentinel2Collection:
         )  # green-NIR / green+NIR -- full NDWI image
         water = image.updateMask(ndwi_calc.lt(threshold)).copyProperties(image).set('system:time_start', image.get('system:time_start'))
         return water
+    
+    @staticmethod
+    def MaskWaterS2ByNDWI(image, threshold):
+        warnings.warn("MaskWaterS2ByNDWI is deprecated. Please use maskWaterByNDWI instead.", 
+                      DeprecationWarning,
+                        stacklevel=2)
+        return Sentinel2Collection.maskWaterByNDWI(image, threshold)
 
     @staticmethod
-    def MaskToWaterS2(image):
+    def maskToWater(image):
         """
         Function to mask to water pixels (mask land and cloud pixels) using SCL band data.
 
@@ -641,6 +678,13 @@ class Sentinel2Collection:
         SCL = image.select("SCL")
         WaterMask = SCL.eq(6)
         return image.updateMask(WaterMask).copyProperties(image).set('system:time_start', image.get('system:time_start'))
+    
+    @staticmethod
+    def MaskToWaterS2(image):
+        warnings.warn("MaskToWaterS2 is deprecated. Please use maskToWater instead.", 
+                      DeprecationWarning,
+                        stacklevel=2)
+        return Sentinel2Collection.maskToWater(image)
 
     @staticmethod
     def halite_mask(image, threshold):
@@ -748,7 +792,7 @@ class Sentinel2Collection:
         return band_to_mask_image.updateMask(mask).rename(band_to_mask).copyProperties(image_to_mask).set('system:time_start', image_to_mask.get('system:time_start'))
 
     @staticmethod
-    def MaskToWaterS2ByNDWI(image, threshold):
+    def maskToWaterByNDWI(image, threshold):
         """
         Function to mask all bands to water pixels (mask land and cloud pixels) based on NDWI.
 
@@ -764,9 +808,16 @@ class Sentinel2Collection:
         )  # green-NIR / green+NIR -- full NDWI image
         water = image.updateMask(ndwi_calc.gte(threshold)).copyProperties(image).set('system:time_start', image.get('system:time_start'))
         return water
+    
+    @staticmethod
+    def MaskToWaterS2ByNDWI(image, threshold):
+        warnings.warn("MaskToWaterS2ByNDWI is deprecated. Please use maskToWaterByNDWI instead.", 
+                      DeprecationWarning,
+                        stacklevel=2)
+        return Sentinel2Collection.maskToWaterByNDWI(image, threshold)
 
     @staticmethod
-    def PixelAreaSum(
+    def pixelAreaSum(
         image, band_name, geometry, threshold=-1, scale=10, maxPixels=1e12
     ):
         """
@@ -825,8 +876,17 @@ class Sentinel2Collection:
         # Call to iterate the calculate_and_set_area function over the list of bands, starting with the original image
         final_image = ee.Image(bands.iterate(calculate_and_set_area, image))
         return final_image
+    
+    @staticmethod
+    def PixelAreaSum(
+        image, band_name, geometry, threshold=-1, scale=10, maxPixels=1e12
+    ):
+        warnings.warn("PixelAreaSum is deprecated. Please use pixelAreaSum instead.", 
+                      DeprecationWarning,
+                        stacklevel=2)
+        return Sentinel2Collection.pixelAreaSum(image, band_name, geometry, threshold, scale, maxPixels)
 
-    def PixelAreaSumCollection(
+    def pixelAreaSumCollection(
         self, band_name, geometry, threshold=-1, scale=10, maxPixels=1e12, output_type='ImageCollection', area_data_export_path=None
     ):
         """
@@ -853,7 +913,7 @@ class Sentinel2Collection:
             collection = self.collection
             # Area calculation for each image in the collection, using the PixelAreaSum function
             AreaCollection = collection.map(
-                lambda image: Sentinel2Collection.PixelAreaSum(
+                lambda image: Sentinel2Collection.pixelAreaSum(
                     image,
                     band_name=band_name,
                     geometry=geometry,
@@ -869,16 +929,24 @@ class Sentinel2Collection:
 
         # If an export path is provided, the area data will be exported to a CSV file
         if area_data_export_path:
-            Sentinel2Collection(collection=self._PixelAreaSumCollection).ExportProperties(property_names=prop_names, file_path=area_data_export_path+'.csv')
+            Sentinel2Collection(collection=self._PixelAreaSumCollection).exportProperties(property_names=prop_names, file_path=area_data_export_path+'.csv')
         # Returning the result in the desired format based on output_type argument or raising an error for invalid input
         if output_type == 'ImageCollection' or output_type == 'ee.ImageCollection':
             return self._PixelAreaSumCollection
         elif output_type == 'Sentinel2Collection':
             return Sentinel2Collection(collection=self._PixelAreaSumCollection)
         elif output_type == 'DataFrame' or output_type == 'Pandas' or output_type == 'pd' or output_type == 'dataframe' or output_type == 'df':
-            return Sentinel2Collection(collection=self._PixelAreaSumCollection).ExportProperties(property_names=prop_names)
+            return Sentinel2Collection(collection=self._PixelAreaSumCollection).exportProperties(property_names=prop_names)
         else:
             raise ValueError("Incorrect `output_type`. The `output_type` argument must be one of the following: 'ImageCollection', 'ee.ImageCollection', 'Sentinel2Collection', 'DataFrame', 'Pandas', 'pd', 'dataframe', or 'df'.")
+
+    def PixelAreaSumCollection(
+        self, band_name, geometry, threshold=-1, scale=10, maxPixels=1e12, output_type='ImageCollection', area_data_export_path=None
+    ):
+        warnings.warn("PixelAreaSumCollection is deprecated. Please use pixelAreaSumCollection instead.", 
+                      DeprecationWarning,
+                        stacklevel=2)
+        return self.pixelAreaSumCollection(band_name, geometry, threshold, scale, maxPixels, output_type, area_data_export_path)
 
     @staticmethod
     def add_month_property_fn(image):
@@ -960,8 +1028,13 @@ class Sentinel2Collection:
             return Sentinel2Collection(collection=ee.ImageCollection(paired.map(_pair_two)))
 
         # Preferred path: merge many singleband products into the parent
-        if not isinstance(collections, list) or len(collections) == 0:
-            raise ValueError("Provide a non-empty list of Sentinel2Collection objects in `collections`.")
+        # if not isinstance(collections, list) or len(collections) == 0:
+        #     raise ValueError("Provide a non-empty list of Sentinel2Collection objects in `collections`.")
+        if not isinstance(collections, list):
+            collections = [collections]
+            
+        if len(collections) == 0:
+            raise ValueError("Provide a non-empty list of LandsatCollection objects in `collections`.")
 
         result = self.collection
         for extra in collections:
@@ -1018,7 +1091,7 @@ class Sentinel2Collection:
             self._dates = dates
         return self._dates
     
-    def ExportProperties(self, property_names, file_path=None):
+    def exportProperties(self, property_names, file_path=None):
         """
         Fetches and returns specified properties from each image in the collection as a list, and returns a pandas DataFrame and optionally saves the results to a csv file.
 
@@ -1073,6 +1146,13 @@ class Sentinel2Collection:
             print(f"Properties saved to {file_path}")
             
         return df
+    
+    def ExportProperties(self, property_names, file_path=None):
+        warnings.warn(
+            "The `ExportProperties` method is deprecated and will be removed in future versions. Please use the `exportProperties` method instead.",
+            DeprecationWarning,
+            stacklevel=2)
+        return self.exportProperties(property_names, file_path)
 
     def get_filtered_collection(self):
         """
@@ -2678,7 +2758,7 @@ class Sentinel2Collection:
             Sentinel2Collection: Sentinel2Collection image collection.
         """
         if self._masked_water_collection is None:
-            col = self.collection.map(Sentinel2Collection.MaskWaterS2)
+            col = self.collection.map(Sentinel2Collection.maskWater)
             self._masked_water_collection = Sentinel2Collection(collection=col)
         return self._masked_water_collection
 
@@ -2690,7 +2770,7 @@ class Sentinel2Collection:
             Sentinel2Collection: Sentinel2Collection image collection.
         """
         col = self.collection.map(
-            lambda image: Sentinel2Collection.MaskWaterS2ByNDWI(
+            lambda image: Sentinel2Collection.maskWaterByNDWI(
                 image, threshold=threshold
             )
         )
@@ -2705,7 +2785,7 @@ class Sentinel2Collection:
             Sentinel2Collection: Sentinel2Collection image collection.
         """
         if self._masked_to_water_collection is None:
-            col = self.collection.map(Sentinel2Collection.MaskToWaterS2)
+            col = self.collection.map(Sentinel2Collection.maskToWater)
             self._masked_water_collection = Sentinel2Collection(collection=col)
         return self._masked_water_collection
 
@@ -2717,7 +2797,7 @@ class Sentinel2Collection:
             Sentinel2Collection: Sentinel2Collection image collection.
         """
         col = self.collection.map(
-            lambda image: Sentinel2Collection.MaskToWaterS2ByNDWI(
+            lambda image: Sentinel2Collection.maskToWaterByNDWI(
                 image, threshold=threshold
             )
         )
@@ -2732,7 +2812,7 @@ class Sentinel2Collection:
             Sentinel2Collection: masked Sentinel2Collection image collection.
         """
         if self._masked_clouds_collection is None:
-            col = self.collection.map(Sentinel2Collection.MaskCloudsS2)
+            col = self.collection.map(Sentinel2Collection.maskClouds)
             self._masked_clouds_collection = Sentinel2Collection(collection=col)
         return self._masked_clouds_collection
 
@@ -2745,7 +2825,7 @@ class Sentinel2Collection:
             Sentinel2Collection: Sentinel2Collection image collection
         """
         if self._masked_shadows_collection is None:
-            col = self.collection.map(Sentinel2Collection.MaskShadowsS2)
+            col = self.collection.map(Sentinel2Collection.maskShadows)
             self._masked_shadows_collection = Sentinel2Collection(collection=col)
         return self._masked_shadows_collection
 
@@ -2760,20 +2840,15 @@ class Sentinel2Collection:
             Sentinel2Collection: masked Sentinel2Collection image collection.
 
         """
-        if self._geometry_masked_collection is None:
-            # Convert the polygon to a mask
-            mask = ee.Image.constant(1).clip(polygon)
+        # Convert the polygon to a mask
+        mask = ee.Image.constant(1).clip(polygon)
 
-            # Update the mask of each image in the collection
-            masked_collection = self.collection.map(lambda img: img.updateMask(mask))
-
-            # Update the internal collection state
-            self._geometry_masked_collection = Sentinel2Collection(
-                collection=masked_collection
-            )
+        # Update the mask of each image in the collection
+        masked_collection = self.collection.map(lambda img: img.updateMask(mask)\
+                                .copyProperties(img).set('system:time_start', img.get('system:time_start')))
 
         # Return the updated object
-        return self._geometry_masked_collection
+        return Sentinel2Collection(collection=masked_collection)
 
     def mask_out_polygon(self, polygon):
         """
@@ -2786,23 +2861,17 @@ class Sentinel2Collection:
             Sentinel2Collection: masked Sentinel2Collection image collection.
 
         """
-        if self._geometry_masked_out_collection is None:
-            # Convert the polygon to a mask
-            full_mask = ee.Image.constant(1)
+        # Convert the polygon to a mask
+        full_mask = ee.Image.constant(1)
 
-            # Use paint to set pixels inside polygon as 0
-            area = full_mask.paint(polygon, 0)
+        # Use paint to set pixels inside polygon as 0
+        area = full_mask.paint(polygon, 0)
 
-            # Update the mask of each image in the collection
-            masked_collection = self.collection.map(lambda img: img.updateMask(area))
-
-            # Update the internal collection state
-            self._geometry_masked_out_collection = Sentinel2Collection(
-                collection=masked_collection
-            )
-
+        # Update the mask of each image in the collection
+        masked_collection = self.collection.map(lambda img: img.updateMask(area)\
+                            .copyProperties(img).set('system:time_start', img.get('system:time_start')))
         # Return the updated object
-        return self._geometry_masked_out_collection
+        return Sentinel2Collection(collection=masked_collection)
 
     def mask_halite(self, threshold):
         """
@@ -2977,6 +3046,9 @@ class Sentinel2Collection:
 
         if geometry is not None and not isinstance(geometry, ee.Geometry):
             raise ValueError(f'The chosen `geometry`: {geometry} is not a valid ee.Geometry object.')
+        
+        native_projection = image_collection.first().select(target_band).projection()
+
         # define the join, which will join all images newer than the current image
         # use system:time_start if the image does not have a Date_Filter property
         if join_method == 'system:time_start':
@@ -3032,7 +3104,7 @@ class Sentinel2Collection:
         # convert the image collection to an image of s_statistic values per pixel
         # where the s_statistic is the sum of partial s values
         # renaming the band as 's_statistic' for later usage
-        final_s_image = partial_s_col.sum().rename('s_statistic')
+        final_s_image = partial_s_col.sum().rename('s_statistic').setDefaultProjection(native_projection)
 
 
         ########## PART 2 - VARIANCE and Z-SCORE ##########
@@ -3095,7 +3167,7 @@ class Sentinel2Collection:
             mask = ee.Image(1).clip(geometry)
             final_image = final_image.updateMask(mask)
 
-        return final_image
+        return final_image.setDefaultProjection(native_projection)
 
     def sens_slope_trend(self, target_band=None, join_method='system:time_start', geometry=None):
             """
@@ -3130,6 +3202,8 @@ class Sentinel2Collection:
 
             if geometry is not None and not isinstance(geometry, ee.Geometry):
                 raise ValueError(f'The chosen `geometry`: {geometry} is not a valid ee.Geometry object.')
+            
+            native_projection = image_collection.first().select(target_band).projection()
 
             # Add Year Band (Time X-Axis)
             def add_year_band(image):
@@ -3158,7 +3232,7 @@ class Sentinel2Collection:
                 mask = ee.Image(1).clip(geometry)
                 slope_band = slope_band.updateMask(mask)
 
-            return slope_band
+            return slope_band.setDefaultProjection(native_projection)
     
     
     def mask_via_band(self, band_to_mask, band_for_mask, threshold=-1, mask_above=True, add_band_to_original_image=False):
@@ -3302,7 +3376,7 @@ class Sentinel2Collection:
         new_col = self.collection.filter(ee.Filter.eq("Date_Filter", img_date))
         return new_col.first()
 
-    def CollectionStitch(self, img_col2):
+    def collectionStitch(self, img_col2):
         """
         Function to mosaic two Sentinel2Collection objects which share image dates.
         Mosaics are only formed for dates where both image collections have images.
@@ -3356,8 +3430,15 @@ class Sentinel2Collection:
         # Return a Sentinel2Collection instance
         return Sentinel2Collection(collection=new_col)
 
+    def CollectionStitch(self, img_col2):
+        warnings.warn(
+            "The `CollectionStitch` method is deprecated and will be removed in future versions. Please use the `collectionStitch` method instead.",
+            DeprecationWarning,
+            stacklevel=2)
+        return self.collectionStitch(img_col2)
+    
     @property
-    def MosaicByDate(self):
+    def mosaicByDateDepr(self):
         """
         Property attribute function to mosaic collection images that share the same date. The properties CLOUD_PIXEL_PERCENTAGE and NODATA_PIXEL_PERCENTAGE
         for each image are used to calculate an overall mean, which replaces the CLOUD_PIXEL_PERCENTAGE and NODATA_PIXEL_PERCENTAGE for each mosaiced image.
@@ -3423,6 +3504,76 @@ class Sentinel2Collection:
             self._MosaicByDate = col
 
         return self._MosaicByDate
+    
+    @property
+    def mosaicByDate(self):
+        """
+        Property attribute function to mosaic collection images that share the same date.
+
+        The property CLOUD_COVER for each image is used to calculate an overall mean,
+        which replaces the CLOUD_COVER property for each mosaiced image.
+        Server-side friendly.
+
+        NOTE: if images are removed from the collection from cloud filtering, you may have mosaics composed of only one image.
+
+        Returns:
+            LandsatCollection: LandsatCollection image collection with mosaiced imagery and mean CLOUD_COVER as a property
+        """
+        if self._MosaicByDate is None:
+            distinct_dates = self.collection.distinct("Date_Filter")
+
+            # Define a join to link images by Date_Filter
+            filter_date = ee.Filter.equals(leftField="Date_Filter", rightField="Date_Filter")
+            join = ee.Join.saveAll(matchesKey="date_matches")
+
+            # Apply the join
+            # Primary: Distinct dates collection
+            # Secondary: The full original collection
+            joined_col = ee.ImageCollection(join.apply(distinct_dates, self.collection, filter_date))
+
+            # Define the mosaicking function 
+            def _mosaic_day(img):
+                # Recover the list of images for this day
+                daily_list = ee.List(img.get("date_matches"))
+                daily_col = ee.ImageCollection.fromImages(daily_list)
+                
+                # Create the mosaic
+                mosaic = daily_col.mosaic().setDefaultProjection(img.projection())
+                
+                # Calculate means for Sentinel-2 specific props
+                cloud_pct = daily_col.aggregate_mean("CLOUDY_PIXEL_PERCENTAGE")
+                nodata_pct = daily_col.aggregate_mean("NODATA_PIXEL_PERCENTAGE")
+
+                # Properties to preserve from the representative image
+                props_of_interest = [
+                    "SPACECRAFT_NAME",
+                    "SENSING_ORBIT_NUMBER",
+                    "SENSING_ORBIT_DIRECTION",
+                    "MISSION_ID",
+                    "PLATFORM_IDENTIFIER",
+                    "system:time_start"
+                ]
+                
+                # Return mosaic with properties set
+                return mosaic.copyProperties(img, props_of_interest).set({
+                    "CLOUDY_PIXEL_PERCENTAGE": cloud_pct,
+                    "NODATA_PIXEL_PERCENTAGE": nodata_pct
+                })
+
+            # 5. Map the function and wrap the result
+            mosaiced_col = joined_col.map(_mosaic_day)
+            self._MosaicByDate = Sentinel2Collection(collection=mosaiced_col)
+
+        # Convert the list of mosaics to an ImageCollection
+        return self._MosaicByDate
+    
+    @property
+    def MosaicByDate(self):
+        warnings.warn(
+            "The `MosaicByDate` property is deprecated and will be removed in future versions. Please use the `mosaicByDate` property instead.",
+            DeprecationWarning,
+            stacklevel=2)
+        return self.mosaicByDate
 
     @staticmethod
     def ee_to_df(

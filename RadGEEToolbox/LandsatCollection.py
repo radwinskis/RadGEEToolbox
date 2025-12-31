@@ -1,6 +1,7 @@
 import ee
 import pandas as pd
 import numpy as np
+import warnings
 
 
 # ---- Reflectance scaling for Landsat Collection 2 SR ----
@@ -185,6 +186,14 @@ class LandsatCollection:
         self._MosaicByDate = None
         self._PixelAreaSumCollection = None
         self._Reflectance = None
+
+    def __call__(self):
+        """
+        Allows the object to be called as a function, returning itself. 
+        This enables property-like methods to be accessed with or without parentheses 
+        (e.g., .mosaicByDate or .mosaicByDate()).
+        """
+        return self
 
     @staticmethod
     def image_dater(image):
@@ -772,7 +781,7 @@ class LandsatCollection:
             return image.addBands(anomaly_image, overwrite=True).copyProperties(image)
 
     @staticmethod
-    def MaskWaterLandsat(image):
+    def maskWater(image):
         """
         Masks water pixels based on Landsat image QA band.
 
@@ -787,9 +796,19 @@ class LandsatCollection:
         water_extract = qa.bitwiseAnd(WaterBitMask).eq(0)
         masked_image = image.updateMask(water_extract).copyProperties(image).set('system:time_start', image.get('system:time_start'))
         return masked_image
+    
+    @staticmethod
+    def MaskWaterLandsat(image):
+        warnings.warn(
+            "MaskWaterLandsat is deprecated and will be removed in a future release. "
+            "Please use maskWater instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        return LandsatCollection.maskWater(image)
 
     @staticmethod
-    def MaskWaterLandsatByNDWI(image, threshold, ng_threshold=None):
+    def maskWaterByNDWI(image, threshold, ng_threshold=None):
         """
         Masks water pixels (mask land and cloud pixels) for all bands based on NDWI and a set threshold where
         all pixels less than NDWI threshold are masked out. Can specify separate thresholds for Landsat 5 vs 8&9 images, where the threshold
@@ -825,9 +844,19 @@ class LandsatCollection:
                 "threshold", threshold, 'system:time_start', image.get('system:time_start')
             )
         return water
-
+    
     @staticmethod
-    def MaskToWaterLandsat(image):
+    def MaskWaterLandsatByNDWI(image, threshold, ng_threshold=None):
+        warnings.warn(
+            "MaskWaterLandsatByNDWI is deprecated and will be removed in a future release. "
+            "Please use maskWaterByNDWI instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        return LandsatCollection.maskWaterByNDWI(image, threshold, ng_threshold=ng_threshold)
+    
+    @staticmethod
+    def maskToWater(image):
         """
         Masks image to water pixels by masking land and cloud pixels based on Landsat image QA band.
 
@@ -842,9 +871,19 @@ class LandsatCollection:
         water_extract = qa.bitwiseAnd(WaterBitMask).neq(0)
         masked_image = image.updateMask(water_extract).copyProperties(image).set('system:time_start', image.get('system:time_start'))
         return masked_image
+    
+    @staticmethod
+    def MaskToWaterLandsat(image):
+        warnings.warn(
+            "MaskToWaterLandsat is deprecated and will be removed in a future release. "
+            "Please use maskToWater instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        return LandsatCollection.maskToWater(image)
 
     @staticmethod
-    def MaskToWaterLandsatByNDWI(image, threshold, ng_threshold=None):
+    def maskToWaterByNDWI(image, threshold, ng_threshold=None):
         """
         Masks water pixels using NDWI based on threshold. Can specify separate thresholds for Landsat 5 vs 8&9 images, where the threshold
         argument applies to Landsat 5 and the ng_threshold argument applies to Landsat 8&9
@@ -879,6 +918,50 @@ class LandsatCollection:
                 "threshold", threshold, 'system:time_start', image.get('system:time_start')
             )
         return water
+    
+    @staticmethod
+    def MaskToWaterLandsatByNDWI(image, threshold, ng_threshold=None):
+        warnings.warn(
+            "MaskToWaterLandsatNDWI is deprecated and will be removed in a future release. "
+            "Please use maskToWaterByNDWI instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        return LandsatCollection.maskToWaterByNDWI(image, threshold, ng_threshold=ng_threshold)
+
+    # @staticmethod
+    # def maskClouds(image):
+    #     """
+    #     Masks clouds pixels based on Landsat image QA band.
+
+    #     Args:
+    #         image (ee.Image): input ee.Image
+
+    #     Returns:
+    #         ee.Image: ee.Image with cloud pixels masked.
+    #     """
+    #     CloudBitMask = ee.Number(2).pow(3).int()
+    #     qa = image.select("QA_PIXEL")
+    #     cloud_extract = qa.bitwiseAnd(CloudBitMask).eq(0)
+    #     masked_image = image.updateMask(cloud_extract).copyProperties(image).set('system:time_start', image.get('system:time_start'))
+    #     return masked_image
+    
+    # @staticmethod
+    # def maskShadows(image):
+    #     """
+    #     Masks shadows pixels based on Landsat image QA band.
+
+    #     Args:
+    #         image (ee.Image): input ee.Image
+
+    #     Returns:
+    #         ee.Image: ee.Image with cloud pixels masked.
+    #     """
+    #     ShadowBitMask = ee.Number(2).pow(4).int()
+    #     qa = image.select("QA_PIXEL")
+    #     shadow_extract = qa.bitwiseAnd(ShadowBitMask).eq(0)
+    #     masked_image = image.updateMask(shadow_extract).copyProperties(image).set('system:time_start', image.get('system:time_start'))
+    #     return masked_image
 
     @staticmethod
     def mask_via_band_fn(image, band_to_mask, band_for_mask, threshold, mask_above=False, add_band_to_original_image=False):
@@ -1026,7 +1109,7 @@ class LandsatCollection:
         return mask
 
     @staticmethod
-    def maskL8clouds(image):
+    def maskClouds(image):
         """
         Masks clouds baseed on Landsat 8 QA band.
 
@@ -1042,9 +1125,17 @@ class LandsatCollection:
         cloud_mask = qa.bitwiseAnd(cloudBitMask).eq(0)
         cirrus_mask = qa.bitwiseAnd(CirrusBitMask).eq(0)
         return image.updateMask(cloud_mask).updateMask(cirrus_mask)
+    
+    @staticmethod
+    def maskL8clouds(image):
+        warnings.warn(
+            "maskL8clouds is deprecated and will be removed in a future release. Please use maskClouds instead.",
+            DeprecationWarning,
+            stacklevel=2)
+        return LandsatCollection.maskClouds(image)
 
     @staticmethod
-    def maskL8shadows(image):
+    def maskShadows(image):
         """
         Masks cloud shadows based on Landsat 8 QA band.
 
@@ -1058,6 +1149,14 @@ class LandsatCollection:
         qa = image.select("QA_PIXEL")
         shadow_mask = qa.bitwiseAnd(shadowBitMask).eq(0)
         return image.updateMask(shadow_mask)
+    
+    @staticmethod
+    def maskL8shadows(image):
+        warnings.warn(
+            "maskL8shadows is deprecated and will be removed in a future release. Please use maskShadows instead.",
+            DeprecationWarning,
+            stacklevel=2)
+        return LandsatCollection.maskShadows(image)
 
     @staticmethod
     def temperature_bands(img):
@@ -1172,7 +1271,7 @@ class LandsatCollection:
         return out.copyProperties(img)
 
     @staticmethod
-    def PixelAreaSum(
+    def pixelAreaSum(
         image, band_name, geometry, threshold=-1, scale=30, maxPixels=1e12
     ):
         """
@@ -1231,8 +1330,18 @@ class LandsatCollection:
         # Call to iterate the calculate_and_set_area function over the list of bands, starting with the original image
         final_image = ee.Image(bands.iterate(calculate_and_set_area, image))
         return final_image
+    
+    @staticmethod
+    def PixelAreaSum(image, band_name, geometry, threshold=-1, scale=30, maxPixels=1e12):
+        warnings.warn(
+            "PixelAreaSum is deprecated and will be removed in a future release. "
+            "Please use pixelAreaSum instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        return LandsatCollection.pixelAreaSum(image, band_name, geometry, threshold, scale, maxPixels)
 
-    def PixelAreaSumCollection(
+    def pixelAreaSumCollection(
         self, band_name, geometry, threshold=-1, scale=30, maxPixels=1e12, output_type='ImageCollection', area_data_export_path=None):
         """
         Calculates the geodesic summation of area for pixels of interest (above a specific threshold)
@@ -1258,7 +1367,7 @@ class LandsatCollection:
             collection = self.collection
             # Area calculation for each image in the collection, using the PixelAreaSum function
             AreaCollection = collection.map(
-                lambda image: LandsatCollection.PixelAreaSum(
+                lambda image: LandsatCollection.pixelAreaSum(
                     image,
                     band_name=band_name,
                     geometry=geometry,
@@ -1274,17 +1383,27 @@ class LandsatCollection:
 
         # If an export path is provided, the area data will be exported to a CSV file
         if area_data_export_path:
-            LandsatCollection(collection=self._PixelAreaSumCollection).ExportProperties(property_names=prop_names, file_path=area_data_export_path+'.csv')
+            LandsatCollection(collection=self._PixelAreaSumCollection).exportProperties(property_names=prop_names, file_path=area_data_export_path+'.csv')
         # Returning the result in the desired format based on output_type argument or raising an error for invalid input
         if output_type == 'ImageCollection' or output_type == 'ee.ImageCollection':
             return self._PixelAreaSumCollection
         elif output_type == 'LandsatCollection':
             return LandsatCollection(collection=self._PixelAreaSumCollection)
         elif output_type == 'DataFrame' or output_type == 'Pandas' or output_type == 'pd' or output_type == 'dataframe' or output_type == 'df':
-            return LandsatCollection(collection=self._PixelAreaSumCollection).ExportProperties(property_names=prop_names)
+            return LandsatCollection(collection=self._PixelAreaSumCollection).exportProperties(property_names=prop_names)
         else:
             raise ValueError("Incorrect `output_type`. The `output_type` argument must be one of the following: 'ImageCollection', 'ee.ImageCollection', 'LandsatCollection', 'DataFrame', 'Pandas', 'pd', 'dataframe', or 'df'.")
 
+    def PixelAreaSumCollection(
+        self, band_name, geometry, threshold=-1, scale=30, maxPixels=1e12, output_type='ImageCollection', area_data_export_path=None):
+        warnings.warn(
+            "PixelAreaSumCollection is deprecated and will be removed in a future release. "
+            "Please use pixelAreaSumCollection instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        return self.pixelAreaSumCollection(band_name, geometry, threshold, scale, maxPixels, output_type, area_data_export_path)
+    
     @staticmethod
     def add_month_property_fn(image):
         """
@@ -1388,7 +1507,12 @@ class LandsatCollection:
             return LandsatCollection(collection=ee.ImageCollection(paired.map(_pair_two)))
 
         # Preferred path: merge many singleband products into the parent
-        if not isinstance(collections, list) or len(collections) == 0:
+        # if not isinstance(collections, list) or len(collections) == 0:
+        #     raise ValueError("Provide a non-empty list of LandsatCollection objects in `collections`.")
+        if not isinstance(collections, list):
+            collections = [collections]
+            
+        if len(collections) == 0:
             raise ValueError("Provide a non-empty list of LandsatCollection objects in `collections`.")
 
         result = self.collection
@@ -1515,7 +1639,7 @@ class LandsatCollection:
             self._dates = dates
         return self._dates
 
-    def ExportProperties(self, property_names, file_path=None):
+    def exportProperties(self, property_names, file_path=None):
         """
         Fetches and returns specified properties from each image in the collection as a list, and returns a pandas DataFrame and optionally saves the results to a csv file.
 
@@ -1570,6 +1694,15 @@ class LandsatCollection:
             print(f"Properties saved to {file_path}")
             
         return df
+    
+    def ExportProperties(self, property_names, file_path=None):
+        warnings.warn(
+            "ExportProperties is deprecated and will be removed in a future release. "
+            "Please use exportProperties instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        return self.exportProperties(property_names, file_path)
 
     def get_filtered_collection(self):
         """
@@ -3089,7 +3222,7 @@ class LandsatCollection:
             LandsatCollection: LandsatCollection image collection
         """
         if self._masked_water_collection is None:
-            col = self.collection.map(LandsatCollection.MaskWaterLandsat)
+            col = self.collection.map(LandsatCollection.maskWater)
             self._masked_water_collection = LandsatCollection(collection=col)
         return self._masked_water_collection
 
@@ -3104,7 +3237,7 @@ class LandsatCollection:
             LandsatCollection: LandsatCollection image collection
         """
         col = self.collection.map(
-            lambda image: LandsatCollection.MaskWaterLandsatByNDWI(
+            lambda image: LandsatCollection.maskWaterByNDWI(
                 image, threshold=threshold
             )
         )
@@ -3119,7 +3252,7 @@ class LandsatCollection:
             LandsatCollection: LandsatCollection image collection
         """
         if self._masked_to_water_collection is None:
-            col = self.collection.map(LandsatCollection.MaskToWaterLandsat)
+            col = self.collection.map(LandsatCollection.maskToWater)
             self._masked_to_water_collection = LandsatCollection(collection=col)
         return self._masked_to_water_collection
 
@@ -3134,7 +3267,7 @@ class LandsatCollection:
             LandsatCollection: LandsatCollection image collection
         """
         col = self.collection.map(
-            lambda image: LandsatCollection.MaskToWaterLandsatByNDWI(
+            lambda image: LandsatCollection.maskToWaterByNDWI(
                 image, threshold=threshold
             )
         )
@@ -3149,7 +3282,7 @@ class LandsatCollection:
             LandsatCollection: LandsatCollection image collection
         """
         if self._masked_clouds_collection is None:
-            col = self.collection.map(LandsatCollection.maskL8clouds)
+            col = self.collection.map(LandsatCollection.maskClouds)
             self._masked_clouds_collection = LandsatCollection(collection=col)
         return self._masked_clouds_collection
     
@@ -3162,7 +3295,7 @@ class LandsatCollection:
             LandsatCollection: LandsatCollection image collection
         """
         if self._masked_shadows_collection is None:
-            col = self.collection.map(LandsatCollection.maskL8shadows)
+            col = self.collection.map(LandsatCollection.maskShadows)
             self._masked_shadows_collection = LandsatCollection(collection=col)
         return self._masked_shadows_collection
 
@@ -3231,20 +3364,14 @@ class LandsatCollection:
             LandsatCollection: masked LandsatCollection image collection
 
         """
-        if self._geometry_masked_collection is None:
-            # Convert the polygon to a mask
-            mask = ee.Image.constant(1).clip(polygon)
+        # Convert the polygon to a mask
+        mask = ee.Image.constant(1).clip(polygon)
 
-            # Update the mask of each image in the collection
-            masked_collection = self.collection.map(lambda img: img.updateMask(mask))
+        # Update the mask of each image in the collection
+        masked_collection = self.collection.map(lambda img: img.updateMask(mask)\
+                                .copyProperties(img).set('system:time_start', img.get('system:time_start')))
 
-            # Update the internal collection state
-            self._geometry_masked_collection = LandsatCollection(
-                collection=masked_collection
-            )
-
-        # Return the updated object
-        return self._geometry_masked_collection
+        return LandsatCollection(collection=masked_collection)
 
     def mask_out_polygon(self, polygon):
         """
@@ -3257,23 +3384,18 @@ class LandsatCollection:
             LandsatCollection: masked LandsatCollection image collection
 
         """
-        if self._geometry_masked_out_collection is None:
-            # Convert the polygon to a mask
-            full_mask = ee.Image.constant(1)
+        # Convert the polygon to a mask
+        full_mask = ee.Image.constant(1)
 
-            # Use paint to set pixels inside polygon as 0
-            area = full_mask.paint(polygon, 0)
+        # Use paint to set pixels inside polygon as 0
+        area = full_mask.paint(polygon, 0)
 
-            # Update the mask of each image in the collection
-            masked_collection = self.collection.map(lambda img: img.updateMask(area))
-
-            # Update the internal collection state
-            self._geometry_masked_out_collection = LandsatCollection(
-                collection=masked_collection
-            )
+        # Update the mask of each image in the collection
+        masked_collection = self.collection.map(lambda img: img.updateMask(area)\
+                            .copyProperties(img).set('system:time_start', img.get('system:time_start')))
 
         # Return the updated object
-        return self._geometry_masked_out_collection
+        return LandsatCollection(collection=masked_collection)
 
     def mask_halite(self, threshold, ng_threshold=None):
         """
@@ -3473,6 +3595,8 @@ class LandsatCollection:
                                             rightField='Date_Filter')
         else:
             raise ValueError(f'The chosen `join_method`: {join_method} does not match the options of "system:time_start" or "Date_Filter".')
+        
+        native_projection = image_collection.first().select(target_band).projection()
 
         # for any matches during a join, set image as a property key called 'future_image'
         join = ee.Join.saveAll(matchesKey='future_image')
@@ -3516,7 +3640,7 @@ class LandsatCollection:
         # convert the image collection to an image of s_statistic values per pixel
         # where the s_statistic is the sum of partial s values
         # renaming the band as 's_statistic' for later usage
-        final_s_image = partial_s_col.sum().rename('s_statistic')
+        final_s_image = partial_s_col.sum().rename('s_statistic').setDefaultProjection(native_projection)
 
 
         ########## PART 2 - VARIANCE and Z-SCORE ##########
@@ -3579,7 +3703,7 @@ class LandsatCollection:
             mask = ee.Image(1).clip(geometry)
             final_image = final_image.updateMask(mask)
 
-        return final_image
+        return final_image.setDefaultProjection(native_projection)
 
     def sens_slope_trend(self, target_band=None, join_method='system:time_start', geometry=None):
             """
@@ -3615,6 +3739,8 @@ class LandsatCollection:
             if geometry is not None and not isinstance(geometry, ee.Geometry):
                 raise ValueError(f'The chosen `geometry`: {geometry} is not a valid ee.Geometry object.')
 
+            native_projection = image_collection.first().select(target_band).projection()
+
             # Add Year Band (Time X-Axis)
             def add_year_band(image):
                 # Handle user-defined date strings vs system time
@@ -3642,7 +3768,7 @@ class LandsatCollection:
                 mask = ee.Image(1).clip(geometry)
                 slope_band = slope_band.updateMask(mask)
 
-            return slope_band
+            return slope_band.setDefaultProjection(native_projection)
     
     def mask_via_band(self, band_to_mask, band_for_mask, threshold=-1, mask_above=True, add_band_to_original_image=False):
         """
@@ -3809,7 +3935,7 @@ class LandsatCollection:
         new_col = self.collection.filter(ee.Filter.eq("Date_Filter", img_date))
         return new_col.first()
 
-    def CollectionStitch(self, img_col2):
+    def collectionStitch(self, img_col2):
         """
         Function to mosaic two LandsatCollection objects which share image dates.
         Mosaics are only formed for dates where both image collections have images.
@@ -3861,9 +3987,15 @@ class LandsatCollection:
 
         # Return a LandsatCollection instance
         return LandsatCollection(collection=new_col)
+    
+    def CollectionStitch(self, img_col2):
+        warnings.warn(
+            "CollectionStitch is deprecated and will be removed in future versions. Please use the 'collectionStitch' property instead.",
+            DeprecationWarning, stacklevel=2)
+        return self.collectionStitch(img_col2)
 
     @property
-    def MosaicByDate(self):
+    def mosaicByDateDepr(self):
         """
         Property attribute function to mosaic collection images that share the same date.
 
@@ -3928,6 +4060,73 @@ class LandsatCollection:
 
         # Convert the list of mosaics to an ImageCollection
         return self._MosaicByDate
+    
+    @property
+    def mosaicByDate(self):
+        """
+        Property attribute function to mosaic collection images that share the same date.
+
+        The property CLOUD_COVER for each image is used to calculate an overall mean,
+        which replaces the CLOUD_COVER property for each mosaiced image.
+        Server-side friendly.
+
+        NOTE: if images are removed from the collection from cloud filtering, you may have mosaics composed of only one image.
+
+        Returns:
+            LandsatCollection: LandsatCollection image collection with mosaiced imagery and mean CLOUD_COVER as a property
+        """
+        if self._MosaicByDate is None:
+            distinct_dates = self.collection.distinct("Date_Filter")
+
+            # Define a join to link images by Date_Filter
+            filter_date = ee.Filter.equals(leftField="Date_Filter", rightField="Date_Filter")
+            join = ee.Join.saveAll(matchesKey="date_matches")
+
+            # Apply the join
+            # Primary: Distinct dates collection
+            # Secondary: The full original collection
+            joined_col = ee.ImageCollection(join.apply(distinct_dates, self.collection, filter_date))
+
+            # Define the mosaicking function 
+            def _mosaic_day(img):
+                # Recover the list of images for this day
+                daily_list = ee.List(img.get("date_matches"))
+                daily_col = ee.ImageCollection.fromImages(daily_list)
+                
+                # Create the mosaic
+                mosaic = daily_col.mosaic().setDefaultProjection(img.projection())
+                
+                # Calculate mean metadata properties
+                cloud_percentage = daily_col.aggregate_mean("CLOUD_COVER")
+
+                # Properties to preserve from the representative image
+                props_of_interest = [
+                    "SPACECRAFT_ID",
+                    "SENSOR_ID",
+                    "PROCESSING_LEVEL",
+                    "ACQUISITION_DATE",
+                    "system:time_start",
+                    "Date_Filter" 
+                ]
+                
+                # Return mosaic with properties set
+                return mosaic.copyProperties(img, props_of_interest).set({
+                    "CLOUD_COVER": cloud_percentage
+                })
+
+            # 5. Map the function and wrap the result
+            mosaiced_col = joined_col.map(_mosaic_day)
+            self._MosaicByDate = LandsatCollection(collection=mosaiced_col)
+
+        # Convert the list of mosaics to an ImageCollection
+        return self._MosaicByDate
+    
+    @property
+    def MosaicByDate(self):
+        warnings.warn(
+            "MosaicByDate is deprecated and will be removed in future versions. Please use the 'mosaicByDate' property instead.",
+            DeprecationWarning, stacklevel=2)
+        return self.mosaicByDate
 
     @staticmethod
     def ee_to_df(

@@ -1,6 +1,7 @@
 import ee
 import pandas as pd
 import numpy as np
+import warnings
 
 
 class GenericCollection:
@@ -92,6 +93,14 @@ class GenericCollection:
         self._MosaicByDate = None
         self._PixelAreaSumCollection = None
         self._daily_aggregate_collection = None
+
+    def __call__(self):
+        """
+        Allows the object to be called as a function, returning itself. 
+        This enables property-like methods to be accessed with or without parentheses 
+        (e.g., .mosaicByDate or .mosaicByDate()).
+        """
+        return self
 
     @staticmethod
     def image_dater(image):
@@ -271,7 +280,7 @@ class GenericCollection:
         return out.copyProperties(img).set('system:time_start', img.get('system:time_start'))
 
     @staticmethod
-    def PixelAreaSum(
+    def pixelAreaSum(
         image, band_name, geometry, threshold=-1, scale=30, maxPixels=1e12
     ):
         """
@@ -331,7 +340,19 @@ class GenericCollection:
         final_image = ee.Image(bands.iterate(calculate_and_set_area, image))
         return final_image #.set('system:time_start', image.get('system:time_start'))
 
-    def PixelAreaSumCollection(
+    @staticmethod
+    def PixelAreaSum(
+        image, band_name, geometry, threshold=-1, scale=30, maxPixels=1e12
+    ):
+        warnings.warn(
+            "The `PixelAreaSum` static method is deprecated and will be removed in future versions. Please use the `pixelAreaSum` static method instead.",
+            DeprecationWarning,
+            stacklevel=2)
+        return GenericCollection.pixelAreaSum(
+            image, band_name, geometry, threshold, scale, maxPixels
+        )
+
+    def pixelAreaSumCollection(
         self, band_name, geometry, threshold=-1, scale=30, maxPixels=1e12, output_type='ImageCollection', area_data_export_path=None
     ):
         """
@@ -358,7 +379,7 @@ class GenericCollection:
             collection = self.collection
             # Area calculation for each image in the collection, using the PixelAreaSum function
             AreaCollection = collection.map(
-                lambda image: GenericCollection.PixelAreaSum(
+                lambda image: GenericCollection.pixelAreaSum(
                     image,
                     band_name=band_name,
                     geometry=geometry,
@@ -374,16 +395,27 @@ class GenericCollection:
 
         # If an export path is provided, the area data will be exported to a CSV file
         if area_data_export_path:
-            GenericCollection(collection=self._PixelAreaSumCollection).ExportProperties(property_names=prop_names, file_path=area_data_export_path+'.csv')
+            GenericCollection(collection=self._PixelAreaSumCollection).exportProperties(property_names=prop_names, file_path=area_data_export_path+'.csv')
         # Returning the result in the desired format based on output_type argument or raising an error for invalid input
         if output_type == 'ImageCollection' or output_type == 'ee.ImageCollection':
             return self._PixelAreaSumCollection
         elif output_type == 'GenericCollection':
             return GenericCollection(collection=self._PixelAreaSumCollection)
         elif output_type == 'DataFrame' or output_type == 'Pandas' or output_type == 'pd' or output_type == 'dataframe' or output_type == 'df':
-            return GenericCollection(collection=self._PixelAreaSumCollection).ExportProperties(property_names=prop_names)
+            return GenericCollection(collection=self._PixelAreaSumCollection).exportProperties(property_names=prop_names)
         else:
             raise ValueError("Incorrect `output_type`. The `output_type` argument must be one of the following: 'ImageCollection', 'ee.ImageCollection', 'GenericCollection', 'DataFrame', 'Pandas', 'pd', 'dataframe', or 'df'.")
+
+    def PixelAreaSumCollection(
+        self, band_name, geometry, threshold=-1, scale=30, maxPixels=1e12, output_type='ImageCollection', area_data_export_path=None
+    ):
+        warnings.warn(
+            "The `PixelAreaSumCollection` method is deprecated and will be removed in future versions. Please use the `pixelAreaSumCollection` method instead.",
+            DeprecationWarning,
+            stacklevel=2)
+        return self.pixelAreaSumCollection(
+            band_name, geometry, threshold, scale, maxPixels, output_type, area_data_export_path
+        )
 
     @staticmethod
     def add_month_property_fn(image):
@@ -544,7 +576,7 @@ class GenericCollection:
         
         return GenericCollection(collection=distinct_col)
 
-    def ExportProperties(self, property_names, file_path=None):
+    def exportProperties(self, property_names, file_path=None):
         """
         Fetches and returns specified properties from each image in the collection as a list, and returns a pandas DataFrame and optionally saves the results to a csv file.
 
@@ -599,6 +631,13 @@ class GenericCollection:
             print(f"Properties saved to {file_path}")
             
         return df
+    
+    def ExportProperties(self, property_names, file_path=None):
+        warnings.warn(
+            "The `ExportProperties` method is deprecated and will be removed in future versions. Please use the `exportProperties` method instead.",
+            DeprecationWarning,
+            stacklevel=2)
+        return self.exportProperties(property_names, file_path)
 
     def get_generic_collection(self):
         """
@@ -1983,6 +2022,8 @@ class GenericCollection:
                                             rightField='Date_Filter')
         else:
             raise ValueError(f'The chosen `join_method`: {join_method} does not match the options of "system:time_start" or "Date_Filter".')
+        
+        native_projection = image_collection.first().select(target_band).projection()
 
         # for any matches during a join, set image as a property key called 'future_image'
         join = ee.Join.saveAll(matchesKey='future_image')
@@ -2026,7 +2067,7 @@ class GenericCollection:
         # convert the image collection to an image of s_statistic values per pixel
         # where the s_statistic is the sum of partial s values
         # renaming the band as 's_statistic' for later usage
-        final_s_image = partial_s_col.sum().rename('s_statistic')
+        final_s_image = partial_s_col.sum().rename('s_statistic').setDefaultProjection(native_projection)
 
 
         ########## PART 2 - VARIANCE and Z-SCORE ##########
@@ -2089,7 +2130,7 @@ class GenericCollection:
             mask = ee.Image(1).clip(geometry)
             final_image = final_image.updateMask(mask)
 
-        return final_image
+        return final_image.setDefaultProjection(native_projection)
 
     def sens_slope_trend(self, target_band=None, join_method='system:time_start', geometry=None):
             """
@@ -2166,20 +2207,15 @@ class GenericCollection:
             GenericCollection: masked GenericCollection image collection
 
         """
-        if self._geometry_masked_collection is None:
-            # Convert the polygon to a mask
-            mask = ee.Image.constant(1).clip(polygon)
+        # Convert the polygon to a mask
+        mask = ee.Image.constant(1).clip(polygon)
 
-            # Update the mask of each image in the collection
-            masked_collection = self.collection.map(lambda img: img.updateMask(mask).copyProperties(img).set('system:time_start', img.get('system:time_start')))
-
-            # Update the internal collection state
-            self._geometry_masked_collection = GenericCollection(
-                collection=masked_collection
-            )
+        # Update the mask of each image in the collection
+        masked_collection = self.collection.map(lambda img: img.updateMask(mask)\
+                                .copyProperties(img).set('system:time_start', img.get('system:time_start')))
 
         # Return the updated object
-        return self._geometry_masked_collection
+        return GenericCollection(collection=masked_collection)
 
     def mask_out_polygon(self, polygon):
         """
@@ -2192,23 +2228,18 @@ class GenericCollection:
             GenericCollection: masked GenericCollection image collection
 
         """
-        if self._geometry_masked_out_collection is None:
-            # Convert the polygon to a mask
-            full_mask = ee.Image.constant(1)
+        # Convert the polygon to a mask
+        full_mask = ee.Image.constant(1)
 
-            # Use paint to set pixels inside polygon as 0
-            area = full_mask.paint(polygon, 0)
+        # Use paint to set pixels inside polygon as 0
+        area = full_mask.paint(polygon, 0)
 
-            # Update the mask of each image in the collection
-            masked_collection = self.collection.map(lambda img: img.updateMask(area).copyProperties(img).set('system:time_start', img.get('system:time_start')))
-
-            # Update the internal collection state
-            self._geometry_masked_out_collection = GenericCollection(
-                collection=masked_collection
-            )
+        # Update the mask of each image in the collection
+        masked_collection = self.collection.map(lambda img: img.updateMask(area)\
+                            .copyProperties(img).set('system:time_start', img.get('system:time_start')))
 
         # Return the updated object
-        return self._geometry_masked_out_collection
+        return GenericCollection(collection=masked_collection)
 
     
     def binary_mask(self, threshold=None, band_name=None, classify_above_threshold=True, mask_zeros=False):
@@ -2467,7 +2498,7 @@ class GenericCollection:
         new_col = self.collection.filter(ee.Filter.eq("Date_Filter", img_date))
         return new_col.first()
 
-    def CollectionStitch(self, img_col2):
+    def collectionStitch(self, img_col2):
         """
         Function to mosaic two GenericCollection objects which share image dates.
         Mosaics are only formed for dates where both image collections have images.
@@ -2519,9 +2550,16 @@ class GenericCollection:
 
         # Return a GenericCollection instance
         return GenericCollection(collection=new_col)
+    
+    def CollectionStitch(self, img_col2):
+        warnings.warn(
+            "CollectionStitch is deprecated. Please use collectionStitch instead.",
+            DeprecationWarning,
+            stacklevel=2)
+        return self.collectionStitch(img_col2)
 
     @property
-    def MosaicByDate(self):
+    def mosaicByDateDepr(self):
         """
         Property attribute function to mosaic collection images that share the same date.
 
@@ -2577,6 +2615,64 @@ class GenericCollection:
 
         # Convert the list of mosaics to an ImageCollection
         return self._MosaicByDate
+    
+    @property
+    def mosaicByDate(self):
+        """
+        Property attribute function to mosaic collection images that share the same date.
+
+        The property CLOUD_COVER for each image is used to calculate an overall mean,
+        which replaces the CLOUD_COVER property for each mosaiced image.
+        Server-side friendly.
+
+        NOTE: if images are removed from the collection from cloud filtering, you may have mosaics composed of only one image.
+
+        Returns:
+            LandsatCollection: LandsatCollection image collection with mosaiced imagery and mean CLOUD_COVER as a property
+        """
+        if self._MosaicByDate is None:
+            distinct_dates = self.collection.distinct("Date_Filter")
+
+            # Define a join to link images by Date_Filter
+            filter_date = ee.Filter.equals(leftField="Date_Filter", rightField="Date_Filter")
+            join = ee.Join.saveAll(matchesKey="date_matches")
+
+            # Apply the join
+            # Primary: Distinct dates collection
+            # Secondary: The full original collection
+            joined_col = ee.ImageCollection(join.apply(distinct_dates, self.collection, filter_date))
+
+            # Define the mosaicking function 
+            def _mosaic_day(img):
+                # Recover the list of images for this day
+                daily_list = ee.List(img.get("date_matches"))
+                daily_col = ee.ImageCollection.fromImages(daily_list)
+                
+                # Create the mosaic
+                mosaic = daily_col.mosaic().setDefaultProjection(img.projection())
+
+                # Properties to preserve from the representative image
+                props_of_interest = [
+                    "system:time_start",
+                    "Date_Filter" 
+                ]
+                
+                # Return mosaic with properties set
+                return mosaic.copyProperties(img, props_of_interest)
+            # 5. Map the function and wrap the result
+            mosaiced_col = joined_col.map(_mosaic_day)
+            self._MosaicByDate = GenericCollection(collection=mosaiced_col)
+
+        # Convert the list of mosaics to an ImageCollection
+        return self._MosaicByDate
+    
+    @property
+    def MosaicByDate(self):
+        warnings.warn(
+            "MosaicByDate is deprecated. Please use mosaicByDate instead.",
+            DeprecationWarning,
+            stacklevel=2)
+        return self.mosaicByDate
 
     @staticmethod
     def ee_to_df(

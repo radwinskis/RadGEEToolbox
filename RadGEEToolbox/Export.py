@@ -11,6 +11,22 @@ class ExportToDrive:
     `.dates` property for naming files, ensuring readable filenames (e.g., 'MyExport_2023-06-01') 
     instead of long system IDs.
 
+    IMPORTANT: After creating an instance of this class, you must call the `export()` method
+    to initiate the export process.
+
+    For example, to export a RadGEEToolbox collection:
+    ```python
+        collection = LandsatCollection(...)  # Assume this is a RadGEEToolbox object
+        exporter = ExportToDrive(
+            input_data=collection,
+            description="Landsat_Export",
+            folder="GEE_Exports",
+            scale=30,
+            name_pattern="{date}",
+        )
+        exporter.export()
+    ```
+
     Args:
         input_data (ee.Image, ee.ImageCollection, or RadGEEToolbox object): The data to export.
             Can be a single image, a collection, or a RadGEEToolbox wrapper object.

@@ -11,5 +11,5 @@ def test_landsat_collection():
     scaled_dates = col_scaled.dates
     assert isinstance(scaled_dates, list), "Expected scaled_dates to be a list - issue in defining reflectance scaled collection"
 
-    water_area = LandsatCollection.PixelAreaSum(image=col.ndwi.image_grab(-1), band_name='ndwi', geometry=col.ndwi.image_grab(-1).geometry(), threshold=0, scale=90)
+    water_area = LandsatCollection.pixelAreaSum(image=col.ndwi.image_grab(-1), band_name='ndwi', geometry=col.ndwi.image_grab(-1).geometry(), threshold=0, scale=90)
     assert water_area.getInfo().get('properties')['ndwi'] is not None, "Expected water_area to have a non-None value - issue in calculating pixel area sum for NDWI"

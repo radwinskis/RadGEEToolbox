@@ -1,7 +1,7 @@
 import ee
+import warnings
 
-
-def CollectionStitch(img_col1, img_col2, copy_properties_from=1):
+def collectionStitch(img_col1, img_col2, copy_properties_from=1):
     """
     Function to mosaic two RadGEETools image collection objects which share image dates.
     Mosaics are only formed for dates where both image collections have images. Server-side friendly.
@@ -42,8 +42,14 @@ def CollectionStitch(img_col1, img_col2, copy_properties_from=1):
     new_col = ee.ImageCollection.fromImages(image_list)
     return new_col
 
+def CollectionStitch(img_col1, img_col2, copy_properties_from=1):
+    warnings.warn(
+        "CollectionStitch is deprecated. Please use collectionStitch instead.",
+        DeprecationWarning,
+        stacklevel=2)
+    return collectionStitch(img_col1, img_col2, copy_properties_from)
 
-def MosaicByDate(img_col):
+def mosaicByDate(img_col):
     """
     Function to mosaic collection images that share the same date. Server-side friendly. Requires images to have date property of "Date_Filter"
 
@@ -80,3 +86,10 @@ def MosaicByDate(img_col):
 
     # Convert the list of mosaics to an ImageCollection
     return new_col
+
+def MosaicByDate(img_col):
+    warnings.warn(
+        "MosaicByDate is deprecated. Please use mosaicByDate instead.",
+        DeprecationWarning,
+        stacklevel=2)
+    return mosaicByDate(img_col)

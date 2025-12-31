@@ -68,7 +68,7 @@ To see the code used to display this image, please view `this Example Notebook <
 
 ::
 
-    calculate_water_area = cloud_masked_NDWI_collection.PixelAreaSumCollection(
+    calculate_water_area = cloud_masked_NDWI_collection.pixelAreaSumCollection(
         band_name='ndwi',
         geometry=study_area,
         threshold=0,

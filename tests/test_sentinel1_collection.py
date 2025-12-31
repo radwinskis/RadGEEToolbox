@@ -23,7 +23,7 @@ def test_sentinel1_collection():
     dates = SAR_collection.dates
     assert isinstance(dates, list), "Expected dates to be a list - issue in defining base collection or masking"
 
-    SAR_collection_sigma0 = SAR_collection.Sigma0FromDb
+    SAR_collection_sigma0 = SAR_collection.sigma0FromDb
     SAR_collection_multilooked = SAR_collection_sigma0.multilook(looks=4)
     SAR_collection_multilooked_and_filtered = SAR_collection_multilooked.speckle_filter(5, geometry=salt_lake_geometry, looks=4)
     multilooked_dates = SAR_collection_multilooked_and_filtered.dates

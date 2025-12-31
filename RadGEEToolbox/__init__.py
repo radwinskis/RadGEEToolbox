@@ -1,6 +1,6 @@
-__version__ = "1.7.3"
+__version__ = "1.7.4"
 
-from .CollectionStitch import CollectionStitch, MosaicByDate
+from .CollectionStitch import collectionStitch, mosaicByDate
 from .Export import ExportToDrive
 from .GetPalette import get_palette
 from .LandsatCollection import LandsatCollection
@@ -10,9 +10,9 @@ from .GenericCollection import GenericCollection
 from .VisParams import get_visualization_params
 
 __all__ = [
-    "CollectionStitch",
+    "collectionStitch",
     "ExportToDrive",
-    "MosaicByDate",
+    "mosaicByDate",
     "get_palette",
     "LandsatCollection",
     "Sentinel1Collection",
