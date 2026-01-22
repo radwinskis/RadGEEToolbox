@@ -2893,200 +2893,197 @@ class GenericCollection:
         lines,
         line_names,
         reducer="mean",
-        dist_interval=30,
+        dist_interval=90,
         n_segments=None,
         scale=30,
         processing_mode='aggregated',
         save_folder_path=None,
         sampling_method='line',
-        point_buffer_radius=15
+        point_buffer_radius=15,
+        batch_size=10
     ):
         """
-        Computes and returns pixel values along transects for each image in a collection.
-
-        This iterative function generates time-series data along one or more lines, and 
-        supports two different geometric sampling methods ('line' and 'buffered_point') 
-        for maximum flexibility and performance.
-
-        There are two processing modes available, aggregated and iterative:
-        - 'aggregated' (default; suggested): Fast, server-side processing. Fetches all results
-            in a single request. Highly recommended. Returns a dictionary of pandas DataFrames.
-        - 'iterative': Slower, client-side loop that processes one image at a time.
-            Kept for backward compatibility (effectively depreciated). Returns None and saves individual CSVs.
-            This method is not recommended unless absolutely necessary, as it is less efficient and may be subject to client-side timeouts.
-
+        Computes and returns pixel values along transects. Provide a list of ee.Geometry.LineString objects and corresponding names, and the function will compute the specified reducer value
+        at regular intervals along each line for all images in the collection. Use `dist_interval` or `n_segments` to control sampling resolution. The user can choose between 'aggregated' mode (returns a dictionary of DataFrames) or 'iterative' mode (saves individual CSVs for each transect).
+        Alter `sampling_method` to sample directly along the line or via buffered points along the line. Buffered points can help capture more representative pixel values in heterogeneous landscapes, and the buffer radius can be adjusted via `point_buffer_radius`.
+        
         Args:
-            lines (list): A list of one or more ee.Geometry.LineString objects that
-                define the transects.
-            line_names (list): A list of string names for each transect. The length
-                of this list must match the length of the `lines` list.
-            reducer (str, optional): The name of the ee.Reducer to apply at each
-                transect point (e.g., 'mean', 'median', 'first'). Defaults to 'mean'.
-            dist_interval (float, optional): The distance interval in meters for
-                sampling points along each transect. Will be overridden if `n_segments` is provided.
-                Defaults to 30. Recommended to increase this value when using the 
-                'line' processing method, or else you may get blank rows.
-            n_segments (int, optional): The number of equal-length segments to split
-                each transect line into for sampling. This parameter overrides `dist_interval`. 
-                Defaults to None.
-            scale (int, optional): The nominal scale in meters for the reduction,
-                which should typically match the pixel resolution of the imagery.
-                Defaults to 30.
-            processing_mode (str, optional): The method for processing the collection.
-                - 'aggregated' (default): Fast, server-side processing. Fetches all
-                  results in a single request. Highly recommended. Returns a dictionary
-                  of pandas DataFrames.
-                - 'iterative': Slower, client-side loop that processes one image at a
-                  time. Kept for backward compatibility. Returns None and saves
-                  individual CSVs.
-            save_folder_path (str, optional): If provided, the function will save the
-                resulting transect data to CSV files. The behavior depends on the
-                `processing_mode`:
-                - In 'aggregated' mode, one CSV is saved for each transect,
-                  containing all dates. (e.g., 'MyTransect_transects.csv').
-                - In 'iterative' mode, one CSV is saved for each date,
-                  containing all transects. (e.g., '2022-06-15_transects.csv').
-            sampling_method (str, optional): The geometric method used for sampling.
-                - 'line' (default): Reduces all pixels intersecting each small line
-                  segment. This can be unreliable and produce blank rows if
-                  `dist_interval` is too small relative to the `scale`.
-                - 'buffered_point': Reduces all pixels within a buffer around the
-                  midpoint of each line segment. This method is more robust and
-                  reliably avoids blank rows, but may not reduce all pixels along a line segment.
-            point_buffer_radius (int, optional): The radius in meters for the buffer
-                when `sampling_method` is 'buffered_point'. Defaults to 15.
+            lines (list): List of ee.Geometry.LineString objects.
+            line_names (list): List of string names for each transect.
+            reducer (str, optional): Reducer name. Defaults to 'mean'.
+            dist_interval (float, optional): Distance interval in meters. Defaults to 90.
+            n_segments (int, optional): Number of segments (overrides dist_interval).
+            scale (int, optional): Scale in meters. Defaults to 30.
+            processing_mode (str, optional): 'aggregated' or 'iterative'.
+            save_folder_path (str, optional): Path to save CSVs.
+            sampling_method (str, optional): 'line' or 'buffered_point'.
+            point_buffer_radius (int, optional): Buffer radius if using 'buffered_point'.
+            batch_size (int, optional): Images per request in 'aggregated' mode. Defaults to 10. Lower the value if you encounter a 'Too many aggregations' error.
 
         Returns:
-            dict or None:
-            - If `processing_mode` is 'aggregated', returns a dictionary where each
-              key is a transect name and each value is a pandas DataFrame. In the
-              DataFrame, the index is the distance along the transect and each
-              column represents an image date. Optionally saves CSV files if
-                `save_folder_path` is provided.
-            - If `processing_mode` is 'iterative', returns None as it saves
-              files directly.
-
-        Raises:
-            ValueError: If `lines` and `line_names` have different lengths, or if
-                an unknown reducer or processing mode is specified.
+            dict or None: Dictionary of DataFrames (aggregated) or None (iterative).
         """
-        # Validating inputs
         if len(lines) != len(line_names):
             raise ValueError("'lines' and 'line_names' must have the same number of elements.")
-        ### Current, server-side processing method ###
-        if processing_mode == 'aggregated':
-            # Validating reducer type
-            try:
-                ee_reducer = getattr(ee.Reducer, reducer)()
-            except AttributeError:
-                raise ValueError(f"Unknown reducer: '{reducer}'.")
-            ### Function to extract transects for a single image
-            def get_transects_for_image(image):
-                image_date = image.get('Date_Filter')
-                # Initialize an empty list to hold all transect FeatureCollections
-                all_transects_for_image = ee.List([])
-                # Looping through each line and processing
-                for i, line in enumerate(lines):
-                    # Index line and name
-                    line_name = line_names[i]
-                    # Determine maxError based on image projection, used for geometry operations
-                    maxError = image.projection().nominalScale().divide(5)
-                    # Calculate effective distance interval
-                    length = line.length(maxError) # using maxError here ensures consistency with cutLines
-                    # Determine effective distance interval based on n_segments or dist_interval
-                    effective_dist_interval = ee.Algorithms.If(
-                        n_segments,
-                        length.divide(n_segments),
-                        dist_interval or 30 # Defaults to 30 if both are None
-                    )
-                    # Generate distances along the line(s) for segmentation
-                    distances = ee.List.sequence(0, length, effective_dist_interval)
-                    # Segmenting the line into smaller lines at the specified distances
-                    cut_lines_geoms = line.cutLines(distances, maxError).geometries()
-                    # Function to create features with distance attributes
-                    # Adjusted to ensure consistent return types
-                    def set_dist_attr(l):
-                        # l is a list: [geometry, distance]
-                        # Extracting geometry portion of line
-                        geom_segment = ee.Geometry(ee.List(l).get(0))
-                        # Extracting distance value for attribute
-                        distance = ee.Number(ee.List(l).get(1))
-                        ### Determine final geometry based on sampling method
-                        # If the sampling method is 'buffered_point', 
-                        # create a buffered point feature at the centroid of each segment,
-                        # otherwise create a line feature
-                        final_feature = ee.Algorithms.If(
-                            ee.String(sampling_method).equals('buffered_point'),
-                            # True Case: Create the buffered point feature
-                            ee.Feature(
-                                geom_segment.centroid(maxError).buffer(point_buffer_radius),
-                                {'distance': distance}
-                            ),
-                            # False Case: Create the line segment feature
-                            ee.Feature(geom_segment, {'distance': distance})
-                        )
-                        # Return either the line segment feature or the buffered point feature
-                        return final_feature
-                    # Creating a FeatureCollection of the cut lines with distance attributes
-                    # Using map to apply the set_dist_attr function to each cut line geometry
-                    line_features = ee.FeatureCollection(cut_lines_geoms.zip(distances).map(set_dist_attr))
-                    # Reducing the image over the line features to get transect values
-                    transect_fc = image.reduceRegions(
-                        collection=line_features, reducer=ee_reducer, scale=scale
-                    )
-                    # Adding image date and line name properties to each feature
-                    def set_props(feature):
-                        return feature.set({'image_date': image_date, 'transect_name': line_name})
-                    # Append to the list of all transects for this image
-                    all_transects_for_image = all_transects_for_image.add(transect_fc.map(set_props))
-                # Combine all transect FeatureCollections into a single FeatureCollection and flatten
-                # Flatten is used to merge the list of FeatureCollections into one
-                return ee.FeatureCollection(all_transects_for_image).flatten()
-            # Map the function over the entire image collection and flatten the results
-            results_fc = ee.FeatureCollection(self.collection.map(get_transects_for_image)).flatten()
-            # Convert the results to a pandas DataFrame
-            df = GenericCollection.ee_to_df(results_fc, remove_geom=True)
-            # Check if the DataFrame is empty
-            if df.empty:
-                print("Warning: No transect data was generated.")
-                return {}
-            # Initialize dictionary to hold output DataFrames for each transect
-            output_dfs = {}
-            # Loop through each unique transect name and create a pivot table
-            for name in sorted(df['transect_name'].unique()):
-                transect_df = df[df['transect_name'] == name]
-                pivot_df = transect_df.pivot(index='distance', columns='image_date', values=reducer)
-                pivot_df.columns.name = 'Date'
-                output_dfs[name] = pivot_df
-            # Optionally save each transect DataFrame to CSV
-            if save_folder_path:
-                for transect_name, transect_df in output_dfs.items():
-                    safe_filename = "".join(x for x in transect_name if x.isalnum() or x in "._-")
-                    file_path = f"{save_folder_path}{safe_filename}_transects.csv"
-                    transect_df.to_csv(file_path)
-                    print(f"Saved transect data to {file_path}")
+
+        first_img = self.collection.first()
+        bands = first_img.bandNames().getInfo()
+        is_multiband = len(bands) > 1
+        
+        # Setup robust dictionary for handling masked/zero values
+        default_val = -9999
+        dummy_dict = ee.Dictionary.fromLists(bands, ee.List.repeat(default_val, len(bands)))
+        
+        if is_multiband:
+            reducer_cols = [f"{b}_{reducer}" for b in bands]
+            clean_names = bands 
+            rename_keys = bands
+            rename_vals = reducer_cols
+        else:
+            reducer_cols = [reducer]
+            clean_names = [bands[0]]
+            rename_keys = bands
+            rename_vals = reducer_cols
+
+        print("Pre-computing transect geometries from input LineString(s)...")
+        
+        master_transect_fc = ee.FeatureCollection([])
+        geom_error = 1.0 
+
+        for i, line in enumerate(lines):
+            line_name = line_names[i]
+            length = line.length(geom_error)
             
+            eff_interval = length.divide(n_segments) if n_segments else dist_interval
+            
+            distances = ee.List.sequence(0, length, eff_interval)
+            cut_lines = line.cutLines(distances, geom_error).geometries()
+            
+            def create_feature(l):
+                geom = ee.Geometry(ee.List(l).get(0))
+                dist = ee.Number(ee.List(l).get(1))
+                
+                final_geom = ee.Algorithms.If(
+                    ee.String(sampling_method).equals('buffered_point'),
+                    geom.centroid(geom_error).buffer(point_buffer_radius),
+                    geom
+                )
+                
+                return ee.Feature(ee.Geometry(final_geom), {
+                    'transect_name': line_name,
+                    'distance': dist
+                })
+
+            line_fc = ee.FeatureCollection(cut_lines.zip(distances).map(create_feature))
+            master_transect_fc = master_transect_fc.merge(line_fc)
+
+        try:
+            ee_reducer = getattr(ee.Reducer, reducer)()
+        except AttributeError:
+            raise ValueError(f"Unknown reducer: '{reducer}'.")
+
+        def process_image(image):
+            date_val = image.get('Date_Filter')
+            
+            # Map over points (Slower but Robust)
+            def reduce_point(f):
+                stats = image.reduceRegion(
+                    reducer=ee_reducer,
+                    geometry=f.geometry(),
+                    scale=scale,
+                    maxPixels=1e13
+                )
+                # Combine with defaults (preserves 0, handles masked)
+                safe_stats = dummy_dict.combine(stats, overwrite=True)
+                # Rename keys to match expected outputs (e.g. 'ndvi' -> 'ndvi_mean')
+                final_stats = safe_stats.rename(rename_keys, rename_vals)
+                
+                return f.set(final_stats).set({'image_date': date_val})
+
+            return master_transect_fc.map(reduce_point)
+
+        export_cols = ['transect_name', 'distance', 'image_date'] + reducer_cols
+
+        if processing_mode == 'aggregated':
+            collection_size = self.collection.size().getInfo()
+            print(f"Starting batch process of {collection_size} images...")
+            
+            dfs = []
+            for i in range(0, collection_size, batch_size):
+                print(f"  Processing image {i} to {min(i + batch_size, collection_size)}...")
+                
+                batch_col = ee.ImageCollection(self.collection.toList(batch_size, i))
+                results_fc = batch_col.map(process_image).flatten()
+                
+                # Dynamic Class Call for ee_to_df
+                df_batch = self.__class__.ee_to_df(results_fc, columns=export_cols, remove_geom=True)
+                
+                if not df_batch.empty:
+                    dfs.append(df_batch)
+
+            if not dfs:
+                print("Warning: No transect data generated.")
+                return {}
+
+            df = pd.concat(dfs, ignore_index=True)
+
+            # Post-Process & Split
+            output_dfs = {}
+            for col in reducer_cols:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+                df[col] = df[col].replace(-9999, np.nan)
+
+            for name in sorted(df['transect_name'].unique()):
+                line_df = df[df['transect_name'] == name]
+                
+                for raw_col, band_name in zip(reducer_cols, clean_names):
+                    try:
+                        # Safety drop for duplicates
+                        line_df_clean = line_df.drop_duplicates(subset=['distance', 'image_date'])
+                        
+                        pivot = line_df_clean.pivot(index='distance', columns='image_date', values=raw_col)
+                        pivot.columns.name = 'Date'
+                        key = f"{name}_{band_name}"
+                        output_dfs[key] = pivot
+                        
+                        if save_folder_path:
+                            safe_key = "".join(x for x in key if x.isalnum() or x in "._-")
+                            fname = f"{save_folder_path}{safe_key}_transects.csv"
+                            pivot.to_csv(fname)
+                            print(f"Saved: {fname}")
+                    except Exception as e:
+                        print(f"Skipping pivot for {name}/{band_name}: {e}")
+
             return output_dfs
 
-        ### old, depreciated iterative client-side processing method ###
         elif processing_mode == 'iterative':
             if not save_folder_path:
-                raise ValueError("`save_folder_path` is required for 'iterative' processing mode.")
+                raise ValueError("save_folder_path is required for iterative mode.")
             
             image_collection_dates = self.dates
             for i, date in enumerate(image_collection_dates):
                 try:
                     print(f"Processing image {i+1}/{len(image_collection_dates)}: {date}")
-                    image = self.image_grab(i)
-                    transects_df = GenericCollection.transect(
-                        image, lines, line_names, reducer, n_segments, dist_interval, to_pandas=True
-                    )
-                    transects_df.to_csv(f"{save_folder_path}{date}_transects.csv")
-                    print(f"{date}_transects saved to csv")
+                    image_list = self.collection.toList(self.collection.size())
+                    image = ee.Image(image_list.get(i))
+                    
+                    fc_result = process_image(image)
+                    df = self.__class__.ee_to_df(fc_result, columns=export_cols, remove_geom=True)
+                    
+                    if not df.empty:
+                        for col in reducer_cols:
+                            df[col] = pd.to_numeric(df[col], errors='coerce')
+                            df[col] = df[col].replace(-9999, np.nan)
+                        
+                        fname = f"{save_folder_path}{date}_transects.csv"
+                        df.to_csv(fname, index=False)
+                        print(f"Saved: {fname}")
+                    else:
+                        print(f"Skipping {date}: No data.")
                 except Exception as e:
-                    print(f"An error occurred while processing image {i+1}: {e}")
+                    print(f"Error processing {date}: {e}")
         else:
-            raise ValueError("`processing_mode` must be 'iterative' or 'aggregated'.")
+            raise ValueError("processing_mode must be 'iterative' or 'aggregated'.")
 
     @staticmethod
     def extract_zonal_stats_from_buffer(
@@ -3190,7 +3187,8 @@ class GenericCollection:
         buffer_size=1,
         tileScale=1,
         dates=None,
-        file_path=None
+        file_path=None,
+        unweighted=False
     ):
         """
         Iterates over a collection of images and extracts spatial statistics (defaults to mean) for a given list of geometries or coordinates. Individual statistics are calculated for each geometry or coordinate provided.
@@ -3207,6 +3205,7 @@ class GenericCollection:
             tileScale (int, optional): A scaling factor to reduce aggregation tile size. Defaults to 1.
             dates (list, optional): A list of date strings ('YYYY-MM-DD') for filtering the collection, such that only images from these dates are included for zonal statistic retrieval. Defaults to None, which uses all dates in the collection.
             file_path (str, optional): File path to save the output CSV.
+            unweighted (bool, optional): If True, uses unweighted statistics when applicable (e.g., for 'mean'). Defaults to False.
 
         Returns:
             pd.DataFrame or None: A pandas DataFrame with dates as the index and coordinate names
@@ -3313,6 +3312,9 @@ class GenericCollection:
             reducer = getattr(ee.Reducer, reducer_type)()
         except AttributeError:
             raise ValueError(f"Unknown reducer_type: '{reducer_type}'.")
+        
+        if unweighted:
+            reducer = reducer.unweighted()
 
         # Define the function to map over the image collection
         def calculate_stats_for_image(image):
@@ -3374,6 +3376,394 @@ class GenericCollection:
             print(f"Zonal stats saved to {file_path}.csv")
             return
         return pivot_df
+    
+    def multiband_zonal_stats(
+            self,
+            geometry,
+            bands,
+            reducer_types,
+            scale=30,
+            geometry_name='geom',
+            dates=None,
+            include_area=False,
+            file_path=None,
+            unweighted=False
+        ):
+            """
+            Calculates zonal statistics for multiple bands over a single geometry for each image in the collection.
+            Allows for specifying different reducers for different bands. Optionally includes the geometry area.
+
+            Args:
+                geometry (ee.Geometry or ee.Feature): The single geometry to calculate statistics for.
+                bands (list of str): A list of band names to include in the analysis.
+                reducer_types (str or list of str): A single reducer name (e.g., 'mean') to apply to all bands, 
+                    or a list of reducer names matching the length of the 'bands' list to apply specific reducers 
+                    to specific bands.
+                scale (int, optional): The scale in meters for the reduction. Defaults to 30.
+                geometry_name (str, optional): A name for the geometry, used in column naming. Defaults to 'geom'.
+                dates (list of str, optional): A list of date strings ('YYYY-MM-DD') to filter the collection. 
+                    Defaults to None (processes all images).
+                include_area (bool, optional): If True, adds a column with the area of the geometry in square meters. 
+                    Defaults to False.
+                file_path (str, optional): If provided, saves the resulting DataFrame to a CSV file at this path.
+                unweighted (bool, optional): If True, uses unweighted statistics when applicable (e.g., for 'mean'). Defaults to False.
+
+            Returns:
+                pd.DataFrame: A pandas DataFrame indexed by Date, with columns named as '{band}_{geometry_name}_{reducer}'.
+            """
+            # 1. Input Validation and Setup
+            if not isinstance(geometry, (ee.Geometry, ee.Feature)):
+                raise ValueError("The `geometry` argument must be an ee.Geometry or ee.Feature.")
+            
+            region = geometry.geometry() if isinstance(geometry, ee.Feature) else geometry
+
+            if isinstance(bands, str):
+                bands = [bands]
+            if not isinstance(bands, list):
+                raise ValueError("The `bands` argument must be a string or a list of strings.")
+
+            # Handle reducer_types (str vs list)
+            if isinstance(reducer_types, str):
+                reducers_list = [reducer_types] * len(bands)
+            elif isinstance(reducer_types, list):
+                if len(reducer_types) != len(bands):
+                    raise ValueError("If `reducer_types` is a list, it must have the same length as `bands`.")
+                reducers_list = reducer_types
+            else:
+                raise ValueError("`reducer_types` must be a string or a list of strings.")
+
+            # 2. Filter Collection
+            processing_col = self.collection
+
+            if dates:
+                processing_col = processing_col.filter(ee.Filter.inList('Date_Filter', dates))
+            
+            processing_col = processing_col.select(bands)
+
+            # 3. Pre-calculate Area (if requested)
+            area_val = None
+            area_col_name = f"{geometry_name}_area_m2"
+            if include_area:
+                # Calculate geodesic area in square meters with maxError of 1m
+                area_val = region.area(1)
+
+            # 4. Define the Reduction Logic
+            def calculate_multiband_stats(image):
+                # Base feature with date property
+                date_val = image.get('Date_Filter')
+                feature = ee.Feature(None, {'Date': date_val})
+
+                # If requested, add the static area value to every feature
+                if include_area:
+                    feature = feature.set(area_col_name, area_val)
+
+                unique_reducers = list(set(reducers_list))
+                
+                # OPTIMIZED PATH: Single reducer type for all bands
+                if len(unique_reducers) == 1:
+                    r_type = unique_reducers[0]
+                    try:
+                        reducer = getattr(ee.Reducer, r_type)()
+                    except AttributeError:
+                        reducer = ee.Reducer.mean() 
+
+                    if unweighted:
+                        reducer = reducer.unweighted()
+
+                    stats = image.reduceRegion(
+                        reducer=reducer,
+                        geometry=region,
+                        scale=scale,
+                        maxPixels=1e13
+                    )
+
+                    for band in bands:
+                        col_name = f"{band}_{geometry_name}_{r_type}"
+                        val = stats.get(band)
+                        feature = feature.set(col_name, val)
+
+                # ITERATIVE PATH: Different reducers for different bands
+                else:
+                    for band, r_type in zip(bands, reducers_list):
+                        try:
+                            reducer = getattr(ee.Reducer, r_type)()
+                        except AttributeError:
+                            reducer = ee.Reducer.mean() 
+
+                        if unweighted:
+                            reducer = reducer.unweighted()
+
+                        stats = image.select(band).reduceRegion(
+                            reducer=reducer,
+                            geometry=region,
+                            scale=scale,
+                            maxPixels=1e13
+                        )
+                        
+                        val = stats.get(band)
+                        col_name = f"{band}_{geometry_name}_{r_type}"
+                        feature = feature.set(col_name, val)
+
+                return feature
+
+            # 5. Execute Server-Side Mapping (with explicit Cast)
+            results_fc = ee.FeatureCollection(processing_col.map(calculate_multiband_stats))
+
+            # 6. Client-Side Conversion
+            try:
+                df = GenericCollection.ee_to_df(results_fc, remove_geom=True)
+            except Exception as e:
+                raise RuntimeError(f"Failed to convert Earth Engine results to DataFrame. Error: {e}")
+
+            if df.empty:
+                print("Warning: No results returned. Check if the geometry intersects the imagery or if dates are valid.")
+                return pd.DataFrame()
+
+            # 7. Formatting & Reordering
+            if 'Date' in df.columns:
+                df['Date'] = pd.to_datetime(df['Date'])
+                df = df.sort_values('Date').set_index('Date')
+
+            # Construct the expected column names in the exact order of the input lists
+            expected_order = [f"{band}_{geometry_name}_{r_type}" for band, r_type in zip(bands, reducers_list)]
+            
+            # If area was included, append it to the END of the list
+            if include_area:
+                expected_order.append(area_col_name)
+            
+            # Reindex the DataFrame to match this order. 
+            existing_cols = [c for c in expected_order if c in df.columns]
+            df = df[existing_cols]
+
+            # 8. Export (Optional)
+            if file_path:
+                if not file_path.lower().endswith('.csv'):
+                    file_path += '.csv'
+                try:
+                    df.to_csv(file_path)
+                    print(f"Multiband zonal stats saved to {file_path}")
+                except Exception as e:
+                    print(f"Error saving file to {file_path}: {e}")
+
+            return df
+    
+    def sample(
+        self,
+        locations,
+        band=None,
+        scale=None,
+        location_names=None,
+        dates=None,
+        file_path=None,
+        tileScale=1
+    ):
+        """
+        Extracts time-series pixel values for a list of locations.
+        
+
+        Args:
+            locations (list, tuple, ee.Geometry, or ee.FeatureCollection): Input points.
+            band (str, optional): The name of the band to sample. Defaults to the first band.
+            scale (int, optional): Scale in meters. Defaults to 30 if None.
+            location_names (list of str, optional): Custom names for locations.
+            dates (list, optional): Date filter ['YYYY-MM-DD'].
+            file_path (str, optional): CSV export path.
+            tileScale (int, optional): Aggregation tile scale. Defaults to 1.
+
+        Returns:
+            pd.DataFrame (or CSV if file_path is provided): DataFrame indexed by Date, columns by Location.
+        """
+        col = self.collection
+        if dates:
+            col = col.filter(ee.Filter.inList('Date_Filter', dates))
+
+        first_img = col.first()
+        available_bands = first_img.bandNames().getInfo()
+        
+        if band:
+            if band not in available_bands:
+                raise ValueError(f"Band '{band}' not found. Available: {available_bands}")
+            target_band = band
+        else:
+            target_band = available_bands[0]
+            
+        processing_col = col.select([target_band])
+
+        def set_name(f):
+            name = ee.Algorithms.If(
+                f.get('geo_name'), f.get('geo_name'),
+                ee.Algorithms.If(f.get('name'), f.get('name'),
+                ee.Algorithms.If(f.get('system:index'), f.get('system:index'), 'unnamed'))
+            )
+            return f.set('geo_name', name)
+
+        if isinstance(locations, (ee.FeatureCollection, ee.Feature)):
+            features = ee.FeatureCollection(locations)
+        elif isinstance(locations, ee.Geometry):
+            lbl = location_names[0] if (location_names and location_names[0]) else 'Point_1'
+            features = ee.FeatureCollection([ee.Feature(locations).set('geo_name', lbl)])
+        elif isinstance(locations, tuple) and len(locations) == 2:
+            lbl = location_names[0] if location_names else 'Location_1'
+            features = ee.FeatureCollection([ee.Feature(ee.Geometry.Point(locations), {'geo_name': lbl})])
+        elif isinstance(locations, list):
+            if all(isinstance(i, tuple) for i in locations):
+                names = location_names if location_names else [f"Loc_{i+1}" for i in range(len(locations))]
+                features = ee.FeatureCollection([
+                    ee.Feature(ee.Geometry.Point(p), {'geo_name': str(n)}) for p, n in zip(locations, names)
+                ])
+            elif all(isinstance(i, ee.Geometry) for i in locations):
+                names = location_names if location_names else [f"Geom_{i+1}" for i in range(len(locations))]
+                features = ee.FeatureCollection([
+                    ee.Feature(g, {'geo_name': str(n)}) for g, n in zip(locations, names)
+                ])
+            else:
+                raise ValueError("List must contain (lon, lat) tuples or ee.Geometry objects.")
+        else:
+            raise TypeError("Invalid locations input.")
+
+        features = features.map(set_name)
+
+
+        def sample_image(img):
+            date = img.get('Date_Filter')
+            use_scale = scale if scale is not None else 30
+            
+
+            default_dict = ee.Dictionary({target_band: -9999})
+
+            def extract_point(f):
+                stats = img.reduceRegion(
+                    reducer=ee.Reducer.first(),
+                    geometry=f.geometry(),
+                    scale=use_scale,
+                    tileScale=tileScale
+                )
+                
+                # Combine dictionaries. 
+                # If stats has 'target_band' (even if 0), it overwrites -9999.
+                # If stats is empty (masked), -9999 remains.
+                safe_stats = default_dict.combine(stats, overwrite=True)
+                val = safe_stats.get(target_band)
+                
+                return f.set({
+                    target_band: val,
+                    'image_date': date
+                })
+
+            return features.map(extract_point)
+
+        # Flatten the results
+        flat_results = processing_col.map(sample_image).flatten()
+
+        df = GenericCollection.ee_to_df(
+            flat_results, 
+            columns=['image_date', 'geo_name', target_band], 
+            remove_geom=True
+        )
+
+        if df.empty:
+            print("Warning: No data returned.")
+            return pd.DataFrame()
+
+        # 6. Clean and Pivot
+        df[target_band] = pd.to_numeric(df[target_band], errors='coerce')
+        
+        # Filter out ONLY the sentinel value (-9999), preserving 0.
+        df = df[df[target_band] != -9999]
+
+        if df.empty:
+             print(f"Warning: All data points were masked (NoData) for band '{target_band}'.")
+             return pd.DataFrame()
+
+        pivot_df = df.pivot(index='image_date', columns='geo_name', values=target_band)
+        pivot_df.index.name = 'Date'
+        pivot_df.columns.name = None
+        pivot_df = pivot_df.reset_index()
+
+        if file_path:
+            if not file_path.lower().endswith('.csv'):
+                file_path += '.csv'
+            pivot_df.to_csv(file_path, index=False)
+            print(f"Sampled data saved to {file_path}")
+            return None
+
+        return pivot_df
+
+    def multiband_sample(
+        self,
+        location,
+        scale=30,
+        file_path=None
+    ):
+        """
+        Extracts ALL band values for a SINGLE location across the entire collection.
+
+        Args:
+            location (tuple or ee.Geometry): A single (lon, lat) tuple OR ee.Geometry.
+            scale (int, optional): Scale in meters. Defaults to 30.
+            file_path (str, optional): Path to save CSV.
+
+        Returns:
+            pd.DataFrame: DataFrame indexed by Date, with columns for each Band.
+        """
+        if isinstance(location, tuple) and len(location) == 2:
+            geom = ee.Geometry.Point(location)
+        elif isinstance(location, ee.Geometry):
+            geom = location
+        else:
+            raise ValueError("Location must be a single (lon, lat) tuple or ee.Geometry.")
+
+        first_img = self.collection.first()
+        band_names = first_img.bandNames()
+        
+        # Create a dictionary of {band_name: -9999}
+        # fill missing values so the Feature structure is consistent
+        dummy_values = ee.List.repeat(-9999, band_names.length())
+        default_dict = ee.Dictionary.fromLists(band_names, dummy_values)
+
+        def get_all_bands(img):
+            date = img.get('Date_Filter')
+            
+            # reduceRegion returns a Dictionary. 
+            # If a pixel is masked, that band key is missing from 'stats'.
+            stats = img.reduceRegion(
+                reducer=ee.Reducer.first(),
+                geometry=geom,
+                scale=scale,
+                maxPixels=1e13
+            )
+            
+            # Combine stats with defaults. 
+            # overwrite=True means real data (stats) overwrites the -9999 defaults.
+            complete_stats = default_dict.combine(stats, overwrite=True)
+            
+            return ee.Feature(None, complete_stats).set('Date', date)
+
+        fc = ee.FeatureCollection(self.collection.map(get_all_bands))
+        
+        df = GenericCollection.ee_to_df(fc, remove_geom=True)
+
+        if df.empty:
+            print("Warning: No data found.")
+            return pd.DataFrame()
+
+        # 6. Cleanup
+        if 'Date' in df.columns:
+            df['Date'] = pd.to_datetime(df['Date'])
+            df = df.set_index('Date').sort_index()
+
+        # Replace our sentinel -9999 with proper NaNs
+        df = df.replace(-9999, np.nan)
+
+        # 7. Export
+        if file_path:
+            if not file_path.lower().endswith('.csv'):
+                file_path += '.csv'
+            df.to_csv(file_path)
+            print(f"Multiband sample saved to {file_path}")
+            return None
+
+        return df
         
     def export_to_asset_collection(
         self,
