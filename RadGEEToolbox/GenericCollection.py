@@ -3774,7 +3774,8 @@ class GenericCollection:
         filename_prefix="",
         crs=None,
         max_pixels=int(1e13),
-        description_prefix="export"
+        description_prefix="export",
+        overwrite=False
     ):
         """
         Exports an image collection to a Google Earth Engine asset collection. The asset collection will be created if it does not already exist, 
@@ -3789,6 +3790,7 @@ class GenericCollection:
             crs (str, optional): The coordinate reference system. Defaults to None, which will use the image's CRS.
             max_pixels (int, optional): The maximum number of pixels. Defaults to int(1e13).
             description_prefix (str, optional): The description prefix. Defaults to "export".
+            overwrite (bool, optional): Whether to overwrite existing assets. Defaults to False.
 
         Returns:
             None: (queues export tasks)
@@ -3805,6 +3807,14 @@ class GenericCollection:
             img = ee.Image(ic.filter(ee.Filter.eq('Date_Filter', date_str)).first())
             asset_id = asset_collection_path + "/" + filename_prefix + date_str
             desc = description_prefix + "_" + filename_prefix + date_str
+
+            if overwrite:
+                try:
+                    ee.data.deleteAsset(asset_id)
+                    print(f"Overwriting: Deleted existing asset {asset_id}")
+                except ee.EEException:
+                    # Asset does not exist, so nothing to delete. Proceed safely.
+                    pass
 
             params = {
                 'image': img,
