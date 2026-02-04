@@ -14,7 +14,7 @@ Designed for both new and advanced users of Google Earth Engine, RadGEEToolbox m
 
 Although similar packages exist (eemont, geetools, etc.), `RadGEEToolbox` extends functionality and provides cohesive, chainable methods for research oriented projects working with Landsat TM & OLI, Sentinel-1 SAR, and/or Sentinel-2 MSI datasets (Table 1). The ultimate goal of `RadGEEToolbox` is to make satellite image processing easier and faster for real world applications relying on the most commonly utilized remote sensing platforms.
 
-As of version `1.7.4`, `RadGEEToolbox` supports any generic image collection via the `GenericCollection` module which allows for utilization of the same data management, temporal reduction, zonal statistics, and data export tools available for the `LandsatCollection`, `Sentinel1Collection`, and `Sentinel2Collection` modules. This allows users to provide their own image collection of choice, such as PRISM or MODIS data, to benefit from the tools available with `RadGEEToolbox`.
+As of version `1.7.5`, `RadGEEToolbox` supports any generic image collection via the `GenericCollection` module which allows for utilization of the same data management, temporal reduction, zonal statistics, and data export tools available for the `LandsatCollection`, `Sentinel1Collection`, and `Sentinel2Collection` modules. This allows users to provide their own image collection of choice, such as PRISM or MODIS data, to benefit from the tools available with `RadGEEToolbox`.
 
 ***Table 1.*** *Comparison of functionality between RadGEEToolbox, eemont, and geetools.*
 
@@ -156,15 +156,15 @@ _____________
 
 ### Installing via pip
 
-To install `RadGEEToolbox` version 1.7.4 using pip (NOTE: it is recommended to create a new virtual environment):
+To install `RadGEEToolbox` version 1.7.5 using pip (NOTE: it is recommended to create a new virtual environment):
 
 ```bash
-pip install RadGEEToolbox==1.7.4
+pip install RadGEEToolbox==1.7.5
 ```
 
 ### Installing via Conda
 
-To install `RadGEEToolbox` version 1.7.4 using conda-forge (NOTE: it is recommended to create a new virtual environment):
+To install `RadGEEToolbox` version 1.7.5 using conda-forge (NOTE: it is recommended to create a new virtual environment):
 
 ```bash
 conda install conda-forge::radgeetoolbox
@@ -195,7 +195,7 @@ To verify that `RadGEEToolbox` was installed correctly:
 python -c "import RadGEEToolbox; print(RadGEEToolbox.__version__)"
 ```
 
-You should see `1.7.4` printed as the version number.
+You should see `1.7.5` printed as the version number.
 
 ### Want to Visualize Data? Install These Too
 
