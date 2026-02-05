@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "RadGEEToolbox"
-version = "1.7.5"
+version = "1.7.6"
 description = "Streamlined Multispectral & SAR Analysis for Google Earth Engine Python API"
 authors = [
     {name = "Mark Radwin", email = "markradwin@gmail.com"}

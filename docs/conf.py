@@ -23,7 +23,7 @@ copyright = '2025, Mark Radwin'
 author = 'Mark Radwin'
 
 # The full version, including alpha/beta/rc tags
-release = '1.7.5'
+release = '1.7.6'
 
 
 # -- General configuration ---------------------------------------------------
