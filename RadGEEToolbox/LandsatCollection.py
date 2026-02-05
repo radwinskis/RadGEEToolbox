@@ -10,19 +10,24 @@ _LS_SCALE = 0.0000275
 _LS_OFFSET = -0.2
 
 def _scale_landsat_sr(img):
-    """
-    Converts Landsat C2 SR DN values to reflectance values for SR_B1..SR_B7 (overwrite bands).
-
-    Args:
-        img (ee.Image): Input Landsat image without scaled bands.
-
-    Returns:
-        ee.Image: Image with scaled reflectance bands.
-    """
     img = ee.Image(img)
+    
+    # Get the sensor from the image metadata
+    # This matches the logic you already use in _landsat_selector
+    sensor = img.get('SPACECRAFT_ID')
+    
+    available_bands = img.bandNames()
+    
+    target_bands = ee.List(_LS_SR_BANDS).filter(ee.Filter.inList('item', available_bands))
+    
     is_scaled = ee.Algorithms.IsEqual(img.get('rgt:scaled'), 'landsat_sr')
-    scaled = img.select(_LS_SR_BANDS).multiply(_LS_SCALE).add(_LS_OFFSET)
+    
+    # Apply scaling factors (0.0000275 and -0.2) only to existing SR bands
+    scaled = img.select(target_bands).multiply(_LS_SCALE).add(_LS_OFFSET)
+    scaled = scaled.max(0.0001)  # Ensure reflectance values are not negative after scaling
+    
     out = img.addBands(scaled, None, True).set('rgt:scaled', 'landsat_sr')
+    
     return ee.Image(ee.Algorithms.If(is_scaled, img, out))
 
 class LandsatCollection:
