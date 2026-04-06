@@ -3387,7 +3387,8 @@ class GenericCollection:
             dates=None,
             include_area=False,
             file_path=None,
-            unweighted=False
+            unweighted=False,
+            tileScale=1
         ):
             """
             Calculates zonal statistics for multiple bands over a single geometry for each image in the collection.
@@ -3474,7 +3475,8 @@ class GenericCollection:
                         reducer=reducer,
                         geometry=region,
                         scale=scale,
-                        maxPixels=1e13
+                        maxPixels=1e13,
+                        tileScale=tileScale
                     )
 
                     for band in bands:

@@ -21,7 +21,10 @@ setup(
     install_requires=[
         "earthengine-api",
         "numpy",
-        "pandas"
+        "pandas",
+        "matplotlib",
+        "cartopy",
+        "Pillow"
     ],
     python_requires=">=3.8",
 )

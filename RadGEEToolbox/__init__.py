@@ -8,6 +8,7 @@ from .Sentinel1Collection import Sentinel1Collection
 from .Sentinel2Collection import Sentinel2Collection
 from .GenericCollection import GenericCollection
 from .VisParams import get_visualization_params
+from .Visualize import Visualize
 
 __all__ = [
     "collectionStitch",
@@ -19,4 +20,5 @@ __all__ = [
     "Sentinel2Collection",
     "GenericCollection",
     "get_visualization_params",
+    "Visualize",
 ]

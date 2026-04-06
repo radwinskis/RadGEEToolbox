@@ -21,6 +21,7 @@ def _scale_s2_sr(img):
     img = ee.Image(img)
     is_scaled = ee.Algorithms.IsEqual(img.get('rgt:scaled'), 'sentinel2_sr')
     scaled = img.select(_S2_SR_BANDS).multiply(_S2_SCALE)
+    scaled = scaled.max(0.0001)
     out = img.addBands(scaled, None, True).set('rgt:scaled', 'sentinel2_sr')
     return ee.Image(ee.Algorithms.If(is_scaled, img, out))
 

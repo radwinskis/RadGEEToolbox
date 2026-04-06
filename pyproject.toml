@@ -15,7 +15,10 @@ requires-python = ">=3.8"
 dependencies = [
     "earthengine-api",
     "numpy",
-    "pandas"
+    "pandas",
+    "matplotlib",
+    "cartopy",
+    "Pillow",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
