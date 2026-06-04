@@ -152,7 +152,7 @@ class Sentinel2Collection:
         self.halite_threshold = -1
         self.gypsum_threshold = -1
         self.turbidity_threshold = -1
-        self.chlorophyll_threshold = 0.5
+        self.chlorophyll_threshold = -1 #0.5
         self.ndsi_threshold = -1
         self.evi_threshold = -1
         self.savi_threshold = -1.5
@@ -786,10 +786,14 @@ class Sentinel2Collection:
 
         band_to_mask_image = image_to_mask.select(band_to_mask)
         band_for_mask_image = image_for_mask.select(band_for_mask)
+        # if mask_above:
+        #     mask = band_for_mask_image.gt(threshold)
+        # else:
+        #     mask = band_for_mask_image.lt(threshold)
         if mask_above:
-            mask = band_for_mask_image.gt(threshold)
+            mask = band_for_mask_image.lte(threshold)
         else:
-            mask = band_for_mask_image.lt(threshold)
+            mask = band_for_mask_image.gte(threshold)
         return band_to_mask_image.updateMask(mask).rename(band_to_mask).copyProperties(image_to_mask).set('system:time_start', image_to_mask.get('system:time_start'))
 
     @staticmethod
@@ -1035,7 +1039,7 @@ class Sentinel2Collection:
             collections = [collections]
             
         if len(collections) == 0:
-            raise ValueError("Provide a non-empty list of LandsatCollection objects in `collections`.")
+            raise ValueError("Provide a non-empty list of Sentinel2Collection objects in `collections`.")
 
         result = self.collection
         for extra in collections:
@@ -3518,7 +3522,7 @@ class Sentinel2Collection:
         NOTE: if images are removed from the collection from cloud filtering, you may have mosaics composed of only one image.
 
         Returns:
-            LandsatCollection: LandsatCollection image collection with mosaiced imagery and mean CLOUD_COVER as a property
+            Sentinel2Collection: Sentinel2Collection image collection with mosaiced imagery and mean CLOUD_COVER as a property
         """
         if self._MosaicByDate is None:
             distinct_dates = self.collection.distinct("Date_Filter")
@@ -3986,6 +3990,90 @@ class Sentinel2Collection:
                     print(f"Error processing {date}: {e}")
         else:
             raise ValueError("processing_mode must be 'iterative' or 'aggregated'.")
+        
+    def temporal_anomaly(self, baseline_start_year, baseline_end_year, target_bands, frequency='monthly', replace=True):
+        """
+        Calculates temporal anomalies relative to a baseline climatology for the Sentinel2Collection.
+        
+        Args:
+            baseline_start_year (int): Start year for the baseline climatology (e.g., 2015).
+            baseline_end_year (int): End year for the baseline climatology (e.g., 2025).
+            target_bands (str or list of str): Band name(s) to calculate anomalies for (e.g., ['ndwi', 'halite']).
+            frequency (str, optional): 'monthly' (compares a given month to the historic avg for that month) 
+                                       or 'yearly' (compares an image to the grand multi-year avg). Defaults to 'monthly'.
+            replace (bool, optional): A boolean indicating whether to replace the original band with the anomaly band. If True, the output image will only contain the anomaly band. If False, the output image will retain all original bands and add the anomaly band. Default is True.
+
+                                       
+        Returns:
+            Sentinel2Collection: A new Sentinel2Collection with the temporal anomaly bands appended.
+        """
+        if isinstance(target_bands, str):
+            target_bands = [target_bands]
+
+        baseline_col = self.collection.filter(
+            ee.Filter.calendarRange(baseline_start_year, baseline_end_year, 'year')
+        ).select(target_bands)
+        
+        # MONTHLY SECTION
+        if frequency == 'monthly':
+            months = ee.List.sequence(1, 12)
+            
+            def compute_month_mean(m):
+                m = ee.Number(m)
+                mean_img = baseline_col.filter(ee.Filter.calendarRange(m, m, 'month')).mean()
+                return mean_img.set('month', m)
+
+            climatology = ee.ImageCollection.fromImages(months.map(compute_month_mean))
+            
+            col_with_month = self.collection.map(lambda img: img.set('month', img.date().get('month')))
+            
+            # Join the 12-month climatology to the input collection
+            filter_month = ee.Filter.equals(leftField='month', rightField='month')
+            join = ee.Join.saveFirst(matchKey='clim_ref')
+            processing_col = ee.ImageCollection(join.apply(col_with_month, climatology, filter_month))
+
+        # YEARLY SECTION
+        elif frequency == 'yearly':
+            global_mean_img = baseline_col.mean()
+            
+            def attach_global_mean(img):
+                return img.set('clim_ref', global_mean_img)
+                
+            processing_col = self.collection.map(attach_global_mean)
+            
+        else:
+            raise ValueError("Frequency must be 'monthly' or 'yearly'")
+
+        # =========================================================
+        # CALCULATE ANOMALY 
+        # =========================================================
+        def compute_anomaly(img):
+            # Retrieve the baseline reference image attached during the join
+            clim_img = ee.Image(img.get('clim_ref'))
+            
+            # Select the target bands from both images
+            target_vals = img.select(target_bands)
+            clim_vals = clim_img.select(target_bands)
+            
+            # Calculate Anomaly (Actual - Climatology)
+            anomalies = target_vals.subtract(clim_vals)
+            
+            # Rename bands to specify they are temporal anomalies using a client-side list comprehension
+            anomaly_names = [f"{b}_temporal_anomaly" for b in target_bands]
+            anomalies = anomalies.rename(anomaly_names)
+
+            # Control the output based on the `replace` argument
+            if replace:
+                # Return ONLY the anomaly bands, but keep the original properties
+                return anomalies.copyProperties(img, img.propertyNames())
+            else:
+                # Append the anomaly bands to the original image and keep properties
+                return img.addBands(anomalies).copyProperties(img, img.propertyNames())
+        
+        # Map the anomaly computation over the joined collection
+        final_col = processing_col.map(compute_anomaly)
+        
+        return Sentinel2Collection(collection=final_col)
 
     @staticmethod
     def extract_zonal_stats_from_buffer(
@@ -4288,6 +4376,8 @@ class Sentinel2Collection:
             reducer_types,
             scale=30,
             geometry_name='geom',
+            include_geometry_name=False,
+            include_reducer_name=False,
             dates=None,
             include_area=False,
             file_path=None,
@@ -4309,6 +4399,8 @@ class Sentinel2Collection:
                     Defaults to None (processes all images).
                 include_area (bool, optional): If True, adds a column with the area of the geometry in square meters. 
                     Defaults to False.
+                include_geometry_name (bool, optional): If True, includes the geometry name in the column names. Defaults to False.
+                include_reducer_name (bool, optional): If True, includes the reducer name in the column names. Defaults to False.
                 file_path (str, optional): If provided, saves the resulting DataFrame to a CSV file at this path.
                 unweighted (bool, optional): Whether to use unweighted reducers. Defaults to False.
 
@@ -4382,8 +4474,16 @@ class Sentinel2Collection:
                     )
 
                     for band in bands:
-                        col_name = f"{band}_{geometry_name}_{r_type}"
+                        if include_geometry_name and include_reducer_name:
+                            col_name = f"{band}_{geometry_name}_{r_type}"
+                        elif include_geometry_name and not include_reducer_name:
+                            col_name = f"{band}_{geometry_name}"
+                        elif not include_geometry_name and include_reducer_name:
+                            col_name = f"{band}_{r_type}"
+                        else:
+                            col_name = f"{band}"
                         val = stats.get(band)
+                        val = ee.Algorithms.If(val, val, -9999)
                         feature = feature.set(col_name, val)
 
                 # ITERATIVE PATH: Different reducers for different bands
@@ -4405,7 +4505,15 @@ class Sentinel2Collection:
                         )
                         
                         val = stats.get(band)
-                        col_name = f"{band}_{geometry_name}_{r_type}"
+                        val = ee.Algorithms.If(val, val, -9999)
+                        if include_geometry_name and include_reducer_name:
+                            col_name = f"{band}_{geometry_name}_{r_type}"
+                        elif include_geometry_name and not include_reducer_name:
+                            col_name = f"{band}_{geometry_name}"
+                        elif not include_geometry_name and include_reducer_name:
+                            col_name = f"{band}_{r_type}"
+                        else:
+                            col_name = f"{band}"
                         feature = feature.set(col_name, val)
 
                 return feature
@@ -4422,6 +4530,8 @@ class Sentinel2Collection:
             if df.empty:
                 print("Warning: No results returned. Check if the geometry intersects the imagery or if dates are valid.")
                 return pd.DataFrame()
+            
+            df = df.replace(-9999, np.nan)
 
             # 7. Formatting & Reordering
             if 'Date' in df.columns:
@@ -4429,7 +4539,17 @@ class Sentinel2Collection:
                 df = df.sort_values('Date').set_index('Date')
 
             # Construct the expected column names in the exact order of the input lists
-            expected_order = [f"{band}_{geometry_name}_{r_type}" for band, r_type in zip(bands, reducers_list)]
+            expected_order = []
+            for band, r_type in zip(bands, reducers_list):
+                if include_geometry_name and include_reducer_name:
+                    col_name = f"{band}_{geometry_name}_{r_type}"
+                elif include_geometry_name and not include_reducer_name:
+                    col_name = f"{band}_{geometry_name}"
+                elif not include_geometry_name and include_reducer_name:
+                    col_name = f"{band}_{r_type}"
+                else:
+                    col_name = f"{band}"
+                expected_order.append(col_name)
             
             # If area was included, append it to the END of the list
             if include_area:
