@@ -3460,6 +3460,239 @@ class GenericCollection:
             print(f"Zonal stats saved to {file_path}.csv")
             return
         return pivot_df
+
+    def batch_zonal_stats(
+        self,
+        geometries,
+        band=None,
+        reducer_type="mean",
+        scale=30,
+        geometry_names=None,
+        buffer_size=1,
+        tileScale=1,
+        dates=None,
+        file_path=None,
+        unweighted=False
+    ):
+        """
+        Performs zonal statistics extraction on an image collection for specified geometries.
+        
+        Iterates over a collection of images and extracts spatial statistics (e.g., mean, median, 
+        standard deviation) for each band within defined geometries. Supports multi-band and 
+        multi-reducer bulk processing for maximum efficiency, allowing simultaneous extraction 
+        of multiple statistics across multiple bands.
+        
+        Args:
+            geometries: Input geometries for zonal statistics extraction. Can be:
+                - ee.FeatureCollection: A collection of features with geometry
+                - ee.Feature: A single feature with geometry
+                - ee.Geometry: A single geometry object
+                - list of tuples: Coordinate pairs (lon, lat) for point locations
+                - list of ee.Geometry: Multiple geometry objects
+            band (str or list, optional): Band name(s) to extract statistics from. 
+                If None, uses the first band. Defaults to None.
+            reducer_type (str or list, optional): Reducer function(s) to apply (e.g., 'mean', 
+                'median', 'stdDev', 'min', 'max'). Can be a single string applied to all bands 
+                or a list matching the length of band list. Defaults to 'mean'.
+            scale (int, optional): Resolution in meters for statistics computation. 
+                Defaults to 30 meters.
+            geometry_names (list, optional): Names for geometries. Used with coordinate lists. 
+                If not provided, auto-generates names like 'Location_1', 'Location_2', etc.
+            buffer_size (float, optional): Buffer radius in meters applied to point geometries. 
+                Defaults to 1 meter.
+            tileScale (int, optional): Scale factor for computation tiles. Larger values reduce 
+                latency but may increase server-side memory usage. Defaults to 1.
+            dates (list, optional): Filter collection to specific dates. Image dates must match 
+                entries in the 'Date_Filter' property.
+            file_path (str, optional): Path to save results as CSV file (without .csv extension). 
+                If provided, returns None and saves to disk. Defaults to None.
+            unweighted (bool, optional): If True, uses unweighted reducers (no area weighting). 
+                Defaults to False.
+        
+        Returns:
+            pd.DataFrame: Pivot table with zonal statistics if file_path is None, 
+                otherwise None (results saved to CSV).
+        """
+        # 1. Parse Band and Reducer Inputs (Supports strings or lists)
+        if band is None:
+            band_list = [self.collection.first().bandNames().get(0).getInfo()]
+            reducer_list = [reducer_type]
+            is_multiband = False
+        elif isinstance(band, str):
+            band_list = [band]
+            if isinstance(reducer_type, str):
+                reducer_list = [reducer_type]
+            else:
+                raise ValueError("If 'band' is a string, 'reducer_type' must be a string.")
+            is_multiband = False
+        elif isinstance(band, list):
+            band_list = band
+            if isinstance(reducer_type, str):
+                reducer_list = [reducer_type] * len(band_list)
+            elif isinstance(reducer_type, list):
+                if len(reducer_type) != len(band_list):
+                    raise ValueError("Length of 'reducer_type' list must match 'band' list.")
+                reducer_list = reducer_type
+            else:
+                raise ValueError("'reducer_type' must be a string or list of strings.")
+            is_multiband = True
+        else:
+            raise TypeError("'band' must be a string or a list of strings.")
+
+        # Filter collection
+        img_collection_obj = GenericCollection(collection=self.collection.select(band_list))
+        if dates:
+            img_collection_obj = GenericCollection(
+                collection=img_collection_obj.collection.filter(ee.Filter.inList('Date_Filter', dates))
+            )
+
+        # Standardize Geometry features
+        features = None
+        validated_coordinates = [] 
+        
+        def set_standard_name(feature):
+            has_geo_name = feature.get('geo_name')
+            has_name = feature.get('name')
+            has_index = feature.get('system:index')
+            new_name = ee.Algorithms.If(
+                has_geo_name, has_geo_name,
+                ee.Algorithms.If(has_name, has_name,
+                ee.Algorithms.If(has_index, has_index, 'unnamed_geometry')))
+            return feature.set({'geo_name': new_name})
+
+        # Geometry Handling
+        if isinstance(geometries, (ee.FeatureCollection, ee.Feature)):
+            features = ee.FeatureCollection(geometries)
+            if geometry_names:
+                 print("Warning: 'geometry_names' are ignored when the input is an ee.Feature or ee.FeatureCollection.")
+        elif isinstance(geometries, ee.Geometry):
+             name = geometry_names[0] if (geometry_names and geometry_names[0]) else 'unnamed_geometry'
+             features = ee.FeatureCollection([ee.Feature(geometries).set('geo_name', name)])
+        elif isinstance(geometries, list):
+            if not geometries: raise ValueError("'geometries' list cannot be empty.")
+            if all(isinstance(i, tuple) for i in geometries):
+                validated_coordinates = geometries
+                if geometry_names is None:
+                    geometry_names = [f"Location_{i+1}" for i in range(len(validated_coordinates))]
+                elif len(geometry_names) != len(validated_coordinates):
+                     raise ValueError("geometry_names must have the same length as coordinates list.")
+                points = [
+                    ee.Feature(ee.Geometry.Point(coord).buffer(buffer_size), {'geo_name': str(name)})
+                    for coord, name in zip(validated_coordinates, geometry_names)
+                ]
+                features = ee.FeatureCollection(points)
+            elif all(isinstance(i, ee.Geometry) for i in geometries):
+                if geometry_names is None:
+                    geometry_names = [f"Geometry_{i+1}" for i in range(len(geometries))]
+                elif len(geometry_names) != len(geometries):
+                     raise ValueError("geometry_names must match geometries list length.")
+                geom_features = [
+                    ee.Feature(geom).set({'geo_name': str(name)})
+                    for geom, name in zip(geometries, geometry_names)
+                ]
+                features = ee.FeatureCollection(geom_features)
+            else:
+                raise TypeError("Input list must be a list of (lon, lat) tuples OR ee.Geometry objects.")
+        elif isinstance(geometries, tuple) and len(geometries) == 2:
+            name = geometry_names[0] if geometry_names else 'Location_1'
+            features = ee.FeatureCollection([
+                ee.Feature(ee.Geometry.Point(geometries).buffer(buffer_size), {'geo_name': name})
+            ])
+        else:
+            raise TypeError("Unsupported type for 'geometries'.")
+        
+        features = features.map(set_standard_name)
+
+        # OPTIMIZATION: Group bands by reducer type to minimize heavy Earth Engine API calls
+        reducer_groups = {}
+        for b, r in zip(band_list, reducer_list):
+            if r not in reducer_groups:
+                reducer_groups[r] = []
+            reducer_groups[r].append(b)
+
+        def calculate_stats_for_image(image):
+            image_date = image.get('Date_Filter')
+            current_fc = features
+            
+            for r_type, b_list in reducer_groups.items():
+                try:
+                    ee_reducer = getattr(ee.Reducer, r_type)()
+                except AttributeError:
+                    raise ValueError(f"Unknown reducer_type: '{r_type}'.")
+                
+                if unweighted: ee_reducer = ee_reducer.unweighted()
+
+                # Execute ONE reduction for all bands sharing this reducer simultaneously
+                stats_fc = image.select(b_list).reduceRegions(
+                    collection=current_fc, reducer=ee_reducer, scale=scale, tileScale=tileScale
+                )
+
+                def guarantee_and_rename(f):
+                    f = ee.Feature(f)
+                    out_f = f
+                    prop_names = f.propertyNames()
+                    
+                    for b in b_list:
+                        # Handle EE's single-band reduction naming quirk gracefully
+                        has_b = prop_names.contains(b)
+                        val = ee.Algorithms.If(
+                            has_b, f.get(b), 
+                            ee.Algorithms.If(prop_names.contains(r_type), f.get(r_type), -9999)
+                        )
+                        
+                        out_f = out_f.set(f"{b}_{r_type}", val)
+                        out_f = ee.Feature(ee.Algorithms.If(
+                            ee.String(b).equals(f"{b}_{r_type}"), out_f, out_f.set(b, None)
+                        ))
+                    
+                    # Prevent cross-contamination between reducer loops
+                    out_f = ee.Feature(ee.Algorithms.If(
+                        prop_names.contains(r_type), out_f.set(r_type, None), out_f
+                    ))
+                    return out_f
+
+                current_fc = stats_fc.map(guarantee_and_rename)
+
+            return current_fc.map(lambda f: f.set('image_date', image_date))
+
+        results_fc = ee.FeatureCollection(img_collection_obj.collection.map(calculate_stats_for_image)).flatten()
+        df = GenericCollection.ee_to_df(results_fc, remove_geom=True)
+
+        if df.empty: raise ValueError("No results found.")
+
+        # Clean sentinel values
+        target_cols = [f"{b}_{r}" for b, r in zip(band_list, reducer_list)]
+        
+        for col in target_cols:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+                df[col] = df[col].replace(-9999, float('nan'))
+                
+        df.dropna(subset=target_cols, how='all', inplace=True)
+
+        # Legacy Pivot (Single Band)
+        if not is_multiband:
+            target_col = target_cols[0]
+            pivot_df = df.pivot(index='image_date', columns='geo_name', values=target_col)
+            pivot_df.columns = [f"{col}_{reducer_list[0]}" for col in pivot_df.columns]
+            pivot_df.index.name = 'Date'
+            pivot_df.columns.name = None
+            pivot_df = pivot_df.reset_index(drop=False)
+            
+        # Multiband Pivot
+        else:
+            pivot_df = df.pivot(index='image_date', columns='geo_name', values=target_cols)
+            pivot_df.columns = [f"{geo}_{val}" for val, geo in pivot_df.columns]
+            pivot_df.index.name = 'Date'
+            pivot_df.reset_index(drop=False, inplace=True)
+
+        if file_path:
+            if file_path.endswith('.csv'): file_path = file_path[:-4]
+            pivot_df.to_csv(f"{file_path}.csv", index=False)
+            print(f"Zonal stats saved to {file_path}.csv")
+            return
+            
+        return pivot_df
     
     def multiband_zonal_stats(
             self,
