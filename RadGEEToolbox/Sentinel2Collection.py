@@ -25,6 +25,82 @@ def _scale_s2_sr(img):
     out = img.addBands(scaled, None, True).set('rgt:scaled', 'sentinel2_sr')
     return ee.Image(ee.Algorithms.If(is_scaled, img, out))
 
+def _compute_otsu_threshold_vectorized(histogram):
+    """
+    Calculates Otsu's threshold using ultra-fast linear algebra.
+    Replaces slow server-side mapping with a single-pass matrix multiplication
+    to calculate cumulative weights and means instantly.
+
+    Args:
+        histogram (dict): A dictionary containing 'histogram' and 'bucketMeans' keys.
+    
+    Returns:
+        float: The computed Otsu threshold value.
+    """
+    histogram_dict = ee.Dictionary(histogram)
+    
+    # Extract 1D arrays, with fallbacks for fully masked/empty images
+    counts_1d = ee.Array(histogram_dict.get('histogram', [0]))
+    means_1d = ee.Array(histogram_dict.get('bucketMeans', [0]))
+    
+    # Get total number of buckets (N)
+    N = counts_1d.length().get([0])
+    
+    # Reshape arrays to 2D column vectors (N x 1) for matrix operations
+    counts_2d = counts_1d.reshape([-1, 1])
+    means_2d = means_1d.reshape([-1, 1])
+    
+    # Calculate Total Pixels safely
+    total = counts_2d.reduce(ee.Reducer.sum(), [0]).get([0, 0])
+    safe_total = ee.Algorithms.If(total.eq(0), 1, total)
+    
+    # Probability (P) and Probability-weighted Mean (M) per bucket
+    P = counts_2d.divide(safe_total)
+    M = P.multiply(means_2d)
+    
+    # Global Mean
+    M_total = M.reduce(ee.Reducer.sum(), [0]).get([0, 0])
+    # Broadcast global mean to an N x 1 array for later subtraction
+    M_total_arr = ee.Array(ee.List.repeat(M_total, N)).reshape([-1, 1])
+    
+    # THE WIZARD TRICK: Create an N x N Lower Triangular Matrix of 1s.
+    indices_list = ee.List.sequence(0, N.subtract(1))
+    # Create N x N grid of column indices
+    cols_mat = ee.Array(ee.List.repeat(indices_list, N))
+    # Create N x N grid of row indices (transpose of cols)
+    rows_mat = cols_mat.transpose()
+    # 1 where row >= col (Lower Triangular), 0 otherwise
+    lower_tri = rows_mat.gte(cols_mat)
+    
+    # Calculate Cumulative Probabilities (W) and Cumulative Means (U) instantly
+    W = lower_tri.matrixMultiply(P)
+    U = lower_tri.matrixMultiply(M)
+    
+    # -------------------------------------------------------------------------
+    # Calculate BCSS (Vectorized)
+    # Formula: (M_total * W - U)^2 / (W * (1 - W))
+    # -------------------------------------------------------------------------
+    
+    # Denominator: W * (1 - W)
+    # Add a tiny epsilon (1e-10) to prevent division by zero errors on empty classes
+    ones_arr = ee.Array(ee.List.repeat(1, N)).reshape([-1, 1])
+    epsilon = ee.Array(ee.List.repeat(1e-10, N)).reshape([-1, 1])
+    W_minus = ones_arr.subtract(W)
+    denominator = W.multiply(W_minus).add(epsilon)
+    
+    # Numerator: (M_total * W - U)^2 
+    diff = M_total_arr.multiply(W).subtract(U)
+    numerator = diff.multiply(diff)
+    
+    # Final BCSS Array (N x 1)
+    bcss = numerator.divide(denominator)
+    
+    # Project the 2D N x 1 matrix back to a 1D array.
+    bcss_1d = bcss.project([0])
+    
+    return means_1d.get(bcss_1d.argmax())
+
+
 class Sentinel2Collection:
     """
     Represents a user-defined collection of ESA Sentinel-2 MSI surface reflectance satellite images at 10 m/px from Google Earth Engine (GEE).
@@ -496,6 +572,25 @@ class Sentinel2Collection:
         )
         return ndmi
 
+    # @staticmethod
+    # def sentinel_nbr_fn(image, threshold):
+    #     """
+    #     Calculates the Normalized Burn Ratio (NBR) for Sentinel-2 images. Masks image based on threshold.
+
+    #     Args:
+    #         image (ee.Image): input ee.Image
+    #         threshold (float): value between -1 and 1 where NBR pixels less than threshold will be masked.
+
+    #     Returns:
+    #         ee.Image: NBR ee.Image
+    #     """
+    #     nbr_expression = '(b("B8") - b("B12")) / (b("B8") + b("B12"))'
+    #     nbr_calc = image.expression(nbr_expression)
+    #     nbr = (nbr_calc.updateMask(nbr_calc.gte(threshold)).rename("nbr")
+    #            .copyProperties(image).set("threshold", threshold, "system:time_start", image.get("system:time_start"))
+    #     )
+    #     return nbr
+
     @staticmethod
     def sentinel_nbr_fn(image, threshold):
         """
@@ -508,11 +603,16 @@ class Sentinel2Collection:
         Returns:
             ee.Image: NBR ee.Image
         """
-        nbr_expression = '(b("B8") - b("B12")) / (b("B8") + b("B12"))'
-        nbr_calc = image.expression(nbr_expression)
-        nbr = (nbr_calc.updateMask(nbr_calc.gte(threshold)).rename("nbr")
-               .copyProperties(image).set("threshold", threshold, "system:time_start", image.get("system:time_start"))
+        # Utilize GEE's highly optimized native method instead of .expression()
+        nbr_calc = image.normalizedDifference(['B8', 'B12']).rename("nbr")
+        
+        # copyProperties automatically transfers 'system:time_start'
+        nbr = (
+            nbr_calc.updateMask(nbr_calc.gte(threshold))
+            .copyProperties(image)
+            .set("threshold", threshold)
         )
+        
         return nbr
     
     @staticmethod
@@ -616,6 +716,56 @@ class Sentinel2Collection:
                       DeprecationWarning,
                         stacklevel=2)
         return Sentinel2Collection.maskShadows(image)
+    
+    @staticmethod
+    def autoMask(image, index_band=None, region=None, scale=90, binary_classification=False, classify_above_threshold=True, mask_zeros=False):
+        """
+        Automatic singleband image classification and masking based on the dynamic Otsu-method. The Otsu approach statistically calculates the best threshold for binary classification.
+        Options are available to customize the classifcation parameters.
+
+        Args:
+            image (ee.Image): input ee.Image
+            index_band (str, optional): name of the band to use for Otsu thresholding. If None, the first band of the image will be used.
+            region (ee.Geometry, optional): region to use for Otsu thresholding. If None, the geometry of the image will be used.
+            scale (int, optional): scale in meters to use for the reduction operation. Default is 90 meters.
+            binary_classification (bool, optional): if True, returns a binary classification mask; if False, returns a masked image with the original values. Default is False.
+            classify_above_threshold (bool, optional): if True, classifies pixels above the threshold as the target class; if False, classifies pixels below the threshold as the target class. Default is True.
+            mask_zeros (bool, optional): if True and binary_classification is True, masks out zero values in the output mask. Default is False.
+
+        Returns:
+            ee.Image: ee.Image with the Otsu threshold applied and masked according to the specified parameters.
+        """
+        if index_band is None:
+            index_band = image.bandNames().get(0)
+        if region is None:
+            region = image.geometry()
+            
+        histogram = image.select(index_band).reduceRegion(
+            reducer=ee.Reducer.histogram(maxBuckets=128), 
+            geometry=region,
+            scale=scale,
+            maxPixels=1e10,
+            bestEffort=True, # Allows GEE to automatically coarsen scale if geometry is too large
+            tileScale=4 
+        ).get(index_band)
+        
+        threshold = ee.Number(_compute_otsu_threshold_vectorized(histogram))
+
+        if binary_classification:
+            if classify_above_threshold:
+                mask = image.select(index_band).gte(threshold).rename(index_band)
+            else:
+                mask = image.select(index_band).lt(threshold).rename(index_band)
+        else:
+            if classify_above_threshold:
+                mask = image.select(index_band).updateMask(image.select(index_band).gte(threshold)).rename(index_band)
+            else:
+                mask = image.select(index_band).updateMask(image.select(index_band).lt(threshold)).rename(index_band)
+
+        if mask_zeros and binary_classification:
+            mask = mask.selfMask()
+        
+        return mask.copyProperties(image, image.propertyNames()).set('otsu_threshold', threshold)
 
     @staticmethod
     def maskWater(image):
@@ -2970,6 +3120,30 @@ class Sentinel2Collection:
                 )
 
         return Sentinel2Collection(collection=col)
+
+    def auto_mask(self, index_band=None, region=None, scale=90, binary_classification=False, classify_above_threshold=True, mask_zeros=False):
+        """
+        Automatic singleband image classification and masking based on the dynamic Otsu-method, for an entire image collection. The Otsu approach statistically calculates the best threshold for binary classification.
+        Options are available to customize the classifcation parameters.
+
+        Args:
+            index_band (str, optional): name of the band to use for Otsu thresholding. If None, the first band of the image will be used.
+            region (ee.Geometry, optional): region to use for Otsu thresholding. If None, the geometry of the image will be used.
+            scale (int, optional): scale in meters to use for the reduction operation. Default is 90 meters.
+            binary_classification (bool, optional): if True, returns a binary classification mask; if False, returns a masked image with the original values. Default is False.
+            classify_above_threshold (bool, optional): if True, classifies pixels above the threshold as the target class; if False, classifies pixels below the threshold as the target class. Default is True.
+            mask_zeros (bool, optional): if True and binary_classification is True, masks out zero values in the output mask. Default is False.
+
+        Returns:
+            Sentinel2Collection: Sentinel2Collection image collection with the Otsu threshold applied and masked for each image according to the specified parameters.
+        """
+        if self.collection.size().eq(0).getInfo():
+            raise ValueError("The collection is empty. Cannot create a binary mask.")
+        masked_col = self.collection.map(lambda image: Sentinel2Collection.autoMask(image, 
+                                    index_band=index_band, region=region, scale=scale, binary_classification=binary_classification, 
+                                    classify_above_threshold=classify_above_threshold, mask_zeros=mask_zeros))
+        
+        return Sentinel2Collection(collection=masked_col)
     
     def anomaly(self, geometry, band_name=None, anomaly_band_name=None, replace=True, scale=10):
         """
@@ -3581,24 +3755,83 @@ class Sentinel2Collection:
             stacklevel=2)
         return self.mosaicByDate
 
+    # @staticmethod
+    # def ee_to_df(
+    #     ee_object, columns=None, remove_geom=True, sort_columns=False, **kwargs
+    # ):
+    #     """Converts an ee.FeatureCollection to pandas dataframe. Adapted from the geemap package (https://geemap.org/common/#geemap.common.ee_to_df)
+
+    #     Args:
+    #         ee_object (ee.FeatureCollection): ee.FeatureCollection.
+    #         columns (list): List of column names. Defaults to None.
+    #         remove_geom (bool): Whether to remove the geometry column. Defaults to True.
+    #         sort_columns (bool): Whether to sort the column names. Defaults to False.
+    #         kwargs: Additional arguments passed to ee.data.computeFeature.
+
+    #     Raises:
+    #         TypeError: ee_object must be an ee.FeatureCollection
+
+    #     Returns:
+    #         pd.DataFrame: pandas DataFrame
+    #     """
+    #     if isinstance(ee_object, ee.Feature):
+    #         ee_object = ee.FeatureCollection([ee_object])
+
+    #     if not isinstance(ee_object, ee.FeatureCollection):
+    #         raise TypeError("ee_object must be an ee.FeatureCollection")
+
+    #     try:
+    #         property_names = ee_object.first().propertyNames().sort().getInfo()
+    #         if remove_geom:
+    #             data = ee_object.map(
+    #                 lambda f: ee.Feature(None, f.toDictionary(property_names))
+    #             )
+    #         else:
+    #             data = ee_object
+
+    #         kwargs["expression"] = data
+    #         kwargs["fileFormat"] = "PANDAS_DATAFRAME"
+
+    #         df = ee.data.computeFeatures(kwargs)
+
+    #         if isinstance(columns, list):
+    #             df = df[columns]
+
+    #         if remove_geom and ("geo" in df.columns):
+    #             df = df.drop(columns=["geo"], axis=1)
+
+    #         if sort_columns:
+    #             df = df.reindex(sorted(df.columns), axis=1)
+
+    #         return df
+    #     except Exception as e:
+    #         raise Exception(e)
+
     @staticmethod
     def ee_to_df(
-        ee_object, columns=None, remove_geom=True, sort_columns=False, **kwargs
+        ee_object: ee.FeatureCollection | ee.Feature, 
+        columns: list[str] | None = None, 
+        remove_geom: bool = True, 
+        sort_columns: bool = False, 
+        **kwargs
     ):
-        """Converts an ee.FeatureCollection to pandas dataframe. Adapted from the geemap package (https://geemap.org/common/#geemap.common.ee_to_df)
+        """
+        Converts an ee.FeatureCollection to a pandas DataFrame. 
+        Adapted from the geemap package.
 
         Args:
-            ee_object (ee.FeatureCollection): ee.FeatureCollection.
-            columns (list): List of column names. Defaults to None.
+            ee_object (ee.FeatureCollection | ee.Feature): Earth Engine object.
+            columns (list): List of column names to retain. Defaults to None.
             remove_geom (bool): Whether to remove the geometry column. Defaults to True.
             sort_columns (bool): Whether to sort the column names. Defaults to False.
-            kwargs: Additional arguments passed to ee.data.computeFeature.
+            kwargs: Additional arguments passed to ee.data.computeFeatures.
 
         Raises:
-            TypeError: ee_object must be an ee.FeatureCollection
+            TypeError: If ee_object is not an ee.Feature or ee.FeatureCollection.
+            RuntimeError: If the Earth Engine API computation fails.
 
         Returns:
-            pd.DataFrame: pandas DataFrame
+            pd.DataFrame: Computed pandas DataFrame.
         """
         if isinstance(ee_object, ee.Feature):
             ee_object = ee.FeatureCollection([ee_object])
@@ -3607,31 +3840,29 @@ class Sentinel2Collection:
             raise TypeError("ee_object must be an ee.FeatureCollection")
 
         try:
-            property_names = ee_object.first().propertyNames().sort().getInfo()
-            if remove_geom:
-                data = ee_object.map(
-                    lambda f: ee.Feature(None, f.toDictionary(property_names))
-                )
-            else:
-                data = ee_object
-
-            kwargs["expression"] = data
+            # Delegate heavy lifting to the GEE API without a blocking .getInfo() call
+            kwargs["expression"] = ee_object
             kwargs["fileFormat"] = "PANDAS_DATAFRAME"
-
+            
             df = ee.data.computeFeatures(kwargs)
 
+            # --- Client-side Pandas Operations ---
             if isinstance(columns, list):
                 df = df[columns]
 
-            if remove_geom and ("geo" in df.columns):
-                df = df.drop(columns=["geo"], axis=1)
+            if remove_geom and "geo" in df.columns:
+                # Pandas 3.0+ convention: axis=1 is redundant when using columns=
+                df = df.drop(columns=["geo"])
 
             if sort_columns:
-                df = df.reindex(sorted(df.columns), axis=1)
+                # Direct subsetting is faster and cleaner than df.reindex()
+                df = df[sorted(df.columns)]
 
             return df
+            
         except Exception as e:
-            raise Exception(e)
+            # Preserve the original traceback for the end user
+            raise RuntimeError(f"Earth Engine to DataFrame conversion failed: {e}") from e
 
     @staticmethod
     def extract_transect(

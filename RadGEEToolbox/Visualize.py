@@ -175,7 +175,7 @@ class Visualize:
         )
         ax.set_aspect(self.aspect_ratio)
 
-    def add_layer(self, ee_object, vis_params=None, color=None, width=1, is_vector=False):
+    def add_layer(self, ee_object, vis_params=None, color=None, width=1, is_vector=False, alpha=None, fill=True):
             """
             Stacks an ee.Image or ee.FeatureCollection onto the grid.
             """
@@ -189,7 +189,11 @@ class Visualize:
             if is_ee_vector or is_vector:
                 vector_fc = ee.FeatureCollection(ee_object)
                 # Use Earth Engine's native, highly optimized styling engine for vectors
-                style_dict = {'color': color if color else 'black', 'width': width, 'fillColor': '00000000'}
+                style_dict = {'color': color if color else 'black', 'width': width, 'fillColor': color if color else '00000000'}
+                if alpha is not None:
+                    style_dict['fillColor'] = f'{color if color else "000000"}{int(alpha * 255):02x}'
+                if not fill:
+                    style_dict['fillColor'] = '00000000'
                 ee_object = vector_fc.style(**style_dict)
                 
                 # Since .style() outputs a pre-rendered RGB image, we clear the v_params payload

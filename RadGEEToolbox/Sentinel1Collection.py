@@ -2514,24 +2514,83 @@ class Sentinel1Collection:
         )
         return self.mosaicByDate
 
+    # @staticmethod
+    # def ee_to_df(
+    #     ee_object, columns=None, remove_geom=True, sort_columns=False, **kwargs
+    # ):
+    #     """Converts an ee.FeatureCollection to pandas dataframe. Adapted from the geemap package (https://geemap.org/common/#geemap.common.ee_to_df)
+
+    #     Args:
+    #         ee_object (ee.FeatureCollection): ee.FeatureCollection.
+    #         columns (list): List of column names. Defaults to None.
+    #         remove_geom (bool): Whether to remove the geometry column. Defaults to True.
+    #         sort_columns (bool): Whether to sort the column names. Defaults to False.
+    #         kwargs: Additional arguments passed to ee.data.computeFeature.
+
+    #     Raises:
+    #         TypeError: ee_object must be an ee.FeatureCollection
+
+    #     Returns:
+    #         pd.DataFrame: pandas DataFrame
+    #     """
+    #     if isinstance(ee_object, ee.Feature):
+    #         ee_object = ee.FeatureCollection([ee_object])
+
+    #     if not isinstance(ee_object, ee.FeatureCollection):
+    #         raise TypeError("ee_object must be an ee.FeatureCollection")
+
+    #     try:
+    #         property_names = ee_object.first().propertyNames().sort().getInfo()
+    #         if remove_geom:
+    #             data = ee_object.map(
+    #                 lambda f: ee.Feature(None, f.toDictionary(property_names))
+    #             )
+    #         else:
+    #             data = ee_object
+
+    #         kwargs["expression"] = data
+    #         kwargs["fileFormat"] = "PANDAS_DATAFRAME"
+
+    #         df = ee.data.computeFeatures(kwargs)
+
+    #         if isinstance(columns, list):
+    #             df = df[columns]
+
+    #         if remove_geom and ("geo" in df.columns):
+    #             df = df.drop(columns=["geo"], axis=1)
+
+    #         if sort_columns:
+    #             df = df.reindex(sorted(df.columns), axis=1)
+
+    #         return df
+    #     except Exception as e:
+    #         raise Exception(e)
+
     @staticmethod
     def ee_to_df(
-        ee_object, columns=None, remove_geom=True, sort_columns=False, **kwargs
+        ee_object: ee.FeatureCollection | ee.Feature, 
+        columns: list[str] | None = None, 
+        remove_geom: bool = True, 
+        sort_columns: bool = False, 
+        **kwargs
     ):
-        """Converts an ee.FeatureCollection to pandas dataframe. Adapted from the geemap package (https://geemap.org/common/#geemap.common.ee_to_df)
+        """
+        Converts an ee.FeatureCollection to a pandas DataFrame. 
+        Adapted from the geemap package.
 
         Args:
-            ee_object (ee.FeatureCollection): ee.FeatureCollection.
-            columns (list): List of column names. Defaults to None.
+            ee_object (ee.FeatureCollection | ee.Feature): Earth Engine object.
+            columns (list): List of column names to retain. Defaults to None.
             remove_geom (bool): Whether to remove the geometry column. Defaults to True.
             sort_columns (bool): Whether to sort the column names. Defaults to False.
-            kwargs: Additional arguments passed to ee.data.computeFeature.
+            kwargs: Additional arguments passed to ee.data.computeFeatures.
 
         Raises:
-            TypeError: ee_object must be an ee.FeatureCollection
+            TypeError: If ee_object is not an ee.Feature or ee.FeatureCollection.
+            RuntimeError: If the Earth Engine API computation fails.
 
         Returns:
-            pd.DataFrame: pandas DataFrame
+            pd.DataFrame: Computed pandas DataFrame.
         """
         if isinstance(ee_object, ee.Feature):
             ee_object = ee.FeatureCollection([ee_object])
@@ -2540,31 +2599,29 @@ class Sentinel1Collection:
             raise TypeError("ee_object must be an ee.FeatureCollection")
 
         try:
-            property_names = ee_object.first().propertyNames().sort().getInfo()
-            if remove_geom:
-                data = ee_object.map(
-                    lambda f: ee.Feature(None, f.toDictionary(property_names))
-                )
-            else:
-                data = ee_object
-
-            kwargs["expression"] = data
+            # Delegate heavy lifting to the GEE API without a blocking .getInfo() call
+            kwargs["expression"] = ee_object
             kwargs["fileFormat"] = "PANDAS_DATAFRAME"
-
+            
             df = ee.data.computeFeatures(kwargs)
 
+            # --- Client-side Pandas Operations ---
             if isinstance(columns, list):
                 df = df[columns]
 
-            if remove_geom and ("geo" in df.columns):
-                df = df.drop(columns=["geo"], axis=1)
+            if remove_geom and "geo" in df.columns:
+                # Pandas 3.0+ convention: axis=1 is redundant when using columns=
+                df = df.drop(columns=["geo"])
 
             if sort_columns:
-                df = df.reindex(sorted(df.columns), axis=1)
+                # Direct subsetting is faster and cleaner than df.reindex()
+                df = df[sorted(df.columns)]
 
             return df
+            
         except Exception as e:
-            raise Exception(e)
+            # Preserve the original traceback for the end user
+            raise RuntimeError(f"Earth Engine to DataFrame conversion failed: {e}") from e
 
     @staticmethod
     def extract_transect(
