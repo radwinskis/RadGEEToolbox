@@ -4425,10 +4425,10 @@ class LandsatCollection:
 
     @staticmethod
     def ee_to_df(
-        ee_object: ee.FeatureCollection | ee.Feature, 
-        columns: list[str] | None = None, 
-        remove_geom: bool = True, 
-        sort_columns: bool = False, 
+        ee_object, 
+        columns = None, 
+        remove_geom = True, 
+        sort_columns = False, 
         **kwargs
     ):
         """
